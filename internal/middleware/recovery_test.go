@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/example/go-boilerplate/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

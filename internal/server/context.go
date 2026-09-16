@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/example/go-boilerplate/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
 )
 

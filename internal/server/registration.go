@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/example/go-boilerplate/internal/health"
-	"github.com/example/go-boilerplate/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/internal/health"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
 )
 

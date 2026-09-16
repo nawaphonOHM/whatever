@@ -3,8 +3,8 @@
 package server
 
 import (
-	intserver "github.com/example/go-boilerplate/internal/server"
-	"github.com/example/go-boilerplate/pkg/rest/response"
+	intserver "github.com/nawaphonOHM/whatever/internal/server"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 )
 
 // Handler defines the function signature for route handlers returning a standardized Response.

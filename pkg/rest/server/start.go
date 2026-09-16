@@ -1,7 +1,7 @@
 package server
 
 import (
-	intserver "github.com/example/go-boilerplate/internal/server"
+	intserver "github.com/nawaphonOHM/whatever/internal/server"
 )
 
 // StartREST initializes and runs the HTTP server with the provided REST API registrations.

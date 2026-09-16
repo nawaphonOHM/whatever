@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	intcfg "github.com/example/go-boilerplate/internal/config"
+	intcfg "github.com/nawaphonOHM/whatever/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

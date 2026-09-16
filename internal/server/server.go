@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	intcfg "github.com/example/go-boilerplate/internal/config"
-	intmw "github.com/example/go-boilerplate/internal/middleware"
-	"github.com/example/go-boilerplate/pkg/logger"
-	"github.com/example/go-boilerplate/pkg/rest/response"
+	intcfg "github.com/nawaphonOHM/whatever/internal/config"
+	intmw "github.com/nawaphonOHM/whatever/internal/middleware"
+	"github.com/nawaphonOHM/whatever/pkg/logger"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
 )
 
