@@ -3,8 +3,8 @@ package health
 import (
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 )
 
 // Status represents the response payload for health probes.

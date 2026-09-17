@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

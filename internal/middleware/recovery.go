@@ -5,8 +5,8 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 )
 
 // Recovery returns a middleware that recovers from any panics, logs the error and stack trace,

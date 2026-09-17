@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/internal/health"
 	"github.com/nawaphonOHM/whatever/pkg/rest/response"
-	"github.com/gin-gonic/gin"
 )
 
 // Handler defines the function signature for route handlers returning a standardized Response.

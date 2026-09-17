@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	intcfg "github.com/nawaphonOHM/whatever/internal/config"
 	"github.com/gin-gonic/gin"
+	intcfg "github.com/nawaphonOHM/whatever/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

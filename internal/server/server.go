@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	intcfg "github.com/nawaphonOHM/whatever/internal/config"
 	intmw "github.com/nawaphonOHM/whatever/internal/middleware"
 	"github.com/nawaphonOHM/whatever/pkg/logger"
 	"github.com/nawaphonOHM/whatever/pkg/rest/response"
-	"github.com/gin-gonic/gin"
 )
 
 // Config defines the configuration for the HTTP server.
