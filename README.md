@@ -43,7 +43,7 @@ its `main` package and supplies its own domain registrations.
 
 ### `pkg/rest/server`
 
-This is the primary package. `server.StartREST([]*server.RestApiRegistration)`
+This is the primary package. `server.StartREST([]*server.RestAPIRegistration)`
 loads the library configuration, installs the default HTTP middleware, registers
 the framework health endpoints, validates the supplied registrations, and starts
 Gin with graceful shutdown on `SIGINT` or `SIGTERM`.
@@ -60,7 +60,7 @@ Generic JSON response formatting utilities adhering to a consistent API contract
 - **Error Envelope**: RFC 9457 Problem Details (`application/problem+json`)
 
 ```go
-import "github.com/example/go-boilerplate/pkg/response"
+import "github.com/nawaphonOHM/whatever/pkg/rest/response"
 
 // HTTP 200 OK with data and optional message (returns response.Response)
 return response.OK(data)
@@ -90,21 +90,21 @@ framework health probe handling are installed internally by `pkg/rest/server`.
 
 ## REST Registration Contract
 
-External projects define endpoints declaratively using `RestApiRegistration` and `ExportableApi`:
+External projects define endpoints declaratively using `RestAPIRegistration` and `ExportableAPI`:
 
 ```go
 package myfeature
 
 import (
-    "github.com/example/go-boilerplate/pkg/response"
-    "github.com/example/go-boilerplate/pkg/server"
+    "github.com/nawaphonOHM/whatever/pkg/rest/response"
+    "github.com/nawaphonOHM/whatever/pkg/rest/server"
 )
 
-func NewFeatureAPIs() *server.RestApiRegistration {
-    return &server.RestApiRegistration{
+func NewFeatureAPIs() *server.RestAPIRegistration {
+    return &server.RestAPIRegistration{
         Version: 1,           // Generates /v1 prefix
         Prefix:  "/items",     // Base path for this group; no /api is added
-        Apis: []*server.ExportableApi{
+        Apis: []*server.ExportableAPI{
             {
                 Path:   "",
                 Method: server.GET,
@@ -177,14 +177,14 @@ package main
 import (
     "log"
 
-    "github.com/example/go-boilerplate/pkg/server"
+    "github.com/nawaphonOHM/whatever/pkg/rest/server"
     "github.com/myorg/myapp/internal/items"
 )
 
 func main() {
     // Collect API registrations from domain modules. StartREST loads the
     // OHM9969_* configuration and installs the framework defaults.
-    registrations := []*server.RestApiRegistration{
+    registrations := []*server.RestAPIRegistration{
         items.NewItemAPIRegistration(),
     }
 
