@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/example/go-boilerplate)](https://goreportcard.com/report/github.com/example/go-boilerplate)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A production-ready, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, production-grade middlewares, and uniform JSON API response envelopes.
+A production-ready, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, zero-boilerplate managed MongoDB client connectivity, production-grade middlewares, and uniform JSON API response envelopes.
 
 ---
 
@@ -13,6 +13,7 @@ A production-ready, modular Go library designed to be imported by microservices 
 - [Architecture & Directory Layout](#architecture--directory-layout)
 - [Public Packages](#public-packages)
 - [REST Registration Contract](#rest-registration-contract)
+- [MongoDB Client (`pkg/mongodb`)](#mongodb-client-pkgmongodb)
 - [Reserved Framework Endpoints](#reserved-framework-endpoints)
 - [Configuration](#configuration)
 - [Consumer Bootstrap](#consumer-bootstrap)
@@ -28,12 +29,13 @@ its `main` package and supplies its own domain registrations.
 
 ```
 .
-├── example/                   # Consumer-style registration and usage tests
-├── internal/                  # Private configuration, middleware, and health implementation
+├── internal/                  # Private configuration, middleware, server, and mongodb implementation
 ├── pkg/
 │   ├── logger/                # Public structured logger helpers
-│   ├── response/              # JSON response envelopes and helpers
-│   └── server/                # StartREST, declarative registration contract
+│   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
+│   └── rest/
+│       ├── response/          # JSON response envelopes and helpers
+│       └── server/            # StartREST, declarative registration contract
 ├── .github/workflows/ci.yml   # Library test, lint, and build verification
 ├── Makefile                   # Local verification commands
 └── README.md
@@ -43,7 +45,7 @@ its `main` package and supplies its own domain registrations.
 
 ### `pkg/rest/server`
 
-This is the primary package. `server.StartREST([]*server.RestAPIRegistration)`
+This is the primary REST package. `server.StartREST([]*server.RestAPIRegistration)`
 loads the library configuration, installs the default HTTP middleware, registers
 the framework health endpoints, validates the supplied registrations, and starts
 Gin with graceful shutdown on `SIGINT` or `SIGTERM`.
@@ -85,6 +87,10 @@ return response.NotFound("NOT_FOUND", "Resource not found")
 The structured logger package provides logging middleware and request-tracing
 utilities with slog support. Request-ID generation, panic recovery, CORS, and
 framework health probe handling are installed internally by `pkg/rest/server`.
+
+### `pkg/mongodb`
+
+The MongoDB package provides a zero-boilerplate entrypoint for connecting microservices to MongoDB clusters. Calling `mongodb.Connect(ctx)` loads configuration automatically from `OHM9969_MONGODB_*` environment variables, connects to the cluster, validates connectivity via ping, and returns a managed `*mongodb.Client`. The client exposes native `*mongo.Database` and `*mongo.Collection` handles for executing queries directly via the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`).
 
 ---
 
@@ -134,6 +140,118 @@ When `StartREST` is called, the library performs fail-fast preflight validation 
 
 ---
 
+## MongoDB Client (`pkg/mongodb`)
+
+The `pkg/mongodb` package encapsulates MongoDB connection establishment, connection pooling, and lifecycle management while directly exposing official driver `*mongo.Database` and `*mongo.Collection` types for zero-overhead querying.
+
+### Connecting & Lifecycle
+
+Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9969_MONGODB_*` environment variables, initializes connection pools, and verifies connectivity via an initial ping:
+
+```go
+package database
+
+import (
+    "context"
+    "log"
+    "time"
+
+    "github.com/nawaphonOHM/whatever/pkg/mongodb"
+)
+
+func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
+    client, err := mongodb.Connect(ctx)
+    if err != nil {
+        log.Fatalf("Failed to connect to MongoDB: %v", err)
+    }
+
+    cleanup := func() {
+        disconnectCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        if err := client.Disconnect(disconnectCtx); err != nil {
+            log.Printf("Failed to gracefully disconnect MongoDB: %v", err)
+        }
+    }
+
+    return client, cleanup
+}
+```
+
+### Database & Collection Handles
+
+Once connected, access collections and databases directly. If no database name is specified, operations automatically use the default database configured in `OHM9969_MONGODB_DATABASE`:
+
+```go
+package repository
+
+import (
+    "context"
+
+    "github.com/nawaphonOHM/whatever/pkg/mongodb"
+    "go.mongodb.org/mongo-driver/v2/bson"
+)
+
+type User struct {
+    ID    string `bson:"_id,omitempty"`
+    Email string `bson:"email"`
+    Name  string `bson:"name"`
+}
+
+type UserRepository struct {
+    client *mongodb.Client
+}
+
+func NewUserRepository(client *mongodb.Client) *UserRepository {
+    return &UserRepository{client: client}
+}
+
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
+    // Automatically targets the default database from OHM9969_MONGODB_DATABASE
+    coll := r.client.Collection("users")
+
+    var user User
+    err := coll.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+    if err != nil {
+        return nil, err
+    }
+    return &user, nil
+}
+
+func (r *UserRepository) RecordAudit(ctx context.Context, entry bson.M) error {
+    // Explicitly target a specific database instead of the default database
+    coll := r.client.Collection("audit_logs", "audit_db")
+
+    _, err := coll.InsertOne(ctx, entry)
+    return err
+}
+```
+
+### Readiness & Health Verification
+
+Use `Ping(ctx)` to verify active cluster connectivity (useful in custom readiness checks or background health pollers):
+
+```go
+// Sends a primary read-preference ping command to the MongoDB cluster
+if err := client.Ping(ctx); err != nil {
+    log.Printf("MongoDB health check failed: %v", err)
+}
+```
+
+### Raw Driver Access
+
+When advanced MongoDB features are needed—such as multi-document transactions, client sessions, or change streams—use `RawClient()` to access the underlying official `*mongo.Client`:
+
+```go
+rawClient := client.RawClient()
+session, err := rawClient.StartSession()
+if err != nil {
+    return err
+}
+defer session.EndSession(ctx)
+```
+
+---
+
 ## Reserved Framework Endpoints
 
 The library pre-registers and reserves the following endpoints:
@@ -149,7 +267,9 @@ Any attempt by a consuming application to register a route at `/health` or `/rea
 
 ## Configuration
 
-All environment variables read by the library use the **`OHM9969_`** prefix:
+All environment variables read by the library use the **`OHM9969_`** prefix.
+
+### REST Server Configuration
 
 | Variable | Description | Default |
 |---|---|---|
@@ -161,31 +281,65 @@ All environment variables read by the library use the **`OHM9969_`** prefix:
 | `OHM9969_SERVER_IDLE_TIMEOUT` | Maximum duration for keep-alive connections | `60s` |
 | `OHM9969_SERVER_SHUTDOWN_TIMEOUT` | Graceful shutdown timeout before forcing exit | `10s` |
 
-`StartREST` loads an optional `.env` file when present. Configuration precedence
-is system environment, then `.env`, then the defaults declared by the library.
-An absent `.env` file is not an error.
+### MongoDB Configuration
+
+| Variable | Description | Default |
+|---|---|---|
+| `OHM9969_MONGODB_URI` | MongoDB connection URI string | `mongodb://localhost:27017` |
+| `OHM9969_MONGODB_DATABASE` | Default database name for collections | `""` (empty) |
+| `OHM9969_MONGODB_CONNECT_TIMEOUT` | Initial connection timeout | `10s` |
+| `OHM9969_MONGODB_SERVER_SELECTION_TIMEOUT` | Server selection timeout | `5s` |
+| `OHM9969_MONGODB_SOCKET_TIMEOUT` | Socket read/write timeout | `10s` |
+| `OHM9969_MONGODB_MAX_POOL_SIZE` | Maximum connection pool size | `100` |
+| `OHM9969_MONGODB_MIN_POOL_SIZE` | Minimum connection pool size | `5` |
+| `OHM9969_MONGODB_MAX_CONN_IDLE_TIME` | Maximum duration a connection remains idle | `10m` |
+| `OHM9969_MONGODB_APP_NAME` | Client metadata application name sent to MongoDB | `""` (empty) |
+
+Both `StartREST` and `mongodb.Connect` load an optional `.env` file when present. Configuration precedence
+is system environment variables, then `.env`, then library defaults. An absent `.env` file is not an error.
 
 ---
 
 ## Consumer Bootstrap
 
-Here is how an importing application bootstraps a service using this library:
+Here is how an importing application bootstraps both MongoDB and the REST server:
 
 ```go
 package main
 
 import (
+    "context"
     "log"
+    "time"
 
+    "github.com/nawaphonOHM/whatever/pkg/mongodb"
     "github.com/nawaphonOHM/whatever/pkg/rest/server"
     "github.com/myorg/myapp/internal/items"
 )
 
 func main() {
-    // Collect API registrations from domain modules. StartREST loads the
-    // OHM9969_* configuration and installs the framework defaults.
+    ctx := context.Background()
+
+    // 1. Initialize MongoDB connection with zero-boilerplate environment configuration
+    mongoClient, err := mongodb.Connect(ctx)
+    if err != nil {
+        log.Fatalf("Failed to initialize MongoDB: %v", err)
+    }
+    defer func() {
+        shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        if err := mongoClient.Disconnect(shutdownCtx); err != nil {
+            log.Printf("MongoDB disconnect error: %v", err)
+        }
+    }()
+
+    // 2. Initialize domain items API with MongoDB collection
+    itemsColl := mongoClient.Collection("items")
+    itemAPI := items.NewItemAPIRegistration(itemsColl)
+
+    // 3. Collect domain API registrations and start REST server with graceful shutdown
     registrations := []*server.RestAPIRegistration{
-        items.NewItemAPIRegistration(),
+        itemAPI,
     }
 
     if err := server.StartREST(registrations); err != nil {
