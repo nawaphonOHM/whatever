@@ -60,7 +60,7 @@ Generic JSON response formatting utilities adhering to a consistent API contract
 - **Error Envelope**: RFC 9457 Problem Details (`application/problem+json`)
 
 ```go
-import "github.com/example/go-boilerplate/pkg/response"
+import "github.com/nawaphonOHM/whatever/pkg/rest/response"
 
 // HTTP 200 OK with data and optional message (returns response.Response)
 return response.OK(data)
