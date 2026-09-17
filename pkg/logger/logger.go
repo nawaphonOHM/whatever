@@ -1,3 +1,4 @@
+// Package logger provides structured HTTP request logging middleware.
 package logger
 
 import (
@@ -24,28 +25,28 @@ func GetRequestID(c *gin.Context) string {
 	return c.GetHeader(HeaderXRequestID)
 }
 
-// LoggerConfig defines the configuration options for the structured Logger middleware.
-type LoggerConfig struct {
+// Config defines the configuration options for the structured Logger middleware.
+type Config struct {
 	Logger    *slog.Logger
 	SkipPaths []string
 }
 
 // Logger returns a structured logging middleware using the default slog logger.
 func Logger() gin.HandlerFunc {
-	return LoggerWithConfig(LoggerConfig{
+	return WithConfig(Config{
 		Logger: slog.Default(),
 	})
 }
 
-// LoggerWithLogger returns a structured logging middleware using a specific slog.Logger instance.
-func LoggerWithLogger(logger *slog.Logger) gin.HandlerFunc {
-	return LoggerWithConfig(LoggerConfig{
+// WithLogger returns a structured logging middleware using a specific slog.Logger instance.
+func WithLogger(logger *slog.Logger) gin.HandlerFunc {
+	return WithConfig(Config{
 		Logger: logger,
 	})
 }
 
-// LoggerWithConfig returns a structured logging middleware configured with custom options.
-func LoggerWithConfig(cfg LoggerConfig) gin.HandlerFunc {
+// WithConfig returns a structured logging middleware configured with custom options.
+func WithConfig(cfg Config) gin.HandlerFunc {
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))

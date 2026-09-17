@@ -1,3 +1,4 @@
+// Package server provides internal HTTP server management, routing, and context handling.
 package server
 
 import (
@@ -213,8 +214,8 @@ func (c *Context) ShouldBindQuery(obj any) error {
 	return nil
 }
 
-// ShouldBindUri is a shortcut for c.ShouldBindWith(obj, binding.Uri).
-func (c *Context) ShouldBindUri(obj any) error {
+// ShouldBindURI is a shortcut for c.ShouldBindWith(obj, binding.Uri).
+func (c *Context) ShouldBindURI(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.ShouldBindUri(obj)
 	}
@@ -253,8 +254,8 @@ func (c *Context) BindQuery(obj any) error {
 	return nil
 }
 
-// BindUri is a shortcut for c.BindWith(obj, binding.Uri).
-func (c *Context) BindUri(obj any) error {
+// BindURI is a shortcut for c.BindWith(obj, binding.Uri).
+func (c *Context) BindURI(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.BindUri(obj)
 	}

@@ -57,8 +57,8 @@ func (r *SuccessResponse[T]) WithTimestamp(t time.Time) *SuccessResponse[T] {
 	return r
 }
 
-// RResponseEnvelope ResponseEnvelope is a type alias for SuccessResponse.
-type RResponseEnvelope[T any] = SuccessResponse[T]
+// Envelope is a type alias for SuccessResponse.
+type Envelope[T any] = SuccessResponse[T]
 
 // ProblemDetails represents an RFC 9457 Problem Details object.
 type ProblemDetails struct {

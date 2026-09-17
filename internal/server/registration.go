@@ -22,6 +22,7 @@ type Middleware func(c *Context)
 // HTTPMethod represents supported HTTP request methods.
 type HTTPMethod int
 
+// Supported HTTP method constants.
 const (
 	GET HTTPMethod = iota
 	HEAD
@@ -74,25 +75,25 @@ func (m HTTPMethod) IsValid() bool {
 	return m >= GET && m <= TRACE
 }
 
-// ApiVersioning represents the API major version (e.g. 1 for v1). 0 indicates unversioned.
-type ApiVersioning uint
+// APIVersioning represents the API major version (e.g. 1 for v1). 0 indicates unversioned.
+type APIVersioning uint
 
 // Pathz represents a URL path segment.
 type Pathz string
 
-// ExportableApi defines a single API route endpoint with method, path, middlewares, and handler.
-type ExportableApi struct {
+// ExportableAPI defines a single API route endpoint with method, path, middlewares, and handler.
+type ExportableAPI struct {
 	Path       Pathz
 	Method     HTTPMethod
 	Middleware []Middleware
 	Handler    Handler
 }
 
-// RestApiRegistration groups multiple exportable APIs under a common prefix and version.
-type RestApiRegistration struct {
-	Version ApiVersioning
+// RestAPIRegistration groups multiple exportable APIs under a common prefix and version.
+type RestAPIRegistration struct {
+	Version APIVersioning
 	Prefix  Pathz
-	Apis    []*ExportableApi
+	Apis    []*ExportableAPI
 }
 
 // Reserved path constants for framework-managed health probes.
@@ -122,7 +123,7 @@ type ValidatedRoute struct {
 // CalculateFullPath joins version, prefix, and path into a normalized canonical URL path.
 // No implicit "/api" segment is inserted — callers supply the full prefix they want.
 // When version > 0, a "/v{N}" segment is prepended unless the prefix already contains it.
-func CalculateFullPath(version ApiVersioning, prefix Pathz, path Pathz) string {
+func CalculateFullPath(version APIVersioning, prefix Pathz, path Pathz) string {
 	pfx := strings.TrimSpace(string(prefix))
 	pth := strings.TrimSpace(string(path))
 
@@ -169,12 +170,12 @@ func CalculateFullPath(version ApiVersioning, prefix Pathz, path Pathz) string {
 	return cleaned
 }
 
-// ValidateRegistrations inspects a slice of RestApiRegistration entries and verifies:
+// ValidateRegistrations inspects a slice of RestAPIRegistration entries and verifies:
 // 1. No nil registrations, nil APIs, or nil handlers
 // 2. All HTTP methods are valid
 // 3. No collision with framework-reserved /health and /ready endpoints
 // 4. No duplicate concrete method/path combinations
-func ValidateRegistrations(registrations []*RestApiRegistration) ([]*ValidatedRoute, error) {
+func ValidateRegistrations(registrations []*RestAPIRegistration) ([]*ValidatedRoute, error) {
 	var validated []*ValidatedRoute
 	seen := make(map[string]bool)
 
@@ -224,13 +225,13 @@ func ValidateRegistrations(registrations []*RestApiRegistration) ([]*ValidatedRo
 
 // RegisterRoutes validates the provided registrations, mounts framework health endpoints,
 // and attaches all validated routes and middlewares to the Gin engine.
-func RegisterRoutes(engine *gin.Engine, registrations []*RestApiRegistration) error {
+func RegisterRoutes(engine *gin.Engine, registrations []*RestAPIRegistration) error {
 	return RegisterRoutesWithVersion(engine, registrations, "")
 }
 
 // RegisterRoutesWithVersion validates the provided registrations, mounts framework health endpoints
 // with version metadata, and attaches all validated routes and middlewares to the Gin engine.
-func RegisterRoutesWithVersion(engine *gin.Engine, registrations []*RestApiRegistration, version string) error {
+func RegisterRoutesWithVersion(engine *gin.Engine, registrations []*RestAPIRegistration, version string) error {
 	validated, err := ValidateRegistrations(registrations)
 	if err != nil {
 		return err

@@ -23,6 +23,7 @@ type Response = response.Response
 // HTTPMethod represents supported HTTP request methods.
 type HTTPMethod = intserver.HTTPMethod
 
+// Supported HTTP method constants.
 const (
 	GET     HTTPMethod = intserver.GET
 	HEAD    HTTPMethod = intserver.HEAD
@@ -35,17 +36,17 @@ const (
 	TRACE   HTTPMethod = intserver.TRACE
 )
 
-// ApiVersioning represents the API major version (e.g. 1 for v1). 0 indicates unversioned.
-type ApiVersioning = intserver.ApiVersioning
+// APIVersioning represents the API major version (e.g. 1 for v1). 0 indicates unversioned.
+type APIVersioning = intserver.APIVersioning
 
 // Pathz represents a URL path segment.
 type Pathz = intserver.Pathz
 
-// ExportableApi defines a single API route endpoint with method, path, middlewares, and handler.
-type ExportableApi = intserver.ExportableApi
+// ExportableAPI defines a single API route endpoint with method, path, middlewares, and handler.
+type ExportableAPI = intserver.ExportableAPI
 
-// RestApiRegistration groups multiple exportable APIs under a common prefix and version.
-type RestApiRegistration = intserver.RestApiRegistration
+// RestAPIRegistration groups multiple exportable APIs under a common prefix and version.
+type RestAPIRegistration = intserver.RestAPIRegistration
 
 // Sentinel validation errors.
 var (

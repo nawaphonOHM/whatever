@@ -24,7 +24,7 @@ func TestLogger_StructuredLogging(t *testing.T) {
 		c.Writer.Header().Set(HeaderXRequestID, "test-req-123")
 		c.Next()
 	})
-	r.Use(LoggerWithLogger(logger))
+	r.Use(WithLogger(logger))
 
 	r.GET("/items/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -55,7 +55,7 @@ func TestLogger_SkipPaths(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
 	r := gin.New()
-	r.Use(LoggerWithConfig(LoggerConfig{
+	r.Use(WithConfig(Config{
 		Logger:    logger,
 		SkipPaths: []string{"/health"},
 	}))
@@ -98,7 +98,7 @@ func TestLogger_ErrorLogLevels(t *testing.T) {
 			logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
 			r := gin.New()
-			r.Use(LoggerWithLogger(logger))
+			r.Use(WithLogger(logger))
 			r.GET("/status", func(c *gin.Context) {
 				c.Status(tt.status)
 			})

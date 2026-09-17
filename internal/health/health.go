@@ -1,3 +1,4 @@
+// Package health provides health check handlers for framework liveness and readiness probes.
 package health
 
 import (

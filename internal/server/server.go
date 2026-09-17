@@ -85,7 +85,7 @@ func New(cfg *Config) *Server {
 // NewFromRegistrations loads environment configuration with OHM9969_ prefix,
 // validates registrations, attaches default middlewares, mounts reserved health endpoints,
 // and prepares a Server ready to start.
-func NewFromRegistrations(registrations []*RestApiRegistration) (*Server, error) {
+func NewFromRegistrations(registrations []*RestAPIRegistration) (*Server, error) {
 	cfg, err := intcfg.Load[Config]()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load server config: %w", err)
@@ -153,7 +153,7 @@ func (s *Server) SetupDefaultMiddlewares(loggerSkipPaths ...string) {
 
 	s.Engine.Use(
 		intmw.RequestID(),
-		logger.LoggerWithConfig(logger.LoggerConfig{
+		logger.WithConfig(logger.Config{
 			SkipPaths: skipPaths,
 		}),
 		intmw.Recovery(),
@@ -173,12 +173,12 @@ func (s *Server) SetupDefaultMiddlewares(loggerSkipPaths ...string) {
 
 // RegisterRoutes validates and mounts caller-supplied API registrations onto the server's Gin engine,
 // pre-registering the reserved /health and /ready health endpoints.
-func (s *Server) RegisterRoutes(registrations []*RestApiRegistration) error {
+func (s *Server) RegisterRoutes(registrations []*RestAPIRegistration) error {
 	return RegisterRoutesWithVersion(s.Engine, registrations, "")
 }
 
 // RegisterRoutesWithVersion validates and mounts caller-supplied API registrations with version metadata,
 // pre-registering the reserved /health and /ready health endpoints.
-func (s *Server) RegisterRoutesWithVersion(registrations []*RestApiRegistration, version string) error {
+func (s *Server) RegisterRoutesWithVersion(registrations []*RestAPIRegistration, version string) error {
 	return RegisterRoutesWithVersion(s.Engine, registrations, version)
 }

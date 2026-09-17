@@ -21,11 +21,11 @@ func TestNewFromRegistrations_Success(t *testing.T) {
 	t.Setenv("OHM9969_APP_VERSION", "2.1.0")
 	t.Setenv("OHM9969_SERVER_PORT", fmt.Sprintf("%d", getFreePort(t)))
 
-	regs := []*RestApiRegistration{
+	regs := []*RestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/items",
-			Apis: []*ExportableApi{
+			Apis: []*ExportableAPI{
 				{
 					Path:   "",
 					Method: GET,
@@ -63,11 +63,11 @@ func TestNewFromRegistrations_Success(t *testing.T) {
 func TestNewFromRegistrations_ReservedPathRejected(t *testing.T) {
 	t.Setenv("OHM9969_GIN_MODE", gin.TestMode)
 
-	regs := []*RestApiRegistration{
+	regs := []*RestAPIRegistration{
 		{
 			Version: 0,
 			Prefix:  "",
-			Apis: []*ExportableApi{
+			Apis: []*ExportableAPI{
 				{
 					Path:   "/health",
 					Method: GET,
@@ -89,11 +89,11 @@ func TestNewFromRegistrations_DuplicateRejected(t *testing.T) {
 	t.Setenv("OHM9969_GIN_MODE", gin.TestMode)
 
 	handler := func(c *Context) response.Response { return response.NoContent() }
-	regs := []*RestApiRegistration{
+	regs := []*RestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/items",
-			Apis: []*ExportableApi{
+			Apis: []*ExportableAPI{
 				{Path: "", Method: GET, Handler: handler},
 				{Path: "", Method: GET, Handler: handler},
 			},
@@ -113,11 +113,11 @@ func TestStartREST_RunsAndShutsDown(t *testing.T) {
 	t.Setenv("OHM9969_SERVER_PORT", fmt.Sprintf("%d", port))
 	t.Setenv("OHM9969_SERVER_SHUTDOWN_TIMEOUT", "2s")
 
-	regs := []*RestApiRegistration{
+	regs := []*RestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/ping",
-			Apis: []*ExportableApi{
+			Apis: []*ExportableAPI{
 				{
 					Path:   "",
 					Method: GET,
@@ -180,7 +180,7 @@ func TestStartREST_RunsAndShutsDown(t *testing.T) {
 func TestStartREST_ValidationFailure(t *testing.T) {
 	t.Setenv("OHM9969_GIN_MODE", gin.TestMode)
 
-	err := StartREST([]*RestApiRegistration{nil})
+	err := StartREST([]*RestAPIRegistration{nil})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNilRegistration)
 }

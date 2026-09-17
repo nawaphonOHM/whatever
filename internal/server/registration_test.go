@@ -48,7 +48,7 @@ func TestHTTPMethod(t *testing.T) {
 func TestCalculateFullPath(t *testing.T) {
 	tests := []struct {
 		name     string
-		version  ApiVersioning
+		version  APIVersioning
 		prefix   Pathz
 		path     Pathz
 		expected string
@@ -79,18 +79,18 @@ func TestValidateRegistrations_Errors(t *testing.T) {
 	dummyHandler := func(c *Context) response.Response { return response.NoContent() }
 
 	t.Run("nil registration", func(t *testing.T) {
-		regs := []*RestApiRegistration{nil}
+		regs := []*RestAPIRegistration{nil}
 		_, err := ValidateRegistrations(regs)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrNilRegistration)
 	})
 
 	t.Run("nil api entry", func(t *testing.T) {
-		regs := []*RestApiRegistration{
+		regs := []*RestAPIRegistration{
 			{
 				Version: 1,
 				Prefix:  "/items",
-				Apis:    []*ExportableApi{nil},
+				Apis:    []*ExportableAPI{nil},
 			},
 		}
 		_, err := ValidateRegistrations(regs)
@@ -99,11 +99,11 @@ func TestValidateRegistrations_Errors(t *testing.T) {
 	})
 
 	t.Run("nil handler", func(t *testing.T) {
-		regs := []*RestApiRegistration{
+		regs := []*RestAPIRegistration{
 			{
 				Version: 1,
 				Prefix:  "/items",
-				Apis: []*ExportableApi{
+				Apis: []*ExportableAPI{
 					{
 						Path:    "/test",
 						Method:  GET,
@@ -118,11 +118,11 @@ func TestValidateRegistrations_Errors(t *testing.T) {
 	})
 
 	t.Run("invalid method", func(t *testing.T) {
-		regs := []*RestApiRegistration{
+		regs := []*RestAPIRegistration{
 			{
 				Version: 1,
 				Prefix:  "/items",
-				Apis: []*ExportableApi{
+				Apis: []*ExportableAPI{
 					{
 						Path:    "/test",
 						Method:  HTTPMethod(999),
@@ -137,11 +137,11 @@ func TestValidateRegistrations_Errors(t *testing.T) {
 	})
 
 	t.Run("reserved /health collision in path", func(t *testing.T) {
-		regs := []*RestApiRegistration{
+		regs := []*RestAPIRegistration{
 			{
 				Version: 0,
 				Prefix:  "",
-				Apis: []*ExportableApi{
+				Apis: []*ExportableAPI{
 					{
 						Path:    "/health",
 						Method:  GET,
@@ -156,11 +156,11 @@ func TestValidateRegistrations_Errors(t *testing.T) {
 	})
 
 	t.Run("reserved /ready collision in prefix", func(t *testing.T) {
-		regs := []*RestApiRegistration{
+		regs := []*RestAPIRegistration{
 			{
 				Version: 0,
 				Prefix:  "/ready",
-				Apis: []*ExportableApi{
+				Apis: []*ExportableAPI{
 					{
 						Path:    "",
 						Method:  GET,
@@ -175,11 +175,11 @@ func TestValidateRegistrations_Errors(t *testing.T) {
 	})
 
 	t.Run("duplicate route registration", func(t *testing.T) {
-		regs := []*RestApiRegistration{
+		regs := []*RestAPIRegistration{
 			{
 				Version: 1,
 				Prefix:  "/items",
-				Apis: []*ExportableApi{
+				Apis: []*ExportableAPI{
 					{
 						Path:    "/list",
 						Method:  GET,
@@ -203,11 +203,11 @@ func TestRegisterRoutesWithVersion(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 
-	regs := []*RestApiRegistration{
+	regs := []*RestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/items",
-			Apis: []*ExportableApi{
+			Apis: []*ExportableAPI{
 				{
 					Path:   "",
 					Method: GET,
@@ -272,11 +272,11 @@ func TestRegisterRoutes_MiddlewareChain(t *testing.T) {
 		order = append(order, "mw2_after")
 	}
 
-	regs := []*RestApiRegistration{
+	regs := []*RestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/chain",
-			Apis: []*ExportableApi{
+			Apis: []*ExportableAPI{
 				{
 					Path:       "/test",
 					Method:     GET,
