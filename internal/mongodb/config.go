@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	intcfg "github.com/nawaphonOHM/whatever/internal/config"
+	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 )
 
 // Config defines the configuration options for connecting to a MongoDB instance or cluster.

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	intcfg "github.com/nawaphonOHM/whatever/internal/config"
+	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

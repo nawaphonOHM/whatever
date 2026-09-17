@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	intcfg "github.com/nawaphonOHM/whatever/internal/config"
-	intmw "github.com/nawaphonOHM/whatever/internal/middleware"
+	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
+	"github.com/nawaphonOHM/whatever/internal/rest/middleware"
 	"github.com/nawaphonOHM/whatever/pkg/logger"
 	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 )
@@ -152,12 +152,12 @@ func (s *Server) SetupDefaultMiddlewares(loggerSkipPaths ...string) {
 	}
 
 	s.Engine.Use(
-		intmw.RequestID(),
+		middleware.RequestID(),
 		logger.WithConfig(logger.Config{
 			SkipPaths: skipPaths,
 		}),
-		intmw.Recovery(),
-		intmw.CORS(intmw.DefaultCORSConfig()),
+		middleware.Recovery(),
+		middleware.CORS(middleware.DefaultCORSConfig()),
 	)
 
 	s.Engine.NoRoute(func(c *gin.Context) {

@@ -3,7 +3,7 @@
 package server
 
 import (
-	intserver "github.com/nawaphonOHM/whatever/internal/server"
+	intserver "github.com/nawaphonOHM/whatever/internal/rest/server"
 )
 
 // StartREST initializes and runs the HTTP server with the provided REST API registrations.
