@@ -26,8 +26,6 @@ This repository is a library, not an application binary. An importing service ow
 its `main` package and supplies its own domain registrations.
 
 ```
-.
-├── configs/                   # Optional configuration files (.env)
 ├── internal/                  # Private configuration, middleware, server, and mongodb implementation
 ├── pkg/
 │   ├── logger/                # Public structured logger helpers
