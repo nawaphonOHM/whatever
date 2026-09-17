@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/health"
+	"github.com/nawaphonOHM/whatever/internal/rest/health"
 	"github.com/nawaphonOHM/whatever/pkg/rest/response"
 )
 
