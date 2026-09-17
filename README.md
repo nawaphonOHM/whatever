@@ -1,8 +1,6 @@
-# Go Boilerplate Library
+# whatever
 
-[![CI](https://github.com/example/go-boilerplate/actions/workflows/ci.yml/badge.svg)](https://github.com/example/go-boilerplate/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/example/go-boilerplate)](https://goreportcard.com/report/github.com/example/go-boilerplate)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
 
 A production-ready, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, zero-boilerplate managed MongoDB client connectivity, production-grade middlewares, and uniform JSON API response envelopes.
 
@@ -28,7 +26,6 @@ This repository is a library, not an application binary. An importing service ow
 its `main` package and supplies its own domain registrations.
 
 ```
-.
 ├── internal/                  # Private configuration, middleware, server, and mongodb implementation
 ├── pkg/
 │   ├── logger/                # Public structured logger helpers
@@ -275,6 +272,7 @@ All environment variables read by the library use the **`OHM9969_`** prefix.
 |---|---|---|
 | `OHM9969_SERVER_HOST` | Network interface address to bind | `""` (all interfaces) |
 | `OHM9969_SERVER_PORT` | HTTP server port | `8080` |
+| `OHM9969_APP_VERSION` | Application version reported by health endpoints | `""` (empty) |
 | `OHM9969_GIN_MODE` | Gin engine mode (`debug`, `release`, `test`) | `release` |
 | `OHM9969_SERVER_READ_TIMEOUT` | Maximum duration for reading request | `10s` |
 | `OHM9969_SERVER_WRITE_TIMEOUT` | Maximum duration for writing response | `10s` |
