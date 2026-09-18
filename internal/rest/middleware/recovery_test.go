@@ -1,3 +1,4 @@
+// Package middleware provides unit tests for panic recovery middleware.
 package middleware
 
 import (
@@ -14,44 +15,78 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRecovery_HandlesPanic(t *testing.T) {
-	var buf bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+const (
+	panicMsg   = "something went critically wrong"
+	panicPath  = "/panic"
+	panicReqID = "panic-req-id"
+)
 
+// setupPanicRouter creates a test router with recovery middleware that panics.
+func setupPanicRouter(logger *slog.Logger) *gin.Engine {
 	r := gin.New()
 	r.Use(RequestID())
 	r.Use(RecoveryWithLogger(logger))
-
-	r.GET("/panic", func(c *gin.Context) {
-		panic("something went critically wrong")
+	r.GET(panicPath, func(*gin.Context) {
+		panic(panicMsg)
 	})
+	return r
+}
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/panic", nil)
-	req.Header.Set(HeaderXRequestID, "panic-req-id")
+// verifyProblemDetails checks RFC 9457 fields on unmarshaled response.
+func verifyProblemDetails(t *testing.T, prob response.ProblemDetails) {
+	assert.Equal(t, http.StatusInternalServerError, prob.Status)
+	assert.Equal(t, "about:blank", prob.Type)
+	assert.Equal(t, "Internal Server Error", prob.Title)
+	assert.Equal(t, "INTERNAL_SERVER_ERROR", prob.Code)
+	assert.Equal(t, "An unexpected internal server error occurred", prob.Detail)
+	assert.Equal(t, panicPath, prob.Instance)
+}
 
-	// Ensure the test does not crash from panic
-	assert.NotPanics(t, func() {
-		r.ServeHTTP(w, req)
-	})
-
+// verifyPanicResponse validates status code and RFC problem details.
+func verifyPanicResponse(t *testing.T, w *httptest.ResponseRecorder) {
+	// Verify HTTP status code
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	// Verify response content type
 	assert.Equal(t, "application/problem+json", w.Header().Get("Content-Type"))
 
 	var prob response.ProblemDetails
 	err := json.Unmarshal(w.Body.Bytes(), &prob)
 	require.NoError(t, err)
 
-	assert.Equal(t, http.StatusInternalServerError, prob.Status)
-	assert.Equal(t, "about:blank", prob.Type)
-	assert.Equal(t, "Internal Server Error", prob.Title)
-	assert.Equal(t, "INTERNAL_SERVER_ERROR", prob.Code)
-	assert.Equal(t, "An unexpected internal server error occurred", prob.Detail)
-	assert.Equal(t, "/panic", prob.Instance)
+	verifyProblemDetails(t, prob)
+}
 
-	// Verify structured log captured the panic
+// verifyPanicLogs validates that the buffer contains required log entries.
+func verifyPanicLogs(t *testing.T, buf *bytes.Buffer) {
+	// Extract output from test buffer
 	logOutput := buf.String()
+	// Assert presence of recovery message
 	assert.Contains(t, logOutput, "panic recovered during request processing")
-	assert.Contains(t, logOutput, "something went critically wrong")
-	assert.Contains(t, logOutput, "panic-req-id")
+	// Assert presence of panic detail
+	assert.Contains(t, logOutput, panicMsg)
+	// Assert presence of request correlation ID
+	assert.Contains(t, logOutput, panicReqID)
+}
+
+// TestRecovery_HandlesPanic verifies that panics are caught properly.
+func TestRecovery_HandlesPanic(t *testing.T) {
+	var buf bytes.Buffer
+	// Initialize logger capturing output to buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, nil))
+	r := setupPanicRouter(logger)
+
+	// Create request with custom request ID
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, panicPath, nil)
+	require.NoError(t, err)
+	req.Header.Set(HeaderXRequestID, panicReqID)
+
+	// Execute HTTP request ensuring no crash
+	assert.NotPanics(t, func() {
+		r.ServeHTTP(w, req)
+	})
+
+	// Verify HTTP response and logs
+	verifyPanicResponse(t, w)
+	verifyPanicLogs(t, &buf)
 }

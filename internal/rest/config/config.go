@@ -1,7 +1,8 @@
-// Package config provides environment variable parsing and configuration loading.
+// Package config provides environment variable parsing and configuration.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -9,26 +10,62 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Load parses environment variables into a struct of type T.
-// It searches for .env files in the provided filenames, or ".env" by default if none provided.
-// If .env file is missing, it silently proceeds without error and reads from system environment.
-// Values precedence: System Environment > .env file > Struct Default Tags.
-func Load[T any](filenames ...string) (*T, error) {
-	var target T
+// isNotExistError checks if error represents a file non-existence error.
+func isNotExistError(err error) bool {
+	if errors.Is(err, os.ErrNotExist) {
+		return true
+	}
+	return os.IsNotExist(err)
+}
 
-	// Attempt to load .env file if available
-	if len(filenames) > 0 {
-		_ = godotenv.Load(filenames...)
-	} else {
-		// Try default .env file in current directory or configs/.env
-		if _, err := os.Stat(".env"); err == nil {
-			_ = godotenv.Load(".env")
-		} else if _, err := os.Stat("configs/.env"); err == nil {
-			_ = godotenv.Load("configs/.env")
+// loadExplicitEnv loads the specified environment files if provided.
+func loadExplicitEnv(filenames []string) error {
+	err := godotenv.Load(filenames...)
+	if err != nil && !isNotExistError(err) {
+		return fmt.Errorf("failed to load env file: %w", err)
+	}
+	return nil
+}
+
+// tryLoadFile attempts to load a file if it exists on disk.
+func tryLoadFile(path string) (bool, error) {
+	if _, err := os.Stat(path); err == nil {
+		if err := godotenv.Load(path); err != nil {
+			return true, fmt.Errorf("failed to load %s file: %w", path, err)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+// loadDefaultEnv tries loading default .env or configs/.env if present.
+func loadDefaultEnv() error {
+	for _, p := range []string{".env", "configs/.env"} {
+		loaded, err := tryLoadFile(p)
+		if loaded {
+			return err
 		}
 	}
+	return nil
+}
 
-	// Parse environment variables with struct tags
+// loadEnvFiles loads environment variables from files based on args.
+func loadEnvFiles(filenames []string) error {
+	if len(filenames) > 0 {
+		return loadExplicitEnv(filenames)
+	}
+	return loadDefaultEnv()
+}
+
+// Load parses environment variables into a struct of type T.
+// It searches for .env files in filenames, or default locations if none.
+// Values precedence: System Environment > .env file > Struct Default Tags.
+func Load[T any](filenames ...string) (*T, error) {
+	if err := loadEnvFiles(filenames); err != nil {
+		return nil, err
+	}
+
+	var target T
 	if err := env.Parse(&target); err != nil {
 		return nil, fmt.Errorf("failed to parse environment config: %w", err)
 	}

@@ -4,9 +4,9 @@ import (
 	"context"
 )
 
-// StartREST initializes and runs the HTTP server with the provided REST API registrations.
-// It loads configuration with OHM9969_ prefix, mounts reserved /health and /ready endpoints,
-// validates routes against collisions and duplicates, and manages graceful shutdown on SIGINT/SIGTERM.
+// StartREST initializes and runs the HTTP server.
+// It loads OHM9969_ configuration, mounts reserved health
+// endpoints, validates routes, and shuts down on signals.
 func StartREST(registrations []*RestAPIRegistration) error {
 	srv, err := NewFromRegistrations(registrations)
 	if err != nil {

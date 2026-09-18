@@ -1,4 +1,5 @@
-// Package health provides health check handlers for framework liveness and readiness probes.
+// Package health provides health check handlers for framework liveness
+// and readiness probes.
 package health
 
 import (
@@ -15,7 +16,8 @@ type Status struct {
 	Version   string    `json:"version,omitempty"`
 }
 
-// Handler manages internal liveness (/health) and readiness (/ready) health checks.
+// Handler manages internal liveness (/health) and readiness (/ready)
+// health checks.
 type Handler struct {
 	version string
 }
