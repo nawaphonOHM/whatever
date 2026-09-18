@@ -1,0 +1,73 @@
+package mongodb
+
+import (
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+)
+
+// applyConnectTimeouts sets connect and server selection timeouts.
+func applyConnectTimeouts(opts *options.ClientOptions, c *Config) {
+	if c.ConnectTimeout > 0 {
+		opts.SetConnectTimeout(c.ConnectTimeout)
+	}
+	if c.ServerSelectionTimeout > 0 {
+		opts.SetServerSelectionTimeout(c.ServerSelectionTimeout)
+	}
+}
+
+// applySocketTimeout sets socket timeout on driver options.
+func applySocketTimeout(opts *options.ClientOptions, c *Config) {
+	if c.SocketTimeout > 0 {
+		opts.SetTimeout(c.SocketTimeout)
+	}
+}
+
+// applyPoolSizes sets max and min pool sizes on driver options.
+func applyPoolSizes(opts *options.ClientOptions, c *Config) {
+	if c.MaxPoolSize > 0 {
+		opts.SetMaxPoolSize(c.MaxPoolSize)
+	}
+	if c.MinPoolSize > 0 {
+		opts.SetMinPoolSize(c.MinPoolSize)
+	}
+}
+
+// applyPoolMetadata sets idle timeout and app name metadata.
+func applyPoolMetadata(opts *options.ClientOptions, c *Config) {
+	if c.MaxConnIdleTime > 0 {
+		opts.SetMaxConnIdleTime(c.MaxConnIdleTime)
+	}
+	if c.AppName != "" {
+		opts.SetAppName(c.AppName)
+	}
+}
+
+// applyExtraOptions merges additional driver options if provided.
+func applyExtraOptions(
+	opts *options.ClientOptions,
+	extraOpts []*options.ClientOptions,
+) *options.ClientOptions {
+	if len(extraOpts) == 0 {
+		return opts
+	}
+	allOpts := append([]*options.ClientOptions{opts}, extraOpts...)
+	return options.MergeClientOptions(allOpts...)
+}
+
+// BuildClientOptions creates official mongo-driver ClientOptions from Config
+// and merges any additional driver options.
+func BuildClientOptions(
+	cfg *Config,
+	extraOpts ...*options.ClientOptions,
+) *options.ClientOptions {
+	c := cfg
+	if c == nil {
+		c = DefaultConfig()
+	}
+
+	opts := options.Client().ApplyURI(c.URI)
+	applyConnectTimeouts(opts, c)
+	applySocketTimeout(opts, c)
+	applyPoolSizes(opts, c)
+	applyPoolMetadata(opts, c)
+	return applyExtraOptions(opts, extraOpts)
+}

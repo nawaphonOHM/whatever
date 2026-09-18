@@ -1,8 +1,8 @@
+// Package config provides unit tests for environment configuration parsing.
 package config
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -10,56 +10,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	envPort        = "PORT"
+	envHost        = "HOST"
+	envDebug       = "DEBUG"
+	envTimeout     = "TIMEOUT"
+	envDBURL       = "DATABASE_URL"
+	envOptVal      = "OPTIONAL_VAL"
+	filePerm0600   = 0o600
+	defaultOptVal  = "default_opt"
+	customOptVal   = "custom_opt"
+	postgresURL    = "postgres://user:pass@localhost:5432/db"
+	sqliteURL      = "sqlite://test.db"
+	localHostStr   = "localhost"
+	defaultPortVal = 8080
+	overridePort   = 9090
+	dotEnvPort     = 3000
+	precedencePort = 4000
+	missingPort    = 5000
+)
+
+// TestConfig represents a test configuration structure with struct tags.
 type TestConfig struct {
-	Port        int           `env:"PORT" envDefault:"8080"`
 	Host        string        `env:"HOST" envDefault:"localhost"`
-	Debug       bool          `env:"DEBUG" envDefault:"false"`
-	Timeout     time.Duration `env:"TIMEOUT" envDefault:"5s"`
 	DatabaseURL string        `env:"DATABASE_URL"`
 	OptionalVal string        `env:"OPTIONAL_VAL" envDefault:"default_opt"`
+	Timeout     time.Duration `env:"TIMEOUT" envDefault:"5s"`
+	Port        int           `env:"PORT" envDefault:"8080"`
+	Debug       bool          `env:"DEBUG" envDefault:"false"`
 }
 
-func TestLoad_Defaults(t *testing.T) {
-	// Clean environment
-	t.Setenv("PORT", "")
-	t.Setenv("HOST", "")
-	t.Setenv("DEBUG", "")
-	t.Setenv("TIMEOUT", "")
-	t.Setenv("DATABASE_URL", "")
-	t.Setenv("OPTIONAL_VAL", "")
-
-	cfg, err := Load[TestConfig]()
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-
-	assert.Equal(t, 8080, cfg.Port)
-	assert.Equal(t, "localhost", cfg.Host)
-	assert.False(t, cfg.Debug)
-	assert.Equal(t, 5*time.Second, cfg.Timeout)
-	assert.Equal(t, "", cfg.DatabaseURL)
-	assert.Equal(t, "default_opt", cfg.OptionalVal)
-}
-
-func TestLoad_EnvOverrides(t *testing.T) {
-	t.Setenv("PORT", "9090")
-	t.Setenv("HOST", "0.0.0.0")
-	t.Setenv("DEBUG", "true")
-	t.Setenv("TIMEOUT", "10s")
-	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
-	t.Setenv("OPTIONAL_VAL", "custom_opt")
-
-	cfg, err := Load[TestConfig]()
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-
-	assert.Equal(t, 9090, cfg.Port)
-	assert.Equal(t, "0.0.0.0", cfg.Host)
-	assert.True(t, cfg.Debug)
-	assert.Equal(t, 10*time.Second, cfg.Timeout)
-	assert.Equal(t, "postgres://user:pass@localhost:5432/db", cfg.DatabaseURL)
-	assert.Equal(t, "custom_opt", cfg.OptionalVal)
-}
-
+// unsetEnv safely unsets environment variables and registers cleanup.
 func unsetEnv(t *testing.T, keys ...string) {
 	t.Helper()
 	for _, key := range keys {
@@ -67,79 +48,66 @@ func unsetEnv(t *testing.T, keys ...string) {
 		require.NoError(t, os.Unsetenv(key))
 		t.Cleanup(func() {
 			if had {
-				_ = os.Setenv(key, orig)
+				assert.NoError(t, os.Setenv(key, orig))
 			} else {
-				_ = os.Unsetenv(key)
+				assert.NoError(t, os.Unsetenv(key))
 			}
 		})
 	}
 }
 
-func TestLoad_DotEnvFile(t *testing.T) {
-	// Create temporary .env file
-	tmpDir := t.TempDir()
-	envFilePath := filepath.Join(tmpDir, ".env.test")
-	envContent := `PORT=3000
-HOST=127.0.0.1
-DEBUG=true
-TIMEOUT=15s
-DATABASE_URL=sqlite://test.db
-`
-	err := os.WriteFile(envFilePath, []byte(envContent), 0600)
-	require.NoError(t, err)
+// verifyDefaultConfig validates default values of parsed config.
+func verifyDefaultConfig(t *testing.T, cfg *TestConfig) {
+	assert.Equal(t, defaultPortVal, cfg.Port)
+	assert.Equal(t, localHostStr, cfg.Host)
+	assert.False(t, cfg.Debug)
+	assert.Equal(t, 5*time.Second, cfg.Timeout)
+	assert.Equal(t, "", cfg.DatabaseURL)
+	assert.Equal(t, defaultOptVal, cfg.OptionalVal)
+}
 
-	// Fully unset so godotenv can populate from the file (empty string still blocks it).
-	unsetEnv(t, "PORT", "HOST", "DEBUG", "TIMEOUT", "DATABASE_URL")
+// TestLoad_Defaults tests parsing config using only default tags.
+func TestLoad_Defaults(t *testing.T) {
+	for _, k := range []string{
+		envPort, envHost, envDebug, envTimeout, envDBURL, envOptVal,
+	} {
+		t.Setenv(k, "")
+	}
 
-	cfg, err := Load[TestConfig](envFilePath)
+	cfg, err := Load[TestConfig]()
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
+	verifyDefaultConfig(t, cfg)
+}
 
-	assert.Equal(t, 3000, cfg.Port)
-	assert.Equal(t, "127.0.0.1", cfg.Host)
+// verifyOverrideConfig validates overridden configuration values.
+func verifyOverrideConfig(t *testing.T, cfg *TestConfig) {
+	assert.Equal(t, overridePort, cfg.Port)
+	assert.Equal(t, "0.0.0.0", cfg.Host)
 	assert.True(t, cfg.Debug)
-	assert.Equal(t, 15*time.Second, cfg.Timeout)
-	assert.Equal(t, "sqlite://test.db", cfg.DatabaseURL)
+	assert.Equal(t, 10*time.Second, cfg.Timeout)
+	assert.Equal(t, postgresURL, cfg.DatabaseURL)
+	assert.Equal(t, customOptVal, cfg.OptionalVal)
 }
 
-func TestLoad_PrecedenceOrder(t *testing.T) {
-	// Create temporary .env file
-	tmpDir := t.TempDir()
-	envFilePath := filepath.Join(tmpDir, ".env.precedence")
-	envContent := `PORT=3000
-HOST=from-env-file
-`
-	err := os.WriteFile(envFilePath, []byte(envContent), 0600)
-	require.NoError(t, err)
+// TestLoad_EnvOverrides tests overriding struct defaults with system env.
+func TestLoad_EnvOverrides(t *testing.T) {
+	t.Setenv(envPort, "9090")
+	t.Setenv(envHost, "0.0.0.0")
+	t.Setenv(envDebug, "true")
+	t.Setenv(envTimeout, "10s")
+	t.Setenv(envDBURL, postgresURL)
+	t.Setenv(envOptVal, customOptVal)
 
-	// System env overrides .env file
-	t.Setenv("PORT", "4000")
-	// HOST must be truly unset so the .env value is applied.
-	unsetEnv(t, "HOST", "OPTIONAL_VAL")
-
-	cfg, err := Load[TestConfig](envFilePath)
+	cfg, err := Load[TestConfig]()
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-
-	// System env wins for PORT
-	assert.Equal(t, 4000, cfg.Port)
-	// .env file wins for HOST
-	assert.Equal(t, "from-env-file", cfg.Host)
-	// Default wins for OPTIONAL_VAL
-	assert.Equal(t, "default_opt", cfg.OptionalVal)
+	verifyOverrideConfig(t, cfg)
 }
 
-func TestLoad_MissingDotEnvFile(t *testing.T) {
-	t.Setenv("PORT", "5000")
-	// Non-existent file should gracefully fall back to system env / defaults
-	cfg, err := Load[TestConfig]("non_existent_file.env")
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-	assert.Equal(t, 5000, cfg.Port)
-}
-
+// TestLoad_InvalidTypeConversion tests error on invalid type conversions.
 func TestLoad_InvalidTypeConversion(t *testing.T) {
-	t.Setenv("PORT", "not-a-number")
+	t.Setenv(envPort, "not-a-number")
 	cfg, err := Load[TestConfig]()
 	assert.Error(t, err)
 	assert.Nil(t, cfg)

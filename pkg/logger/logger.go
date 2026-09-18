@@ -2,6 +2,7 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"time"
@@ -15,7 +16,13 @@ const HeaderXRequestID = "X-Request-ID"
 // RequestIDKey is the gin.Context key where the request ID is stored.
 const RequestIDKey = "RequestID"
 
-// GetRequestID extracts the request ID from the Gin context, or empty string if not found.
+const (
+	statusServerError = 500
+	statusClientError = 400
+	httpRequestMsg    = "HTTP Request"
+)
+
+// GetRequestID extracts the request ID from the Gin context, or empty string.
 func GetRequestID(c *gin.Context) string {
 	if val, exists := c.Get(RequestIDKey); exists {
 		if reqID, ok := val.(string); ok {
@@ -25,42 +32,83 @@ func GetRequestID(c *gin.Context) string {
 	return c.GetHeader(HeaderXRequestID)
 }
 
-// Config defines the configuration options for the structured Logger middleware.
+// Config defines options for the structured Logger middleware.
 type Config struct {
 	Logger    *slog.Logger
 	SkipPaths []string
 }
 
-// Logger returns a structured logging middleware using the default slog logger.
+// Logger returns a structured logging middleware using the default logger.
 func Logger() gin.HandlerFunc {
-	return WithConfig(Config{
-		Logger: slog.Default(),
-	})
+	return WithConfig(Config{Logger: slog.Default()})
 }
 
-// WithLogger returns a structured logging middleware using a specific slog.Logger instance.
+// WithLogger returns a logging middleware using a specific slog.Logger.
 func WithLogger(logger *slog.Logger) gin.HandlerFunc {
-	return WithConfig(Config{
-		Logger: logger,
-	})
+	return WithConfig(Config{Logger: logger})
 }
 
-// WithConfig returns a structured logging middleware configured with custom options.
+// buildSkipMap creates a lookup map for skipped paths.
+func buildSkipMap(paths []string) map[string]bool {
+	skipMap := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		skipMap[p] = true
+	}
+	return skipMap
+}
+
+// buildLogAttrs constructs standard log attributes for a request.
+func buildLogAttrs(c *gin.Context, latency time.Duration) []slog.Attr {
+	attrs := []slog.Attr{
+		slog.String("request_id", GetRequestID(c)),
+		slog.String("method", c.Request.Method),
+		slog.String("path", c.Request.URL.Path),
+		slog.String("query", c.Request.URL.RawQuery),
+		slog.Int("status", c.Writer.Status()),
+		slog.Int64("latency_ms", latency.Milliseconds()),
+		slog.Duration("latency", latency),
+		slog.String("client_ip", c.ClientIP()),
+		slog.String("user_agent", c.Request.UserAgent()),
+		slog.Int("bytes_out", c.Writer.Size()),
+	}
+	if len(c.Errors) > 0 {
+		attrs = append(attrs, slog.String("errors", c.Errors.String()))
+	}
+	return attrs
+}
+
+// determineLogLevel returns appropriate slog.Level for given HTTP status.
+func determineLogLevel(status int) slog.Level {
+	if status >= statusServerError {
+		return slog.LevelError
+	}
+	if status >= statusClientError {
+		return slog.LevelWarn
+	}
+	return slog.LevelInfo
+}
+
+// logRequest writes the log entry at appropriate level according to status.
+func logRequest(
+	ctx context.Context,
+	logger *slog.Logger,
+	status int,
+	attrs []slog.Attr,
+) {
+	level := determineLogLevel(status)
+	logger.LogAttrs(ctx, level, httpRequestMsg, attrs...)
+}
+
+// WithConfig returns a structured logging middleware configured with options.
 func WithConfig(cfg Config) gin.HandlerFunc {
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	}
-
-	skipMap := make(map[string]bool, len(cfg.SkipPaths))
-	for _, path := range cfg.SkipPaths {
-		skipMap[path] = true
-	}
+	skipMap := buildSkipMap(cfg.SkipPaths)
 
 	return func(c *gin.Context) {
-		path := c.Request.URL.Path
-
-		if skipMap[path] {
+		if skipMap[c.Request.URL.Path] {
 			c.Next()
 			return
 		}
@@ -69,36 +117,7 @@ func WithConfig(cfg Config) gin.HandlerFunc {
 		c.Next()
 		latency := time.Since(start)
 
-		status := c.Writer.Status()
-		reqID := GetRequestID(c)
-
-		attrs := []slog.Attr{
-			slog.String("request_id", reqID),
-			slog.String("method", c.Request.Method),
-			slog.String("path", path),
-			slog.String("query", c.Request.URL.RawQuery),
-			slog.Int("status", status),
-			slog.Int64("latency_ms", latency.Milliseconds()),
-			slog.Duration("latency", latency),
-			slog.String("client_ip", c.ClientIP()),
-			slog.String("user_agent", c.Request.UserAgent()),
-			slog.Int("bytes_out", c.Writer.Size()),
-		}
-
-		if len(c.Errors) > 0 {
-			attrs = append(attrs, slog.String("errors", c.Errors.String()))
-		}
-
-		msg := "HTTP Request"
-		ctx := c.Request.Context()
-
-		switch {
-		case status >= 500:
-			logger.LogAttrs(ctx, slog.LevelError, msg, attrs...)
-		case status >= 400:
-			logger.LogAttrs(ctx, slog.LevelWarn, msg, attrs...)
-		default:
-			logger.LogAttrs(ctx, slog.LevelInfo, msg, attrs...)
-		}
+		attrs := buildLogAttrs(c, latency)
+		logRequest(c.Request.Context(), logger, c.Writer.Status(), attrs)
 	}
 }

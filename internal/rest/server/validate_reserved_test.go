@@ -1,0 +1,57 @@
+package server
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestValidateRegistrations_ReservedPath rejects /health.
+func TestValidateRegistrations_ReservedPath(t *testing.T) {
+	// Arrange
+	regs := []*RestAPIRegistration{{
+		Apis: []*ExportableAPI{{
+			Path:    ReservedHealthPath,
+			Method:  GET,
+			Handler: dummyHandler,
+		}},
+	}}
+
+	// Act
+	_, err := validateRegistrations(regs)
+
+	// Assert
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrReservedPath)
+}
+
+// TestValidateRegistrations_Duplicate rejects colliding routes.
+func TestValidateRegistrations_Duplicate(t *testing.T) {
+	// Arrange
+	regs := []*RestAPIRegistration{
+		{
+			Prefix: "/items",
+			Apis: []*ExportableAPI{{
+				Path:    "",
+				Method:  GET,
+				Handler: dummyHandler,
+			}},
+		},
+		{
+			Prefix: "/items",
+			Apis: []*ExportableAPI{{
+				Path:    "",
+				Method:  GET,
+				Handler: dummyHandler,
+			}},
+		},
+	}
+
+	// Act
+	_, err := validateRegistrations(regs)
+
+	// Assert
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrDuplicateRoute)
+}

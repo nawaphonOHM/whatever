@@ -3,7 +3,6 @@ package mongodb
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
@@ -22,7 +21,8 @@ type Client struct {
 	defaultDatabase string
 }
 
-// NewClient creates a new Client wrapping an existing mongo.Client with a default database.
+// NewClient creates a new Client wrapping an existing mongo.Client with a
+// default database.
 func NewClient(rawClient *mongo.Client, defaultDatabase string) *Client {
 	return &Client{
 		rawClient:       rawClient,
@@ -30,23 +30,26 @@ func NewClient(rawClient *mongo.Client, defaultDatabase string) *Client {
 	}
 }
 
+// resolveDBName returns the target database name or default fallback.
+func (c *Client) resolveDBName(name ...string) string {
+	if len(name) > 0 && name[0] != "" {
+		return name[0]
+	}
+	return c.defaultDatabase
+}
+
 // Database returns a handle to the specified database.
-// If no database name or an empty name is provided, it falls back to the configured default database.
-// Returns nil if the client is not initialized.
+// If no database name or an empty name is provided, it falls back to the
+// configured default database. Returns nil if the client is not initialized.
 func (c *Client) Database(name ...string) *mongo.Database {
 	if c == nil || c.rawClient == nil {
 		return nil
 	}
-	dbName := c.defaultDatabase
-	if len(name) > 0 && name[0] != "" {
-		dbName = name[0]
-	}
-	return c.rawClient.Database(dbName)
+	return c.rawClient.Database(c.resolveDBName(name...))
 }
 
 // Collection returns a handle for a collection in the specified database.
-// If dbName is omitted or empty, it falls back to the configured default database.
-// Returns nil if the client is not initialized.
+// If dbName is omitted or empty, it falls back to default database.
 func (c *Client) Collection(name string, dbName ...string) *mongo.Collection {
 	db := c.Database(dbName...)
 	if db == nil {
@@ -72,48 +75,9 @@ func (c *Client) Disconnect(ctx context.Context) error {
 }
 
 // RawClient returns the underlying official *mongo.Client handle.
-// This serves as an escape hatch for advanced operations such as transactions, sessions, or change streams.
 func (c *Client) RawClient() *mongo.Client {
 	if c == nil {
 		return nil
 	}
 	return c.rawClient
-}
-
-// Connect loads MongoDB configuration from environment variables (OHM9969_MONGODB_*),
-// establishes a connection to the MongoDB deployment, verifies connectivity with Ping,
-// and returns a managed Client.
-func Connect(ctx context.Context, opts ...Option) (*Client, error) {
-	cfg, err := LoadConfig()
-	if err != nil {
-		return nil, err
-	}
-	return ConnectWithConfig(ctx, cfg, opts...)
-}
-
-// ConnectWithConfig connects to MongoDB using the provided Config and Options.
-// It verifies connectivity via Ping using the provided context.
-func ConnectWithConfig(ctx context.Context, cfg *Config, opts ...Option) (*Client, error) {
-	if cfg == nil {
-		return nil, ErrNilConfig
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid mongodb config: %w", err)
-	}
-
-	optionsContainer := NewOptions(opts...)
-	clientOptions := BuildClientOptions(cfg, optionsContainer.DriverOptions...)
-
-	rawClient, err := mongo.Connect(clientOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create mongodb client: %w", err)
-	}
-
-	client := NewClient(rawClient, cfg.Database)
-	if err := client.Ping(ctx); err != nil {
-		_ = rawClient.Disconnect(ctx)
-		return nil, fmt.Errorf("failed to ping mongodb: %w", err)
-	}
-
-	return client, nil
 }
