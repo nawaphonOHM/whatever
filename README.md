@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
 
-~~A production-ready~~, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, zero-boilerplate managed MongoDB client connectivity, production-grade middlewares, and uniform JSON API response envelopes.
+A production-ready, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, zero-boilerplate managed MongoDB client connectivity, production-grade middlewares, and uniform JSON API response envelopes.
 
 ---
 
@@ -42,8 +42,8 @@ its `main` package and supplies its own domain registrations.
 
 The unified REST package provides declarative route registration contracts and standardized response factories. Server execution, engine bootstrap, and lifecycle management are encapsulated internally within `internal/rest/server`.
 
-- **API Registration**: Declarative route registration structs (`RestAPIRegistration`, `ExportableAPI`), handler signatures (`Handler`, `Middleware`), request context wrapper (`Context`), HTTP method constants (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`, `HEAD`, `CONNECT`, `TRACE`), and path types (`Pathz`, `APIVersioning`).
-- **Standardized Response Factories**: The `Response` interface, generic JSON success envelope builders (`OK`, `Created`, `NoContent`, `JSON`, `SuccessResponse[T]`, `Envelope[T]`), and RFC 9457 Problem Details error constructors (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `InternalServerError`, `Error`, `ProblemDetails`).
+- **API Registration**: Declarative route registration structs (`RRestAPIRegistration`, `ExportableAPI`), handler signatures (`Handler`, `Middleware`), request context wrapper (`Context`), HTTP method constants (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`, `HEAD`, `CONNECT`, `TRACE`), and path types (`Pathz`, `APIVersioning`).
+- **Standardized Response Factories**: The `Response` interface, generic JSON success envelope builders (`OK`, `Created`, `NoContent`, `JSON`, `SuccessResponse[T]`, `Envelope[T]`), and RFC 9457 Problem Details error constructors (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `InternalServerError`, `Error`).
 
 - **Success Envelope**: `{"success": true, "message": "...", "data": ..., "timestamp": "..."}`
 - **Error Envelope**: RFC 9457 Problem Details (`application/problem+json`)
@@ -71,9 +71,7 @@ return rest.NotFound("NOT_FOUND", "Resource not found")
 
 ### `pkg/logger`
 
-The structured logger package provides logging middleware and request-tracing
-utilities with slog support. Request-ID generation, panic recovery, CORS, and
-framework health probe handling are installed internally by the framework server engine.
+The structured logger package provides HTTP request logging middleware and request-tracing utilities with `log/slog` support. It exports middleware constructors (`Logger`, `WithLogger`, `WithConfig`), request tracing helper (`GetRequestID`), and configuration struct (`Config`). Request-ID generation, panic recovery, CORS, and framework health probe handling are installed internally by the framework server engine.
 
 ### `pkg/mongodb`
 
@@ -83,7 +81,7 @@ The MongoDB package provides a zero-boilerplate entrypoint for connecting micros
 
 ## REST Registration Contract
 
-External projects define endpoints declaratively using `RestAPIRegistration` and `ExportableAPI`:
+External projects define endpoints declaratively using `RRestAPIRegistration` and `ExportableAPI`:
 
 ```go
 package myfeature
@@ -92,8 +90,15 @@ import (
     "github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
-func NewFeatureAPIs() *rest.RestAPIRegistration {
-    return &rest.RestAPIRegistration{
+func authMiddleware(c rest.Context) {
+    token := c.GetHeader("Authorization")
+    if token == "" {
+        return
+    }
+}
+
+func NewFeatureAPIs() *rest.RRestAPIRegistration {
+    return &rest.RRestAPIRegistration{
         Version: 1,           // Generates /v1 prefix
         Prefix:  "/items",     // Base path for this group; no /api is added
         Apis: []*rest.ExportableAPI{
@@ -105,8 +110,9 @@ func NewFeatureAPIs() *rest.RestAPIRegistration {
                 },
             },
             {
-                Path:   "/:id",
-                Method: rest.GET,
+                Path:       "/:id",
+                Method:     rest.GET,
+                Middleware: []rest.Middleware{authMiddleware},
                 Handler: func(c rest.Context) rest.Response {
                     id := c.Param("id")
                     return rest.OK(map[string]string{"id": id})
@@ -325,7 +331,7 @@ func main() {
     itemAPI := items.NewItemAPIRegistration(itemsColl)
 
     // 3. Collect domain API registrations
-    registrations := []*rest.RestAPIRegistration{
+    registrations := []*rest.RRestAPIRegistration{
         itemAPI,
     }
     _ = registrations
@@ -341,20 +347,29 @@ HTTP server execution, middleware orchestration, and graceful shutdown are manag
 ### Makefile Targets
 
 ```bash
-$ make help
+# Run unit and integration tests with race detection
+make test
 
-Usage:
-  make <target>
+# Generate HTML code coverage report
+make test-coverage
 
-Targets:
-  help                Display this help screen
-  build               Verify compilation of all packages
-  test                Run unit and integration tests with race detection
-  test-coverage       Run tests with race detection and HTML coverage report
-  vet                 Run go vet analysis
-  lint                Run golangci-lint
-  tidy                Tidy and verify Go module dependencies
-  clean               Clean temporary test coverage and artifact files
+# Run linters (golangci-lint or go vet fallback)
+make lint
+
+# Run go vet analysis
+make vet
+
+# Verify compilation of all packages
+make build
+
+# Tidy and verify module dependencies
+make tidy
+
+# Run test, vet, and build
+make all
+
+# Clean temporary test and build artifacts
+make clean
 ```
 
 ### Testing & Coverage
