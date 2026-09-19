@@ -11,7 +11,7 @@ import (
 )
 
 func TestSuccessResponse_NilAndDefaults(t *testing.T) {
-	var nilResp *SuccessResponse[string]
+	var nilResp *successResponse[string]
 	assert.Equal(t, http.StatusOK, nilResp.StatusCode())
 	assert.Nil(t, nilResp.withMessage("msg"))
 	assert.Nil(t, nilResp.withTimestamp(time.Now()))
@@ -19,7 +19,7 @@ func TestSuccessResponse_NilAndDefaults(t *testing.T) {
 }
 
 func TestSuccessResponse_ZeroCodeWrite(t *testing.T) {
-	resp := &SuccessResponse[string]{Code: 0}
+	resp := &successResponse[string]{Code: 0}
 	assert.Equal(t, http.StatusOK, resp.StatusCode())
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()

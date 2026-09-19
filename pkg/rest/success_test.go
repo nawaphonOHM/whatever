@@ -44,6 +44,38 @@ func TestSuccessResponse_ShapeSerialization(t *testing.T) {
 	assert.Equal(t, "2026-09-17T02:30:00Z", raw["timestamp"])
 }
 
+// assertDTOFields verifies unmarshaling into the public SuccessResponse DTO.
+func assertDTOFields(t *testing.T, data []byte, fixedTime time.Time) {
+	var dto SuccessResponse[string]
+	require.NoError(t, json.Unmarshal(data, &dto))
+	assert.True(t, dto.Success)
+	assert.Equal(t, "ok", dto.Message)
+	assert.Equal(t, "payload", dto.Data)
+	assert.Equal(t, fixedTime, dto.Timestamp)
+}
+
+// assertEnvelopeFields verifies unmarshaling into the Envelope type alias.
+func assertEnvelopeFields(t *testing.T, data []byte, fixedTime time.Time) {
+	var env Envelope[string]
+	require.NoError(t, json.Unmarshal(data, &env))
+	assert.True(t, env.Success)
+	assert.Equal(t, "ok", env.Message)
+	assert.Equal(t, "payload", env.Data)
+	assert.Equal(t, fixedTime, env.Timestamp)
+}
+
+// TestSuccessResponse_DTOUnmarshaling tests JSON envelope deserialization
+// into the public SuccessResponse and Envelope DTO types.
+func TestSuccessResponse_DTOUnmarshaling(t *testing.T) {
+	fixedTime := getFixedTime()
+	resp := newSuccessResponse("payload", "ok").withTimestamp(fixedTime)
+	data, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	assertDTOFields(t, data, fixedTime)
+	assertEnvelopeFields(t, data, fixedTime)
+}
+
 // TestSuccessResponse_ChainedMethods tests chaining withMessage and
 // withTimestamp.
 func TestSuccessResponse_ChainedMethods(t *testing.T) {
