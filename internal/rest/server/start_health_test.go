@@ -7,21 +7,21 @@ import (
 	"testing"
 
 	"github.com/nawaphonOHM/whatever/internal/rest/health"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // emptyRegs returns an empty registration slice.
-func emptyRegs() []*RestAPIRegistration {
-	return make([]*RestAPIRegistration, 0)
+func emptyRegs() []*rest.RRestAPIRegistration {
+	return make([]*rest.RRestAPIRegistration, 0)
 }
 
 // fetchHealth decodes the reserved health payload.
 func fetchHealth(
 	t *testing.T,
 	port int,
-) response.SuccessResponse[health.Status] {
+) rest.SuccessResponse[health.Status] {
 	t.Helper()
 	url := fmt.Sprintf(
 		"http://%s:%d%s", testHost, port, ReservedHealthPath,
@@ -30,7 +30,7 @@ func fetchHealth(
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	var body response.SuccessResponse[health.Status]
+	var body rest.SuccessResponse[health.Status]
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 	return body
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/internal/rest/problem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,9 +34,9 @@ func newMiddlewareEngine() *gin.Engine {
 func decodeProblem(
 	t *testing.T,
 	body []byte,
-) response.ProblemDetails {
+) problem.ProblemDetails {
 	t.Helper()
-	var prob response.ProblemDetails
+	var prob problem.ProblemDetails
 	require.NoError(t, json.Unmarshal(body, &prob))
 	return prob
 }

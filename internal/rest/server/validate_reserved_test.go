@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -10,10 +11,10 @@ import (
 // TestValidateRegistrations_ReservedPath rejects /health.
 func TestValidateRegistrations_ReservedPath(t *testing.T) {
 	// Arrange
-	regs := []*RestAPIRegistration{{
-		Apis: []*ExportableAPI{{
+	regs := []*rest.RRestAPIRegistration{{
+		Apis: []*rest.ExportableAPI{{
 			Path:    ReservedHealthPath,
-			Method:  GET,
+			Method:  rest.GET,
 			Handler: dummyHandler,
 		}},
 	}}
@@ -29,20 +30,20 @@ func TestValidateRegistrations_ReservedPath(t *testing.T) {
 // TestValidateRegistrations_Duplicate rejects colliding routes.
 func TestValidateRegistrations_Duplicate(t *testing.T) {
 	// Arrange
-	regs := []*RestAPIRegistration{
+	regs := []*rest.RRestAPIRegistration{
 		{
 			Prefix: "/items",
-			Apis: []*ExportableAPI{{
+			Apis: []*rest.ExportableAPI{{
 				Path:    "",
-				Method:  GET,
+				Method:  rest.GET,
 				Handler: dummyHandler,
 			}},
 		},
 		{
 			Prefix: "/items",
-			Apis: []*ExportableAPI{{
+			Apis: []*rest.ExportableAPI{{
 				Path:    "",
-				Method:  GET,
+				Method:  rest.GET,
 				Handler: dummyHandler,
 			}},
 		},

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,12 +13,12 @@ import (
 func TestStartREST_ReservedPathRejected(t *testing.T) {
 	// Arrange
 	t.Setenv(envGinMode, gin.TestMode)
-	regs := []*RestAPIRegistration{{
-		Apis: []*ExportableAPI{{
+	regs := []*rest.RRestAPIRegistration{{
+		Apis: []*rest.ExportableAPI{{
 			Path:   ReservedHealthPath,
-			Method: GET,
-			Handler: func(*Context) response.Response {
-				return response.OK("override")
+			Method: rest.GET,
+			Handler: func(rest.Context) rest.Response {
+				return rest.OK("override")
 			},
 		}},
 	}}
@@ -35,22 +35,22 @@ func TestStartREST_ReservedPathRejected(t *testing.T) {
 func TestStartREST_DuplicateRejected(t *testing.T) {
 	// Arrange
 	t.Setenv(envGinMode, gin.TestMode)
-	handler := func(*Context) response.Response {
-		return response.NoContent()
+	handler := func(rest.Context) rest.Response {
+		return rest.NoContent()
 	}
-	regs := []*RestAPIRegistration{
+	regs := []*rest.RRestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/x",
-			Apis: []*ExportableAPI{{
-				Path: "", Method: GET, Handler: handler,
+			Apis: []*rest.ExportableAPI{{
+				Path: "", Method: rest.GET, Handler: handler,
 			}},
 		},
 		{
 			Version: 1,
 			Prefix:  "/x",
-			Apis: []*ExportableAPI{{
-				Path: "", Method: GET, Handler: handler,
+			Apis: []*rest.ExportableAPI{{
+				Path: "", Method: rest.GET, Handler: handler,
 			}},
 		},
 	}
@@ -69,7 +69,7 @@ func TestStartREST_NilRegistrationRejected(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
 
 	// Act
-	err := StartREST([]*RestAPIRegistration{nil})
+	err := StartREST([]*rest.RRestAPIRegistration{nil})
 
 	// Assert
 	require.Error(t, err)

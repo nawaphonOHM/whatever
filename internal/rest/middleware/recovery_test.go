@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/internal/rest/problem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func setupPanicRouter(logger *slog.Logger) *gin.Engine {
 }
 
 // verifyProblemDetails checks RFC 9457 fields on unmarshaled response.
-func verifyProblemDetails(t *testing.T, prob response.ProblemDetails) {
+func verifyProblemDetails(t *testing.T, prob problem.ProblemDetails) {
 	assert.Equal(t, http.StatusInternalServerError, prob.Status)
 	assert.Equal(t, "about:blank", prob.Type)
 	assert.Equal(t, "Internal Server Error", prob.Title)
@@ -49,7 +49,7 @@ func verifyPanicResponse(t *testing.T, w *httptest.ResponseRecorder) {
 	// Verify response content type
 	assert.Equal(t, "application/problem+json", w.Header().Get("Content-Type"))
 
-	var prob response.ProblemDetails
+	var prob problem.ProblemDetails
 	err := json.Unmarshal(w.Body.Bytes(), &prob)
 	require.NoError(t, err)
 

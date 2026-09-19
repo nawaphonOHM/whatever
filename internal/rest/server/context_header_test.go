@@ -9,65 +9,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	customHeaderName = "X-Custom"
-	customHeaderVal  = "custom-value"
-	respHeaderName   = "X-Response"
-	respHeaderVal    = "resp-value"
-	cookieName       = "session"
-	cookieVal        = "abc"
-	cookieMaxAge     = 3600
-	cookiePath       = "/"
-	cookieDomain     = "example.com"
-	headersPath      = "/test-headers"
-)
-
-// applyHeaderCookieWrites writes response header and cookie.
-func applyHeaderCookieWrites(c *Context) {
-	c.SetHeader(respHeaderName, respHeaderVal)
-	c.SetCookie(&http.Cookie{
-		Name:     cookieName,
-		Value:    cookieVal,
-		MaxAge:   cookieMaxAge,
-		Path:     cookiePath,
-		Domain:   cookieDomain,
-		Secure:   true,
-		HttpOnly: true,
+func TestContext_HeadersAndCookies(t *testing.T) {
+	r := gin.New()
+	r.GET("/headers", func(gc *gin.Context) {
+		c := newContext(gc)
+		assert.Equal(t, "Bearer xyz", c.GetHeader("Authorization"))
+		cookie, err := c.Cookie("session")
+		assert.NoError(t, err)
+		assert.Equal(t, "session-val", cookie)
+		c.Header("X-Custom", testValue)
+		c.SetHeader("X-Alias", testValue)
+		c.SetCookie(&http.Cookie{Name: "remember", Value: testValue})
+		c.Status(testAccepted)
 	})
-	c.Status(http.StatusOK)
-}
-
-// runHeaderCookieRequest exercises the headers test route.
-func runHeaderCookieRequest(
-	r *gin.Engine,
-) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodGet, headersPath, nil)
-	req.Header.Set(customHeaderName, customHeaderVal)
+	req := httptest.NewRequest(http.MethodGet, "/headers", nil)
+	req.Header.Set("Authorization", "Bearer xyz")
+	req.AddCookie(&http.Cookie{Name: "session", Value: "session-val"})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	return w
-}
-
-// TestContext_HeadersAndCookies covers header and cookie helpers.
-func TestContext_HeadersAndCookies(t *testing.T) {
-	// Arrange
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	var headerVal string
-	r.GET(headersPath, func(gc *gin.Context) {
-		c := NewContext(gc)
-		headerVal = c.GetHeader(customHeaderName)
-		_, err := c.Cookie(cookieName)
-		assert.ErrorIs(t, err, http.ErrNoCookie)
-		applyHeaderCookieWrites(c)
-	})
-
-	// Act
-	w := runHeaderCookieRequest(r)
-
-	// Assert
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, customHeaderVal, headerVal)
-	assert.Equal(t, respHeaderVal, w.Header().Get(respHeaderName))
-	assert.Contains(t, w.Header().Get("Set-Cookie"), cookieName)
+	assert.Equal(t, testAccepted, w.Code)
+	assert.Equal(t, testValue, w.Header().Get("X-Custom"))
+	assert.Contains(t, w.Header().Get("Set-Cookie"), "remember=value")
 }

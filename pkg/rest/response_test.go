@@ -1,4 +1,4 @@
-package response
+package rest
 
 import (
 	"encoding/json"
@@ -122,4 +122,6 @@ func TestNoContent(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	assert.Empty(t, w.Body.String())
+	assert.Equal(t, http.StatusNoContent, NoContent().StatusCode())
+	NoContent().Write(nil)
 }

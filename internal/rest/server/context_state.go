@@ -1,17 +1,15 @@
 package server
 
-import (
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
-)
+import "github.com/nawaphonOHM/whatever/pkg/rest"
 
-// Set stores a new key/value pair exclusively for this context.
+// Set stores a key/value pair exclusively for this context.
 func (c *Context) Set(key string, value any) {
 	if c.ginCtx != nil {
 		c.ginCtx.Set(key, value)
 	}
 }
 
-// Get returns the value for the given key and whether it exists.
+// Get returns the value for a key and whether it exists.
 func (c *Context) Get(key string) (value any, exists bool) {
 	if c.ginCtx != nil {
 		return c.ginCtx.Get(key)
@@ -19,8 +17,7 @@ func (c *Context) Get(key string) (value any, exists bool) {
 	return nil, false
 }
 
-// MustGet returns the value for the given key if it exists, otherwise it
-// panics.
+// MustGet returns the value for a key or panics if it is missing.
 func (c *Context) MustGet(key string) any {
 	if c.ginCtx != nil {
 		return c.ginCtx.MustGet(key)
@@ -28,8 +25,7 @@ func (c *Context) MustGet(key string) any {
 	panic("context is nil")
 }
 
-// Next executes the pending handlers in the chain inside the calling
-// middleware.
+// Next executes pending handlers in the chain.
 func (c *Context) Next() {
 	if c.ginCtx != nil {
 		c.ginCtx.Next()
@@ -43,17 +39,15 @@ func (c *Context) Abort() {
 	}
 }
 
-// AbortWithStatus calls Abort and writes the headers with the specified status
-// code.
+// AbortWithStatus aborts and writes the specified status code.
 func (c *Context) AbortWithStatus(code int) {
 	if c.ginCtx != nil {
 		c.ginCtx.AbortWithStatus(code)
 	}
 }
 
-// AbortWithResponse aborts the handler chain and serializes the provided
-// Response.
-func (c *Context) AbortWithResponse(resp response.Response) {
+// AbortWithResponse aborts and serializes the provided Response.
+func (c *Context) AbortWithResponse(resp rest.Response) {
 	if c.ginCtx == nil {
 		return
 	}
@@ -63,9 +57,8 @@ func (c *Context) AbortWithResponse(resp response.Response) {
 	}
 }
 
-// AbortWithProblem aborts the handler chain and serializes the provided RFC
-// 9457 ProblemDetails.
-func (c *Context) AbortWithProblem(prob *response.ProblemDetails) {
+// AbortWithProblem aborts and serializes the provided ProblemDetails.
+func (c *Context) AbortWithProblem(prob rest.Response) {
 	c.AbortWithResponse(prob)
 }
 

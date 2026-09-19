@@ -1,6 +1,4 @@
-// Package response provides standardized JSON API response envelopes and RFC
-// 9457 Problem Details.
-package response
+package rest
 
 import (
 	"net/http"
@@ -37,7 +35,7 @@ func (*noContentResponse) Write(c *gin.Context) {
 
 // JSON creates a Response pointer with the given status code and data.
 func JSON(statusCode int, data any, message ...string) Response {
-	resp := NewSuccessResponse(data, message...)
+	resp := newSuccessResponse(data, message...)
 	resp.Code = statusCode
 	return resp
 }
@@ -55,9 +53,4 @@ func Created(data any, message ...string) Response {
 // NoContent creates a 204 No Content Response.
 func NoContent() Response {
 	return &noContentResponse{}
-}
-
-// Problem returns the ProblemDetails as a Response.
-func Problem(prob *ProblemDetails) Response {
-	return prob
 }

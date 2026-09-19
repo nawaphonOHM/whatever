@@ -1,3 +1,4 @@
+// Package server implements the internal HTTP engine and lifecycle routines.
 package server
 
 import (

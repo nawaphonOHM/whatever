@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,19 +21,19 @@ const (
 )
 
 // mwOrderRegs builds a registration that records middleware order.
-func mwOrderRegs(order *[]string) []*RestAPIRegistration {
-	return []*RestAPIRegistration{{
+func mwOrderRegs(order *[]string) []*rest.RRestAPIRegistration {
+	return []*rest.RRestAPIRegistration{{
 		Version: 1,
-		Apis: []*ExportableAPI{{
+		Apis: []*rest.ExportableAPI{{
 			Path:   mwPath,
-			Method: GET,
-			Middleware: []Middleware{
-				func(*Context) { *order = append(*order, mwMarkerA) },
-				func(*Context) { *order = append(*order, mwMarkerB) },
+			Method: rest.GET,
+			Middleware: []rest.Middleware{
+				func(rest.Context) { *order = append(*order, mwMarkerA) },
+				func(rest.Context) { *order = append(*order, mwMarkerB) },
 			},
-			Handler: func(*Context) response.Response {
+			Handler: func(rest.Context) rest.Response {
 				*order = append(*order, mwMarkerH)
-				return response.NoContent()
+				return rest.NoContent()
 			},
 		}},
 	}}

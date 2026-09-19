@@ -8,7 +8,7 @@ import (
 	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 	"github.com/nawaphonOHM/whatever/internal/rest/middleware"
 	"github.com/nawaphonOHM/whatever/pkg/logger"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
 const (
@@ -30,11 +30,11 @@ func defaultSkipPaths(extra ...string) []string {
 // attachErrorHandlers registers RFC 9457 404/405 handlers.
 func attachErrorHandlers(engine *gin.Engine) {
 	engine.NoRoute(func(c *gin.Context) {
-		resp := response.NotFound(codeNotFound, msgNotFound)
+		resp := rest.NotFound(codeNotFound, msgNotFound)
 		resp.Write(c)
 	})
 	engine.NoMethod(func(c *gin.Context) {
-		resp := response.Error(
+		resp := rest.Error(
 			http.StatusMethodNotAllowed,
 			codeMethodNotAllowed,
 			msgMethodNotAllowed,
@@ -60,7 +60,7 @@ func (s *Server) SetupDefaultMiddlewares(
 
 // NewFromRegistrations loads config and prepares a Server.
 func NewFromRegistrations(
-	registrations []*RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 ) (*Server, error) {
 	cfg, err := intcfg.Load[Config]()
 	if err != nil {
@@ -83,14 +83,14 @@ func NewFromRegistrations(
 
 // RegisterRoutes mounts registrations without version metadata.
 func (s *Server) RegisterRoutes(
-	registrations []*RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 ) error {
 	return RegisterRoutesWithVersion(s.Engine, registrations, "")
 }
 
 // RegisterRoutesWithVersion mounts registrations with version.
 func (s *Server) RegisterRoutesWithVersion(
-	registrations []*RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 	version string,
 ) error {
 	return RegisterRoutesWithVersion(

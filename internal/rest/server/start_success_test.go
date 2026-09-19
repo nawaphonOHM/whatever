@@ -7,21 +7,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // pingRegs returns a versioned /ping registration set.
-func pingRegs() []*RestAPIRegistration {
-	return []*RestAPIRegistration{{
+func pingRegs() []*rest.RRestAPIRegistration {
+	return []*rest.RRestAPIRegistration{{
 		Version: 1,
 		Prefix:  "/api",
-		Apis: []*ExportableAPI{{
+		Apis: []*rest.ExportableAPI{{
 			Path:   "/ping",
-			Method: GET,
-			Handler: func(*Context) response.Response {
-				return response.OK("pong")
+			Method: rest.GET,
+			Handler: func(rest.Context) rest.Response {
+				return rest.OK("pong")
 			},
 		}},
 	}}
@@ -29,7 +29,7 @@ func pingRegs() []*RestAPIRegistration {
 
 // startRESTAsync launches StartREST and waits for bind.
 func startRESTAsync(
-	regs []*RestAPIRegistration,
+	regs []*rest.RRestAPIRegistration,
 ) <-chan error {
 	errCh := make(chan error, 1)
 	go func() { errCh <- StartREST(regs) }()

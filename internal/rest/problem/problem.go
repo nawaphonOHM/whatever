@@ -1,4 +1,5 @@
-package response
+// Package problem provides RFC 9457 Problem Details object encapsulation.
+package problem
 
 import (
 	"net/http"
@@ -6,7 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const defaultProblemType = "about:blank"
+// MediaTypeProblemJSON is canonical media type for RFC 9457 Problem Details.
+const MediaTypeProblemJSON = "application/problem+json"
+
+// DefaultProblemType is default URI reference identifying problem type.
+const DefaultProblemType = "about:blank"
 
 // ProblemDetails represents an RFC 9457 Problem Details object.
 type ProblemDetails struct {
@@ -27,8 +32,7 @@ func (p *ProblemDetails) StatusCode() int {
 	return p.Status
 }
 
-// Write serializes the ProblemDetails object to the Gin context using the
-// application/problem+json media type.
+// Write serializes the ProblemDetails object to the Gin context.
 func (p *ProblemDetails) Write(c *gin.Context) {
 	if c == nil || p == nil {
 		return
@@ -40,7 +44,7 @@ func (p *ProblemDetails) Write(c *gin.Context) {
 
 func (p *ProblemDetails) ensureDefaults(c *gin.Context) {
 	if p.Type == "" {
-		p.Type = defaultProblemType
+		p.Type = DefaultProblemType
 	}
 	p.ensureTitle()
 	p.ensureInstance(c)
@@ -77,8 +81,8 @@ func (p *ProblemDetails) setDetails(details ...any) {
 	}
 }
 
-// NewProblemDetails creates an RFC 9457 Problem Details pointer object.
-func NewProblemDetails(
+// New creates an RFC 9457 Problem Details pointer object.
+func New(
 	statusCode int,
 	code, detail string,
 	details ...any,
@@ -88,7 +92,7 @@ func NewProblemDetails(
 		title = "Error"
 	}
 	prob := &ProblemDetails{
-		Type:   defaultProblemType,
+		Type:   DefaultProblemType,
 		Title:  title,
 		Status: statusCode,
 		Detail: detail,
@@ -96,35 +100,4 @@ func NewProblemDetails(
 	}
 	prob.setDetails(details...)
 	return prob
-}
-
-// Error creates an RFC 9457 Problem Details Response.
-func Error(statusCode int, code, detail string, details ...any) Response {
-	return NewProblemDetails(statusCode, code, detail, details...)
-}
-
-// BadRequest creates a 400 Bad Request RFC 9457 Problem Details Response.
-func BadRequest(code, detail string, details ...any) Response {
-	return Error(http.StatusBadRequest, code, detail, details...)
-}
-
-// Unauthorized creates a 401 Unauthorized RFC 9457 Problem Details Response.
-func Unauthorized(code, detail string, details ...any) Response {
-	return Error(http.StatusUnauthorized, code, detail, details...)
-}
-
-// Forbidden creates a 403 Forbidden RFC 9457 Problem Details Response.
-func Forbidden(code, detail string, details ...any) Response {
-	return Error(http.StatusForbidden, code, detail, details...)
-}
-
-// NotFound creates a 404 Not Found RFC 9457 Problem Details Response.
-func NotFound(code, detail string, details ...any) Response {
-	return Error(http.StatusNotFound, code, detail, details...)
-}
-
-// InternalServerError creates a 500 Internal Server Error RFC 9457 Problem
-// Details Response.
-func InternalServerError(code, detail string, details ...any) Response {
-	return Error(http.StatusInternalServerError, code, detail, details...)
 }

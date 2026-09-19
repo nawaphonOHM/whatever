@@ -1,44 +1,83 @@
 package server
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	stateUserID = "user-123"
-	stateCount  = 42
-	stateMins   = 5
-)
-
-// TestContext_StateStore verifies typed getters for stored values.
 func TestContext_StateStore(t *testing.T) {
-	// Arrange a route that stores and reads context values.
-	r := gin.New()
-	r.GET("/state-test", func(gc *gin.Context) {
-		c := NewContext(gc)
-		c.Set("user_id", stateUserID)
-		c.Set("is_admin", true)
-		c.Set("count", stateCount)
-		c.Set("duration", stateMins*time.Minute)
+	gc, _ := newTestContext()
+	c := newContext(gc)
+	now := time.Now().UTC().Truncate(time.Second)
+	setBasicState(c, now)
+	value, exists := c.Get(testKey)
+	assert.True(t, exists)
+	assertBasicState(t, c, value, now)
+}
 
-		assert.Equal(t, stateUserID, c.GetString("user_id"))
-		assert.True(t, c.GetBool("is_admin"))
-		assert.Equal(t, stateCount, c.GetInt("count"))
-		assert.Equal(t, stateMins*time.Minute, c.GetDuration("duration"))
-		c.Status(http.StatusOK)
-	})
+func setBasicState(c *Context, now time.Time) {
+	c.Set(testKey, testValue)
+	c.Set("bool", true)
+	c.Set("int", testIntValue)
+	c.Set("time", now)
+}
 
-	// Act
-	req := httptest.NewRequest(http.MethodGet, "/state-test", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+func assertBasicState(t *testing.T, c rest.Context, value any, now time.Time) {
+	assert.Equal(t, testValue, value)
+	assert.Equal(t, testValue, c.MustGet(testKey))
+	assert.True(t, c.GetBool("bool"))
+	assert.Equal(t, testIntValue, c.GetInt("int"))
+	assert.Equal(t, now, c.GetTime("time"))
+}
 
-	// Assert
-	assert.Equal(t, http.StatusOK, w.Code)
+func TestContext_TypedStateValues(t *testing.T) {
+	gc, _ := newTestContext()
+	c := newContext(gc)
+	setTypedState(c)
+	assertTypedState(t, c)
+}
+
+func setTypedState(c *Context) {
+	c.Set("int64", int64(testInt64Value))
+	c.Set("uint", uint(testUintValue))
+	c.Set("uint64", uint64(testUint64Value))
+	c.Set("float", testFloatValue)
+	c.Set("duration", time.Minute)
+	c.Set("slice", []string{testValue})
+}
+
+func assertTypedState(t *testing.T, c rest.Context) {
+	assert.Equal(t, int64(testInt64Value), c.GetInt64("int64"))
+	assert.Equal(t, uint(testUintValue), c.GetUint("uint"))
+	assert.Equal(t, uint64(testUint64Value), c.GetUint64("uint64"))
+	assert.Equal(t, testFloatValue, c.GetFloat64("float"))
+	assert.Equal(t, time.Minute, c.GetDuration("duration"))
+	assert.Equal(t, []string{testValue}, c.GetStringSlice("slice"))
+}
+
+func TestContext_StateMapsAndMissingValues(t *testing.T) {
+	gc, _ := newTestContext()
+	c := newContext(gc)
+	setMapState(c)
+	assert.Equal(t, map[string]any{testKey: testValue}, c.GetStringMap("map"))
+	assertMapState(t, c)
+	_, exists := c.Get("missing")
+	assert.False(t, exists)
+	assert.Panics(t, func() { c.MustGet("missing") })
+}
+
+func assertMapState(t *testing.T, c rest.Context) {
+	stringsMap := map[string]string{testKey: testValue}
+	slicesMap := map[string][]string{testKey: {testValue}}
+	assert.Equal(t, stringsMap, c.GetStringMapString("strings"))
+	assert.Equal(t, slicesMap, c.GetStringMapStringSlice("slices"))
+}
+
+func setMapState(c *Context) {
+	c.Set("map", map[string]any{testKey: testValue})
+	c.Set("strings", map[string]string{testKey: testValue})
+	c.Set("slices", map[string][]string{testKey: {testValue}})
 }

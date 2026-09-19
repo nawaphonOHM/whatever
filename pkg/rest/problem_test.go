@@ -1,4 +1,4 @@
-package response
+package rest
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	intprob "github.com/nawaphonOHM/whatever/internal/rest/problem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,11 +15,11 @@ import (
 // assertProblemResponse verifies the unmarshaled problem details object.
 func assertProblemResponse(
 	t *testing.T,
-	prob ProblemDetails,
+	prob intprob.ProblemDetails,
 	tc problemTestCase,
 ) {
 	assert.Equal(t, tc.expectedStatus, prob.Status)
-	assert.Equal(t, defaultProblemType, prob.Type)
+	assert.Equal(t, intprob.DefaultProblemType, prob.Type)
 	assert.Equal(t, tc.expectedTitle, prob.Title)
 	assert.Equal(t, tc.expectedCode, prob.Code)
 	assert.Equal(t, tc.expectedDetail, prob.Detail)
@@ -45,7 +46,7 @@ func runProblemTest(t *testing.T, tc problemTestCase) {
 	w := performProblemRequest(t, tc.endpoint, tc.handler)
 	assert.Equal(t, tc.expectedStatus, w.Code)
 	assert.Equal(t, MediaTypeProblemJSON, w.Header().Get("Content-Type"))
-	var prob ProblemDetails
+	var prob intprob.ProblemDetails
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &prob))
 	assertProblemResponse(t, prob, tc)
 }

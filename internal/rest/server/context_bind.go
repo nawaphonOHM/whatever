@@ -1,7 +1,6 @@
 package server
 
-// ShouldBind checks the Method and Content-Type to select a binding engine
-// automatically.
+// ShouldBind selects a binding engine from Method and Content-Type.
 func (c *Context) ShouldBind(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.ShouldBind(obj)
@@ -9,7 +8,7 @@ func (c *Context) ShouldBind(obj any) error {
 	return nil
 }
 
-// ShouldBindJSON is a shortcut for c.ShouldBindWith(obj, binding.JSON).
+// ShouldBindJSON binds a JSON request body.
 func (c *Context) ShouldBindJSON(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.ShouldBindJSON(obj)
@@ -17,7 +16,7 @@ func (c *Context) ShouldBindJSON(obj any) error {
 	return nil
 }
 
-// ShouldBindQuery is a shortcut for c.ShouldBindWith(obj, binding.Query).
+// ShouldBindQuery binds query parameters.
 func (c *Context) ShouldBindQuery(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.ShouldBindQuery(obj)
@@ -25,7 +24,7 @@ func (c *Context) ShouldBindQuery(obj any) error {
 	return nil
 }
 
-// ShouldBindURI is a shortcut for c.ShouldBindWith(obj, binding.Uri).
+// ShouldBindURI binds URI parameters.
 func (c *Context) ShouldBindURI(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.ShouldBindUri(obj)
@@ -33,7 +32,7 @@ func (c *Context) ShouldBindURI(obj any) error {
 	return nil
 }
 
-// ShouldBindHeader is a shortcut for c.ShouldBindWith(obj, binding.Header).
+// ShouldBindHeader binds request headers.
 func (c *Context) ShouldBindHeader(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.ShouldBindHeader(obj)
@@ -41,8 +40,7 @@ func (c *Context) ShouldBindHeader(obj any) error {
 	return nil
 }
 
-// Bind checks the Method and Content-Type to select a binding engine
-// automatically.
+// Bind selects a binding engine from Method and Content-Type.
 func (c *Context) Bind(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.Bind(obj)
@@ -50,7 +48,7 @@ func (c *Context) Bind(obj any) error {
 	return nil
 }
 
-// BindJSON is a shortcut for c.BindWith(obj, binding.JSON).
+// BindJSON binds a JSON request body.
 func (c *Context) BindJSON(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.BindJSON(obj)
@@ -58,7 +56,7 @@ func (c *Context) BindJSON(obj any) error {
 	return nil
 }
 
-// BindQuery is a shortcut for c.BindWith(obj, binding.Query).
+// BindQuery binds query parameters.
 func (c *Context) BindQuery(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.BindQuery(obj)
@@ -66,7 +64,7 @@ func (c *Context) BindQuery(obj any) error {
 	return nil
 }
 
-// BindURI is a shortcut for c.BindWith(obj, binding.Uri).
+// BindURI binds URI parameters.
 func (c *Context) BindURI(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.BindUri(obj)
@@ -74,7 +72,7 @@ func (c *Context) BindURI(obj any) error {
 	return nil
 }
 
-// BindHeader is a shortcut for c.BindWith(obj, binding.Header).
+// BindHeader binds request headers.
 func (c *Context) BindHeader(obj any) error {
 	if c.ginCtx != nil {
 		return c.ginCtx.BindHeader(obj)

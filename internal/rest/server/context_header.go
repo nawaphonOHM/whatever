@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-// GetHeader returns the value of the specified request header.
+// GetHeader returns a request header value.
 func (c *Context) GetHeader(key string) string {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetHeader(key)
@@ -19,12 +19,12 @@ func (c *Context) Header(key, value string) {
 	}
 }
 
-// SetHeader is an alias for Header to set a response header.
+// SetHeader is an alias for Header.
 func (c *Context) SetHeader(key, value string) {
 	c.Header(key, value)
 }
 
-// Cookie returns the named cookie provided in the request.
+// Cookie returns a named request cookie.
 func (c *Context) Cookie(name string) (string, error) {
 	if c.ginCtx != nil {
 		return c.ginCtx.Cookie(name)
@@ -32,7 +32,7 @@ func (c *Context) Cookie(name string) (string, error) {
 	return "", http.ErrNoCookie
 }
 
-// SetCookie adds a Set-Cookie header from an http.Cookie value.
+// SetCookie adds a Set-Cookie header from an http.Cookie.
 func (c *Context) SetCookie(cookie *http.Cookie) {
 	if c.ginCtx == nil || cookie == nil {
 		return

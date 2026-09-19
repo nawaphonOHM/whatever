@@ -2,7 +2,7 @@ package server
 
 import "time"
 
-// GetString returns the value associated with the key as a string.
+// GetString returns a context value as a string.
 func (c *Context) GetString(key string) string {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetString(key)
@@ -10,7 +10,7 @@ func (c *Context) GetString(key string) string {
 	return ""
 }
 
-// GetBool returns the value associated with the key as a boolean.
+// GetBool returns a context value as a boolean.
 func (c *Context) GetBool(key string) bool {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetBool(key)
@@ -18,7 +18,7 @@ func (c *Context) GetBool(key string) bool {
 	return false
 }
 
-// GetInt returns the value associated with the key as an integer.
+// GetInt returns a context value as an integer.
 func (c *Context) GetInt(key string) int {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetInt(key)
@@ -26,7 +26,7 @@ func (c *Context) GetInt(key string) int {
 	return 0
 }
 
-// GetInt64 returns the value associated with the key as an int64.
+// GetInt64 returns a context value as int64.
 func (c *Context) GetInt64(key string) int64 {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetInt64(key)
@@ -34,7 +34,7 @@ func (c *Context) GetInt64(key string) int64 {
 	return 0
 }
 
-// GetUint returns the value associated with the key as a uint.
+// GetUint returns a context value as uint.
 func (c *Context) GetUint(key string) uint {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetUint(key)
@@ -42,7 +42,7 @@ func (c *Context) GetUint(key string) uint {
 	return 0
 }
 
-// GetUint64 returns the value associated with the key as a uint64.
+// GetUint64 returns a context value as uint64.
 func (c *Context) GetUint64(key string) uint64 {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetUint64(key)
@@ -50,7 +50,7 @@ func (c *Context) GetUint64(key string) uint64 {
 	return 0
 }
 
-// GetFloat64 returns the value associated with the key as a float64.
+// GetFloat64 returns a context value as float64.
 func (c *Context) GetFloat64(key string) float64 {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetFloat64(key)
@@ -58,7 +58,7 @@ func (c *Context) GetFloat64(key string) float64 {
 	return 0
 }
 
-// GetTime returns the value associated with the key as time.Time.
+// GetTime returns a context value as time.Time.
 func (c *Context) GetTime(key string) time.Time {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetTime(key)
@@ -66,7 +66,7 @@ func (c *Context) GetTime(key string) time.Time {
 	return time.Time{}
 }
 
-// GetDuration returns the value associated with the key as time.Duration.
+// GetDuration returns a context value as time.Duration.
 func (c *Context) GetDuration(key string) time.Duration {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetDuration(key)
@@ -74,8 +74,7 @@ func (c *Context) GetDuration(key string) time.Duration {
 	return 0
 }
 
-// GetStringSlice returns the value associated with the key as a slice of
-// strings.
+// GetStringSlice returns a context value as a string slice.
 func (c *Context) GetStringSlice(key string) []string {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetStringSlice(key)
@@ -83,8 +82,7 @@ func (c *Context) GetStringSlice(key string) []string {
 	return nil
 }
 
-// GetStringMap returns the value associated with the key as a map of
-// interfaces.
+// GetStringMap returns a context value as a map of interfaces.
 func (c *Context) GetStringMap(key string) map[string]any {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetStringMap(key)
@@ -92,8 +90,7 @@ func (c *Context) GetStringMap(key string) map[string]any {
 	return nil
 }
 
-// GetStringMapString returns the value associated with the key as a map of
-// strings.
+// GetStringMapString returns a context value as a string map.
 func (c *Context) GetStringMapString(key string) map[string]string {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetStringMapString(key)
@@ -101,8 +98,7 @@ func (c *Context) GetStringMapString(key string) map[string]string {
 	return nil
 }
 
-// GetStringMapStringSlice returns the value associated with the key as a map of
-// string slices.
+// GetStringMapStringSlice returns a context value as a map of string slices.
 func (c *Context) GetStringMapStringSlice(key string) map[string][]string {
 	if c.ginCtx != nil {
 		return c.ginCtx.GetStringMapStringSlice(key)

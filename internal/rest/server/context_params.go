@@ -1,6 +1,6 @@
 package server
 
-// Param returns the value of the URL parameter.
+// Param returns the value of a URL parameter.
 func (c *Context) Param(key string) string {
 	if c.ginCtx != nil {
 		return c.ginCtx.Param(key)
@@ -8,7 +8,7 @@ func (c *Context) Param(key string) string {
 	return ""
 }
 
-// Query returns the value of the URL query parameter.
+// Query returns the value of a URL query parameter.
 func (c *Context) Query(key string) string {
 	if c.ginCtx != nil {
 		return c.ginCtx.Query(key)
@@ -16,8 +16,7 @@ func (c *Context) Query(key string) string {
 	return ""
 }
 
-// DefaultQuery returns the value of the URL query parameter or defaultValue if
-// empty.
+// DefaultQuery returns a query value or defaultValue if it is empty.
 func (c *Context) DefaultQuery(key, defaultValue string) string {
 	if c.ginCtx != nil {
 		return c.ginCtx.DefaultQuery(key, defaultValue)
@@ -25,7 +24,7 @@ func (c *Context) DefaultQuery(key, defaultValue string) string {
 	return defaultValue
 }
 
-// QueryArray returns a slice of values for a given query key.
+// QueryArray returns values for a query key.
 func (c *Context) QueryArray(key string) []string {
 	if c.ginCtx != nil {
 		return c.ginCtx.QueryArray(key)
@@ -33,7 +32,7 @@ func (c *Context) QueryArray(key string) []string {
 	return nil
 }
 
-// QueryMap returns a map of values for a given query key.
+// QueryMap returns values for a query key as a map.
 func (c *Context) QueryMap(key string) map[string]string {
 	if c.ginCtx != nil {
 		return c.ginCtx.QueryMap(key)

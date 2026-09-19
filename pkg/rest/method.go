@@ -1,4 +1,4 @@
-package server
+package rest
 
 import (
 	"fmt"
@@ -21,7 +21,6 @@ const (
 	TRACE
 )
 
-// httpMethodNames maps HTTPMethod values to standard names.
 var httpMethodNames = map[HTTPMethod]string{
 	GET:     http.MethodGet,
 	HEAD:    http.MethodHead,
