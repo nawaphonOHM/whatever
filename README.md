@@ -30,9 +30,7 @@ its `main` package and supplies its own domain registrations.
 ├── pkg/
 │   ├── logger/                # Public structured logger helpers
 │   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
-│   └── rest/
-│       ├── response/          # JSON response envelopes and helpers
-│       └── server/            # StartREST, declarative registration contract
+│   └── rest/                  # Public REST API registration contracts & JSON response factories
 ├── .github/workflows/ci.yml   # Library test, lint, and build verification
 ├── Makefile                   # Local verification commands
 └── README.md
@@ -40,50 +38,42 @@ its `main` package and supplies its own domain registrations.
 
 ## Public Packages
 
-### `pkg/rest/server`
+### `pkg/rest`
 
-This is the primary REST package. `server.StartREST([]*server.RestAPIRegistration)`
-loads the library configuration, installs the default HTTP middleware, registers
-the framework health endpoints, validates the supplied registrations, and starts
-Gin with graceful shutdown on `SIGINT` or `SIGTERM`.
+The unified REST package provides declarative route registration contracts and standardized response factories. Server execution, engine bootstrap, and lifecycle management are encapsulated internally within `internal/rest/server`.
 
-The registration slice is explicit: Go cannot discover arbitrary packages that
-import a module at runtime. Each consuming service collects registrations from its
-domain packages and passes them to `StartREST`.
-
-### `pkg/rest/response`
-
-Generic JSON response formatting utilities adhering to a consistent API contract and RFC 9457 Problem Details:
+- **API Registration**: Declarative route registration structs (`RestAPIRegistration`, `ExportableAPI`), handler signatures (`Handler`, `Middleware`), request context wrapper (`Context`), HTTP method constants (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`, `HEAD`, `CONNECT`, `TRACE`), and path types (`Pathz`, `APIVersioning`).
+- **Standardized Response Factories**: The `Response` interface, generic JSON success envelope builders (`OK`, `Created`, `NoContent`, `JSON`, `SuccessResponse[T]`, `Envelope[T]`), and RFC 9457 Problem Details error constructors (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `InternalServerError`, `Error`, `ProblemDetails`).
 
 - **Success Envelope**: `{"success": true, "message": "...", "data": ..., "timestamp": "..."}`
 - **Error Envelope**: RFC 9457 Problem Details (`application/problem+json`)
 
 ```go
-import "github.com/nawaphonOHM/whatever/pkg/rest/response"
+import "github.com/nawaphonOHM/whatever/pkg/rest"
 
-// HTTP 200 OK with data and optional message (returns response.Response)
-return response.OK(data)
-return response.OK(data, "Fetched successfully")
+// HTTP 200 OK with data and optional message (returns rest.Response)
+return rest.OK(data)
+return rest.OK(data, "Fetched successfully")
 
-// HTTP 201 Created with data and optional message (returns response.Response)
-return response.Created(newResource)
-return response.Created(newResource, "Created successfully")
+// HTTP 201 Created with data and optional message (returns rest.Response)
+return rest.Created(newResource)
+return rest.Created(newResource, "Created successfully")
 
 // HTTP 204 No Content
-return response.NoContent()
+return rest.NoContent()
 
-// HTTP 400 Bad Request (returns RFC 9457 ProblemDetails response.Response)
-return response.BadRequest("VALIDATION_FAILED", "Invalid payload", validationDetails)
+// HTTP 400 Bad Request (returns RFC 9457 ProblemDetails rest.Response)
+return rest.BadRequest("VALIDATION_FAILED", "Invalid payload", validationDetails)
 
-// HTTP 404 Not Found (returns RFC 9457 ProblemDetails response.Response)
-return response.NotFound("NOT_FOUND", "Resource not found")
+// HTTP 404 Not Found (returns RFC 9457 ProblemDetails rest.Response)
+return rest.NotFound("NOT_FOUND", "Resource not found")
 ```
 
 ### `pkg/logger`
 
 The structured logger package provides logging middleware and request-tracing
 utilities with slog support. Request-ID generation, panic recovery, CORS, and
-framework health probe handling are installed internally by `pkg/rest/server`.
+framework health probe handling are installed internally by the framework server engine.
 
 ### `pkg/mongodb`
 
@@ -99,28 +89,27 @@ External projects define endpoints declaratively using `RestAPIRegistration` and
 package myfeature
 
 import (
-    "github.com/nawaphonOHM/whatever/pkg/rest/response"
-    "github.com/nawaphonOHM/whatever/pkg/rest/server"
+    "github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
-func NewFeatureAPIs() *server.RestAPIRegistration {
-    return &server.RestAPIRegistration{
+func NewFeatureAPIs() *rest.RestAPIRegistration {
+    return &rest.RestAPIRegistration{
         Version: 1,           // Generates /v1 prefix
         Prefix:  "/items",     // Base path for this group; no /api is added
-        Apis: []*server.ExportableAPI{
+        Apis: []*rest.ExportableAPI{
             {
                 Path:   "",
-                Method: server.GET,
-                Handler: func(c *server.Context) response.Response {
-                    return response.OK([]string{"item1", "item2"})
+                Method: rest.GET,
+                Handler: func(c *rest.Context) rest.Response {
+                    return rest.OK([]string{"item1", "item2"})
                 },
             },
             {
                 Path:   "/:id",
-                Method: server.GET,
-                Handler: func(c *server.Context) response.Response {
+                Method: rest.GET,
+                Handler: func(c *rest.Context) rest.Response {
                     id := c.Param("id")
-                    return response.OK(map[string]string{"id": id})
+                    return rest.OK(map[string]string{"id": id})
                 },
             },
         },
@@ -129,7 +118,7 @@ func NewFeatureAPIs() *server.RestAPIRegistration {
 ```
 
 ### Route Validation Guarantees
-When `StartREST` is called, the library performs fail-fast preflight validation before mutating Gin:
+When registrations are evaluated, the library performs fail-fast preflight validation before mutating Gin:
 1. **Reserved Path Check**: Rejects any registration mapping to `/health` or `/ready`.
 2. **Duplicate Route Prevention**: Detects duplicate method + path combinations and returns a descriptive error rather than allowing Gin to panic.
 3. **Nil Safety**: Validates that registrations, APIs, and handlers are non-nil.
@@ -258,7 +247,7 @@ The library pre-registers and reserves the following endpoints:
 | `GET` | `/health` | Liveness probe (verifies process is running) | `{"status": "up", "timestamp": "...", "version": "..."}` |
 | `GET` | `/ready` | Readiness probe (verifies server is ready for traffic) | `{"status": "ready", "timestamp": "...", "version": "..."}` |
 
-Any attempt by a consuming application to register a route at `/health` or `/ready` is rejected with `server.ErrReservedPath`.
+Any attempt by a consuming application to register a route at `/health` or `/ready` is rejected during route validation.
 
 ---
 
@@ -293,14 +282,14 @@ All environment variables read by the library use the **`OHM9969_`** prefix.
 | `OHM9969_MONGODB_MAX_CONN_IDLE_TIME` | Maximum duration a connection remains idle | `10m` |
 | `OHM9969_MONGODB_APP_NAME` | Client metadata application name sent to MongoDB | `""` (empty) |
 
-Both `StartREST` and `mongodb.Connect` load an optional `.env` file when present. Configuration precedence
+Both the REST server engine and `mongodb.Connect` load an optional `.env` file when present. Configuration precedence
 is system environment variables, then `.env`, then library defaults. An absent `.env` file is not an error.
 
 ---
 
 ## Consumer Bootstrap
 
-Here is how an importing application bootstraps both MongoDB and the REST server:
+Here is how an importing application bootstraps MongoDB and defines REST API registrations:
 
 ```go
 package main
@@ -311,7 +300,7 @@ import (
     "time"
 
     "github.com/nawaphonOHM/whatever/pkg/mongodb"
-    "github.com/nawaphonOHM/whatever/pkg/rest/server"
+    "github.com/nawaphonOHM/whatever/pkg/rest"
     "github.com/myorg/myapp/internal/items"
 )
 
@@ -335,16 +324,15 @@ func main() {
     itemsColl := mongoClient.Collection("items")
     itemAPI := items.NewItemAPIRegistration(itemsColl)
 
-    // 3. Collect domain API registrations and start REST server with graceful shutdown
-    registrations := []*server.RestAPIRegistration{
+    // 3. Collect domain API registrations
+    registrations := []*rest.RestAPIRegistration{
         itemAPI,
     }
-
-    if err := server.StartREST(registrations); err != nil {
-        log.Fatalf("Server error: %v", err)
-    }
+    _ = registrations
 }
 ```
+
+HTTP server execution, middleware orchestration, and graceful shutdown are managed internally by the framework engine.
 
 ---
 

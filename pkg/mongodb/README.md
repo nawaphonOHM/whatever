@@ -1,8 +1,8 @@
 # MongoDB
 
 The `mongodb` package is the public entrypoint for connecting consuming services
-to MongoDB. It follows the same public-package pattern as `pkg/rest/server`:
-applications use a small lifecycle API, while configuration and implementation
+to MongoDB. It follows the same modular library pattern as `pkg/rest`:
+applications interact with clean public APIs, while configuration and implementation
 details remain internal to this library.
 
 ## Configuration
