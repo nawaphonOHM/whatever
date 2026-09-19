@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
 
-A production-ready, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, zero-boilerplate managed MongoDB client connectivity, production-grade middlewares, and uniform JSON API response envelopes.
+~~A production-ready~~, modular Go library designed to be imported by microservices and API applications. It provides declarative REST API registration scanning, pre-registered health/readiness endpoints, encapsulated Gin HTTP server lifecycle management with graceful shutdown, zero-boilerplate managed MongoDB client connectivity, production-grade middlewares, and uniform JSON API response envelopes.
 
 ---
 
