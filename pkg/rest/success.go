@@ -32,18 +32,18 @@ func (r *SuccessResponse[T]) Write(c *gin.Context) {
 	}
 }
 
-// WithMessage sets the message on the SuccessResponse and returns it for
+// withMessage sets the message on the SuccessResponse and returns it for
 // chaining.
-func (r *SuccessResponse[T]) WithMessage(msg string) *SuccessResponse[T] {
+func (r *SuccessResponse[T]) withMessage(msg string) *SuccessResponse[T] {
 	if r != nil {
 		r.Message = msg
 	}
 	return r
 }
 
-// WithTimestamp sets the timestamp on the SuccessResponse and returns it for
+// withTimestamp sets the timestamp on the SuccessResponse and returns it for
 // chaining.
-func (r *SuccessResponse[T]) WithTimestamp(t time.Time) *SuccessResponse[T] {
+func (r *SuccessResponse[T]) withTimestamp(t time.Time) *SuccessResponse[T] {
 	if r != nil {
 		r.Timestamp = t
 	}
@@ -53,8 +53,8 @@ func (r *SuccessResponse[T]) WithTimestamp(t time.Time) *SuccessResponse[T] {
 // Envelope is a type alias for SuccessResponse.
 type Envelope[T any] = SuccessResponse[T]
 
-// NewSuccessResponse creates a successful SuccessResponse envelope pointer.
-func NewSuccessResponse[T any](data T, message ...string) *SuccessResponse[T] {
+// newSuccessResponse creates a successful SuccessResponse envelope pointer.
+func newSuccessResponse[T any](data T, message ...string) *SuccessResponse[T] {
 	resp := &SuccessResponse[T]{
 		Code:      http.StatusOK,
 		Success:   true,

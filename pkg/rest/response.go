@@ -35,7 +35,7 @@ func (*noContentResponse) Write(c *gin.Context) {
 
 // JSON creates a Response pointer with the given status code and data.
 func JSON(statusCode int, data any, message ...string) Response {
-	resp := NewSuccessResponse(data, message...)
+	resp := newSuccessResponse(data, message...)
 	resp.Code = statusCode
 	return resp
 }

@@ -13,8 +13,8 @@ import (
 func TestSuccessResponse_NilAndDefaults(t *testing.T) {
 	var nilResp *SuccessResponse[string]
 	assert.Equal(t, http.StatusOK, nilResp.StatusCode())
-	assert.Nil(t, nilResp.WithMessage("msg"))
-	assert.Nil(t, nilResp.WithTimestamp(time.Now()))
+	assert.Nil(t, nilResp.withMessage("msg"))
+	assert.Nil(t, nilResp.withTimestamp(time.Now()))
 	nilResp.Write(nil)
 }
 

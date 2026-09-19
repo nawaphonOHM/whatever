@@ -30,7 +30,7 @@ func getFixedTime() time.Time {
 // TestSuccessResponse_ShapeSerialization tests JSON envelope serialization.
 func TestSuccessResponse_ShapeSerialization(t *testing.T) {
 	fixedTime := getFixedTime()
-	resp := NewSuccessResponse("payload", "ok").WithTimestamp(fixedTime)
+	resp := newSuccessResponse("payload", "ok").withTimestamp(fixedTime)
 
 	data, err := json.Marshal(resp)
 	require.NoError(t, err)
@@ -44,13 +44,13 @@ func TestSuccessResponse_ShapeSerialization(t *testing.T) {
 	assert.Equal(t, "2026-09-17T02:30:00Z", raw["timestamp"])
 }
 
-// TestSuccessResponse_ChainedMethods tests chaining WithMessage and
-// WithTimestamp.
+// TestSuccessResponse_ChainedMethods tests chaining withMessage and
+// withTimestamp.
 func TestSuccessResponse_ChainedMethods(t *testing.T) {
 	fixedTime := getFixedTime()
-	resp := NewSuccessResponse(testIntVal).
-		WithMessage("custom").
-		WithTimestamp(fixedTime)
+	resp := newSuccessResponse(testIntVal).
+		withMessage("custom").
+		withTimestamp(fixedTime)
 
 	assert.Equal(t, "custom", resp.Message)
 	assert.Equal(t, testIntVal, resp.Data)
