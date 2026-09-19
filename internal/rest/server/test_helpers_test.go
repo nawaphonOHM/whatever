@@ -14,17 +14,18 @@ import (
 
 // Shared test constants keep environment keys and timings consistent.
 const (
-	testHost        = "127.0.0.1"
-	startWait       = 50 * time.Millisecond
-	shutdownWait    = 3 * time.Second
-	envGinMode      = "OHM9969_GIN_MODE"
-	envServerPort   = "OHM9969_SERVER_PORT"
-	envServerHost   = "OHM9969_SERVER_HOST"
-	envAppVersion   = "OHM9969_APP_VERSION"
-	customPort      = 9090
-	customReadSec   = 5
-	customIdleSec   = 30
-	appVersionValue = "2.0.0"
+	testHost          = "127.0.0.1"
+	startWait         = 50 * time.Millisecond
+	shutdownWait      = 3 * time.Second
+	envGinMode        = "OHM9969_GIN_MODE"
+	envServerPort     = "OHM9969_SERVER_PORT"
+	envServerHost     = "OHM9969_SERVER_HOST"
+	envAppVersion     = "OHM9969_APP_VERSION"
+	customPort        = 9090
+	customReadSec     = 5
+	customIdleSec     = 30
+	appVersionValue   = "2.0.0"
+	invalidMethodCode = 999
 )
 
 // getFreePort reserves an ephemeral local TCP port for tests.

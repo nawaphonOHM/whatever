@@ -5,6 +5,8 @@ import (
 	pathpkg "path"
 	"slices"
 	"strings"
+
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
 // normalizePrefix ensures a leading slash and no trailing slash.
@@ -41,12 +43,12 @@ func normalizePath(path string) string {
 }
 
 // versionToken returns the bare version segment (e.g. "v1").
-func versionToken(version APIVersioning) string {
+func versionToken(version rest.APIVersioning) string {
 	return fmt.Sprintf("v%d", version)
 }
 
 // applyVersion prefixes pfx with /vN when version is set and missing.
-func applyVersion(version APIVersioning, pfx string) string {
+func applyVersion(version rest.APIVersioning, pfx string) string {
 	if version == 0 {
 		return pfx
 	}
@@ -79,8 +81,8 @@ func isReservedPath(fullPath string) bool {
 // CalculateFullPath builds the canonical route path.
 // Reserved health/readiness endpoints are never version-prefixed.
 func CalculateFullPath(
-	version APIVersioning,
-	prefix, path Pathz,
+	version rest.APIVersioning,
+	prefix, path rest.Pathz,
 ) string {
 	pfx := normalizePrefix(string(prefix))
 	pth := normalizePath(string(path))

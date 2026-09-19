@@ -3,44 +3,44 @@ package server
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/internal/rest/health"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
 // wrapMiddleware adapts a framework Middleware to gin.HandlerFunc.
-func wrapMiddleware(mw Middleware) gin.HandlerFunc {
+func wrapMiddleware(mw rest.Middleware) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		c := NewContext(ginCtx)
+		c := rest.NewContext(ginCtx)
 		mw(c)
 	}
 }
 
 // writeIfPresent writes resp when non-nil.
-func writeIfPresent(c *Context, resp response.Response) {
+func writeIfPresent(c *rest.Context, resp rest.Response) {
 	if resp == nil {
 		return
 	}
-	resp.Write(c.ginCtx)
+	resp.Write(c.GinContext())
 }
 
 // invokeHandler runs the handler unless the context was aborted.
-func invokeHandler(c *Context, h Handler) {
-	if c.IsAborted() {
+func invokeHandler(c *rest.Context, h rest.Handler) {
+	if c.GinContext().IsAborted() {
 		return
 	}
 	writeIfPresent(c, h(c))
 }
 
 // wrapHandler adapts a framework Handler to gin.HandlerFunc.
-func wrapHandler(h Handler) gin.HandlerFunc {
+func wrapHandler(h rest.Handler) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		invokeHandler(NewContext(ginCtx), h)
+		invokeHandler(rest.NewContext(ginCtx), h)
 	}
 }
 
 // buildHandlers composes middlewares and handler into gin handlers.
 func buildHandlers(
-	middlewares []Middleware,
-	handler Handler,
+	middlewares []rest.Middleware,
+	handler rest.Handler,
 ) []gin.HandlerFunc {
 	handlers := make([]gin.HandlerFunc, 0, len(middlewares)+1)
 	for _, mw := range middlewares {
@@ -70,7 +70,7 @@ func mountHealthEndpoints(engine *gin.Engine, version string) {
 // RegisterRoutesWithVersion validates and mounts API registrations.
 func RegisterRoutesWithVersion(
 	engine *gin.Engine,
-	registrations []*RestAPIRegistration,
+	registrations []*rest.RestAPIRegistration,
 	version string,
 ) error {
 	validated, err := validateRegistrations(registrations)

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/internal/rest/health"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,15 +19,15 @@ const (
 )
 
 // sampleRegs returns a simple versioned registration set.
-func sampleRegs() []*RestAPIRegistration {
-	return []*RestAPIRegistration{{
+func sampleRegs() []*rest.RestAPIRegistration {
+	return []*rest.RestAPIRegistration{{
 		Version: 1,
 		Prefix:  "/items",
-		Apis: []*ExportableAPI{{
+		Apis: []*rest.ExportableAPI{{
 			Path:   "",
-			Method: GET,
-			Handler: func(*Context) response.Response {
-				return response.OK([]string{"item1", "item2"})
+			Method: rest.GET,
+			Handler: func(*rest.Context) rest.Response {
+				return rest.OK([]string{"item1", "item2"})
 			},
 		}},
 	}}
@@ -48,7 +48,7 @@ func getJSON(
 // assertItemsOK checks the versioned items payload.
 func assertItemsOK(t *testing.T, body []byte) {
 	t.Helper()
-	var itemsResp response.SuccessResponse[[]string]
+	var itemsResp rest.SuccessResponse[[]string]
 	require.NoError(t, json.Unmarshal(body, &itemsResp))
 	assert.True(t, itemsResp.Success)
 	assert.Equal(t, []string{"item1", "item2"}, itemsResp.Data)
@@ -57,7 +57,7 @@ func assertItemsOK(t *testing.T, body []byte) {
 // assertHealthVersion checks reserved health payload version.
 func assertHealthVersion(t *testing.T, body []byte) {
 	t.Helper()
-	var healthResp response.SuccessResponse[health.Status]
+	var healthResp rest.SuccessResponse[health.Status]
 	require.NoError(t, json.Unmarshal(body, &healthResp))
 	assert.Equal(t, testAPIVersion, healthResp.Data.Version)
 }
