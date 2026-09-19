@@ -14,7 +14,7 @@ type registrationScan struct {
 
 // appendRoute validates one API and appends it when valid.
 func (s *registrationScan) appendRoute(
-	reg *rest.RestAPIRegistration,
+	reg *rest.RRestAPIRegistration,
 	api *rest.ExportableAPI,
 	apiIdx int,
 ) error {
@@ -31,7 +31,7 @@ func (s *registrationScan) appendRoute(
 
 // requireRegistration rejects a nil registration group.
 func requireRegistration(
-	reg *rest.RestAPIRegistration,
+	reg *rest.RRestAPIRegistration,
 	regIdx int,
 ) error {
 	if reg != nil {
@@ -45,7 +45,7 @@ func requireRegistration(
 }
 
 // scanAPIs validates every API entry in a registration group.
-func (s *registrationScan) scanAPIs(reg *rest.RestAPIRegistration) error {
+func (s *registrationScan) scanAPIs(reg *rest.RRestAPIRegistration) error {
 	for apiIdx, api := range reg.Apis {
 		if err := s.appendRoute(reg, api, apiIdx); err != nil {
 			return err
@@ -56,7 +56,7 @@ func (s *registrationScan) scanAPIs(reg *rest.RestAPIRegistration) error {
 
 // scanRegistration validates one registration group.
 func (s *registrationScan) scanRegistration(
-	reg *rest.RestAPIRegistration,
+	reg *rest.RRestAPIRegistration,
 	regIdx int,
 ) error {
 	if err := requireRegistration(reg, regIdx); err != nil {
@@ -67,7 +67,7 @@ func (s *registrationScan) scanRegistration(
 
 // validateRegistrations validates registrations and returns routes.
 func validateRegistrations(
-	registrations []*rest.RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 ) ([]*validatedRoute, error) {
 	scan := &registrationScan{
 		seen: make(map[string]bool),

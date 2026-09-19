@@ -19,14 +19,14 @@ const (
 )
 
 // sampleRegs returns a simple versioned registration set.
-func sampleRegs() []*rest.RestAPIRegistration {
-	return []*rest.RestAPIRegistration{{
+func sampleRegs() []*rest.RRestAPIRegistration {
+	return []*rest.RRestAPIRegistration{{
 		Version: 1,
 		Prefix:  "/items",
 		Apis: []*rest.ExportableAPI{{
 			Path:   "",
 			Method: rest.GET,
-			Handler: func(*rest.Context) rest.Response {
+			Handler: func(rest.Context) rest.Response {
 				return rest.OK([]string{"item1", "item2"})
 			},
 		}},

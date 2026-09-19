@@ -9,14 +9,14 @@ import (
 )
 
 // dummyHandler is a no-op handler used by validation tests.
-func dummyHandler(*rest.Context) rest.Response {
+func dummyHandler(rest.Context) rest.Response {
 	return rest.NoContent()
 }
 
 // TestValidateRegistrations_NilRegistration rejects nil groups.
 func TestValidateRegistrations_NilRegistration(t *testing.T) {
 	// Act
-	_, err := validateRegistrations([]*rest.RestAPIRegistration{nil})
+	_, err := validateRegistrations([]*rest.RRestAPIRegistration{nil})
 
 	// Assert
 	require.Error(t, err)
@@ -26,7 +26,7 @@ func TestValidateRegistrations_NilRegistration(t *testing.T) {
 // TestValidateRegistrations_NilAPI rejects nil API entries.
 func TestValidateRegistrations_NilAPI(t *testing.T) {
 	// Arrange
-	regs := []*rest.RestAPIRegistration{{
+	regs := []*rest.RRestAPIRegistration{{
 		Prefix: "/x",
 		Apis:   []*rest.ExportableAPI{nil},
 	}}
@@ -42,7 +42,7 @@ func TestValidateRegistrations_NilAPI(t *testing.T) {
 // TestValidateRegistrations_NilHandler rejects nil handlers.
 func TestValidateRegistrations_NilHandler(t *testing.T) {
 	// Arrange
-	regs := []*rest.RestAPIRegistration{{
+	regs := []*rest.RRestAPIRegistration{{
 		Prefix: "/x",
 		Apis: []*rest.ExportableAPI{{
 			Path:    "/y",
@@ -62,7 +62,7 @@ func TestValidateRegistrations_NilHandler(t *testing.T) {
 // TestValidateRegistrations_InvalidMethod rejects bad methods.
 func TestValidateRegistrations_InvalidMethod(t *testing.T) {
 	// Arrange
-	regs := []*rest.RestAPIRegistration{{
+	regs := []*rest.RRestAPIRegistration{{
 		Prefix: "/x",
 		Apis: []*rest.ExportableAPI{{
 			Path:    "/y",

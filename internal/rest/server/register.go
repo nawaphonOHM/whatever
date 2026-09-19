@@ -9,31 +9,26 @@ import (
 // wrapMiddleware adapts a framework Middleware to gin.HandlerFunc.
 func wrapMiddleware(mw rest.Middleware) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		c := rest.NewContext(ginCtx)
+		c := newContext(ginCtx)
 		mw(c)
 	}
 }
 
-// writeIfPresent writes resp when non-nil.
-func writeIfPresent(c *rest.Context, resp rest.Response) {
-	if resp == nil {
-		return
-	}
-	resp.Write(c.GinContext())
-}
-
 // invokeHandler runs the handler unless the context was aborted.
-func invokeHandler(c *rest.Context, h rest.Handler) {
-	if c.GinContext().IsAborted() {
+func invokeHandler(ginCtx *gin.Context, h rest.Handler) {
+	if ginCtx.IsAborted() {
 		return
 	}
-	writeIfPresent(c, h(c))
+	c := newContext(ginCtx)
+	if resp := h(c); resp != nil {
+		resp.Write(ginCtx)
+	}
 }
 
 // wrapHandler adapts a framework Handler to gin.HandlerFunc.
 func wrapHandler(h rest.Handler) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		invokeHandler(rest.NewContext(ginCtx), h)
+		invokeHandler(ginCtx, h)
 	}
 }
 
@@ -70,7 +65,7 @@ func mountHealthEndpoints(engine *gin.Engine, version string) {
 // RegisterRoutesWithVersion validates and mounts API registrations.
 func RegisterRoutesWithVersion(
 	engine *gin.Engine,
-	registrations []*rest.RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 	version string,
 ) error {
 	validated, err := validateRegistrations(registrations)

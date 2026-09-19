@@ -32,7 +32,7 @@ func TestHTTPMethod_Invalid(t *testing.T) {
 
 func TestRestAPIRegistrationStructure(t *testing.T) {
 	api := &ExportableAPI{Path: "/status", Method: GET}
-	reg := &RestAPIRegistration{
+	reg := &RRestAPIRegistration{
 		Prefix: "/api", Apis: []*ExportableAPI{api},
 		Version: APIVersioning(1),
 	}
@@ -46,12 +46,11 @@ func TestRestAPIRegistrationStructure(t *testing.T) {
 func TestHandlerAndMiddlewareContracts(t *testing.T) {
 	called := false
 	api := ExportableAPI{
-		Handler:    func(*Context) Response { return OK(testValue) },
-		Middleware: []Middleware{func(*Context) { called = true }},
+		Handler:    func(Context) Response { return OK(testValue) },
+		Middleware: []Middleware{func(Context) { called = true }},
 	}
-	ctx := NewContext(nil)
-	api.Middleware[0](ctx)
-	response := api.Handler(ctx)
+	api.Middleware[0](nil)
+	response := api.Handler(nil)
 	assert.True(t, called)
 	assert.Equal(t, testStatus, response.StatusCode())
 }

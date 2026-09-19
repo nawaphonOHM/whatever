@@ -13,8 +13,8 @@ import (
 )
 
 // emptyRegs returns an empty registration slice.
-func emptyRegs() []*rest.RestAPIRegistration {
-	return make([]*rest.RestAPIRegistration, 0)
+func emptyRegs() []*rest.RRestAPIRegistration {
+	return make([]*rest.RRestAPIRegistration, 0)
 }
 
 // fetchHealth decodes the reserved health payload.

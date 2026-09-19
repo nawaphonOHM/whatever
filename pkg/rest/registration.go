@@ -11,10 +11,10 @@ type APIVersioning uint
 type Pathz string
 
 // Handler defines route handlers returning a standardized Response.
-type Handler func(*Context) Response
+type Handler func(Context) Response
 
 // Middleware defines the function signature for route middlewares.
-type Middleware func(*Context)
+type Middleware func(Context)
 
 // ExportableAPI defines a single API route endpoint.
 type ExportableAPI struct {
@@ -24,8 +24,8 @@ type ExportableAPI struct {
 	Method     HTTPMethod
 }
 
-// RestAPIRegistration groups APIs under a common prefix and version.
-type RestAPIRegistration struct {
+// RRestAPIRegistration groups APIs under a common prefix and version.
+type RRestAPIRegistration struct {
 	Prefix  Pathz
 	Apis    []*ExportableAPI
 	Version APIVersioning

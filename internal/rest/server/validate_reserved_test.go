@@ -11,7 +11,7 @@ import (
 // TestValidateRegistrations_ReservedPath rejects /health.
 func TestValidateRegistrations_ReservedPath(t *testing.T) {
 	// Arrange
-	regs := []*rest.RestAPIRegistration{{
+	regs := []*rest.RRestAPIRegistration{{
 		Apis: []*rest.ExportableAPI{{
 			Path:    ReservedHealthPath,
 			Method:  rest.GET,
@@ -30,7 +30,7 @@ func TestValidateRegistrations_ReservedPath(t *testing.T) {
 // TestValidateRegistrations_Duplicate rejects colliding routes.
 func TestValidateRegistrations_Duplicate(t *testing.T) {
 	// Arrange
-	regs := []*rest.RestAPIRegistration{
+	regs := []*rest.RRestAPIRegistration{
 		{
 			Prefix: "/items",
 			Apis: []*rest.ExportableAPI{{

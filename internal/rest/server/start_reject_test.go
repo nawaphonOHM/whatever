@@ -13,11 +13,11 @@ import (
 func TestStartREST_ReservedPathRejected(t *testing.T) {
 	// Arrange
 	t.Setenv(envGinMode, gin.TestMode)
-	regs := []*rest.RestAPIRegistration{{
+	regs := []*rest.RRestAPIRegistration{{
 		Apis: []*rest.ExportableAPI{{
 			Path:   ReservedHealthPath,
 			Method: rest.GET,
-			Handler: func(*rest.Context) rest.Response {
+			Handler: func(rest.Context) rest.Response {
 				return rest.OK("override")
 			},
 		}},
@@ -35,10 +35,10 @@ func TestStartREST_ReservedPathRejected(t *testing.T) {
 func TestStartREST_DuplicateRejected(t *testing.T) {
 	// Arrange
 	t.Setenv(envGinMode, gin.TestMode)
-	handler := func(*rest.Context) rest.Response {
+	handler := func(rest.Context) rest.Response {
 		return rest.NoContent()
 	}
-	regs := []*rest.RestAPIRegistration{
+	regs := []*rest.RRestAPIRegistration{
 		{
 			Version: 1,
 			Prefix:  "/x",
@@ -69,7 +69,7 @@ func TestStartREST_NilRegistrationRejected(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
 
 	// Act
-	err := StartREST([]*rest.RestAPIRegistration{nil})
+	err := StartREST([]*rest.RRestAPIRegistration{nil})
 
 	// Assert
 	require.Error(t, err)

@@ -96,7 +96,7 @@ func checkDuplicate(seen map[string]bool, key string) error {
 
 // buildValidatedRoute creates a route and checks collisions.
 func buildValidatedRoute(
-	reg *rest.RestAPIRegistration,
+	reg *rest.RRestAPIRegistration,
 	api *rest.ExportableAPI,
 	seen map[string]bool,
 ) (*validatedRoute, error) {

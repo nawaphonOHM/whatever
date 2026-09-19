@@ -100,14 +100,14 @@ func NewFeatureAPIs() *rest.RestAPIRegistration {
             {
                 Path:   "",
                 Method: rest.GET,
-                Handler: func(c *rest.Context) rest.Response {
+                Handler: func(c rest.Context) rest.Response {
                     return rest.OK([]string{"item1", "item2"})
                 },
             },
             {
                 Path:   "/:id",
                 Method: rest.GET,
-                Handler: func(c *rest.Context) rest.Response {
+                Handler: func(c rest.Context) rest.Response {
                     id := c.Param("id")
                     return rest.OK(map[string]string{"id": id})
                 },

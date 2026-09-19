@@ -21,17 +21,17 @@ const (
 )
 
 // mwOrderRegs builds a registration that records middleware order.
-func mwOrderRegs(order *[]string) []*rest.RestAPIRegistration {
-	return []*rest.RestAPIRegistration{{
+func mwOrderRegs(order *[]string) []*rest.RRestAPIRegistration {
+	return []*rest.RRestAPIRegistration{{
 		Version: 1,
 		Apis: []*rest.ExportableAPI{{
 			Path:   mwPath,
 			Method: rest.GET,
 			Middleware: []rest.Middleware{
-				func(*rest.Context) { *order = append(*order, mwMarkerA) },
-				func(*rest.Context) { *order = append(*order, mwMarkerB) },
+				func(rest.Context) { *order = append(*order, mwMarkerA) },
+				func(rest.Context) { *order = append(*order, mwMarkerB) },
 			},
-			Handler: func(*rest.Context) rest.Response {
+			Handler: func(rest.Context) rest.Response {
 				*order = append(*order, mwMarkerH)
 				return rest.NoContent()
 			},

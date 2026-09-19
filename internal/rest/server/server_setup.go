@@ -60,7 +60,7 @@ func (s *Server) SetupDefaultMiddlewares(
 
 // NewFromRegistrations loads config and prepares a Server.
 func NewFromRegistrations(
-	registrations []*rest.RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 ) (*Server, error) {
 	cfg, err := intcfg.Load[Config]()
 	if err != nil {
@@ -83,14 +83,14 @@ func NewFromRegistrations(
 
 // RegisterRoutes mounts registrations without version metadata.
 func (s *Server) RegisterRoutes(
-	registrations []*rest.RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 ) error {
 	return RegisterRoutesWithVersion(s.Engine, registrations, "")
 }
 
 // RegisterRoutesWithVersion mounts registrations with version.
 func (s *Server) RegisterRoutesWithVersion(
-	registrations []*rest.RestAPIRegistration,
+	registrations []*rest.RRestAPIRegistration,
 	version string,
 ) error {
 	return RegisterRoutesWithVersion(

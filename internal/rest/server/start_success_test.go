@@ -13,14 +13,14 @@ import (
 )
 
 // pingRegs returns a versioned /ping registration set.
-func pingRegs() []*rest.RestAPIRegistration {
-	return []*rest.RestAPIRegistration{{
+func pingRegs() []*rest.RRestAPIRegistration {
+	return []*rest.RRestAPIRegistration{{
 		Version: 1,
 		Prefix:  "/api",
 		Apis: []*rest.ExportableAPI{{
 			Path:   "/ping",
 			Method: rest.GET,
-			Handler: func(*rest.Context) rest.Response {
+			Handler: func(rest.Context) rest.Response {
 				return rest.OK("pong")
 			},
 		}},
@@ -29,7 +29,7 @@ func pingRegs() []*rest.RestAPIRegistration {
 
 // startRESTAsync launches StartREST and waits for bind.
 func startRESTAsync(
-	regs []*rest.RestAPIRegistration,
+	regs []*rest.RRestAPIRegistration,
 ) <-chan error {
 	errCh := make(chan error, 1)
 	go func() { errCh <- StartREST(regs) }()
