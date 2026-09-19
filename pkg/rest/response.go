@@ -54,8 +54,3 @@ func Created(data any, message ...string) Response {
 func NoContent() Response {
 	return &noContentResponse{}
 }
-
-// Problem returns the ProblemDetails as a Response.
-func Problem(prob *ProblemDetails) Response {
-	return prob
-}

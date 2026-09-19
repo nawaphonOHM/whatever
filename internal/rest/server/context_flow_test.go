@@ -25,7 +25,7 @@ func TestContext_AbortWithResponse(t *testing.T) {
 func TestContext_AbortWithProblem(t *testing.T) {
 	r := gin.New()
 	r.GET("/problem", func(gc *gin.Context) {
-		prob := rest.NewProblemDetails(testUnauthorized, "UNAUTH", "denied")
+		prob := rest.Unauthorized("UNAUTH", "denied")
 		newContext(gc).AbortWithProblem(prob)
 	})
 	w := httptest.NewRecorder()
