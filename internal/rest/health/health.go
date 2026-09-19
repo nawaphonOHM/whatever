@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
 // Status represents the response payload for health probes.
@@ -31,7 +31,7 @@ func New(version string) *Handler {
 
 // Health handles GET /health liveness probe requests.
 func (h *Handler) Health(c *gin.Context) {
-	resp := response.OK(Status{
+	resp := rest.OK(Status{
 		Status:    "up",
 		Timestamp: time.Now().UTC(),
 		Version:   h.version,
@@ -41,7 +41,7 @@ func (h *Handler) Health(c *gin.Context) {
 
 // Ready handles GET /ready readiness probe requests.
 func (h *Handler) Ready(c *gin.Context) {
-	resp := response.OK(Status{
+	resp := rest.OK(Status{
 		Status:    "ready",
 		Timestamp: time.Now().UTC(),
 		Version:   h.version,

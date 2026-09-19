@@ -1,9 +1,11 @@
 package server
 
+import "github.com/nawaphonOHM/whatever/pkg/rest"
+
 // validatedRoute is a fully resolved route ready for engine mount.
 type validatedRoute struct {
-	Handler     Handler
+	Handler     rest.Handler
 	Path        string
 	Method      string
-	Middlewares []Middleware
+	Middlewares []rest.Middleware
 }

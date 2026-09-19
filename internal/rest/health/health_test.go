@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest/response"
+	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,7 +42,7 @@ func verifyProbeResponse(
 	expectedStatus string,
 ) {
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp response.SuccessResponse[Status]
+	var resp rest.SuccessResponse[Status]
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 
