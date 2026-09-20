@@ -17,10 +17,10 @@ const (
 	testHost          = "127.0.0.1"
 	startWait         = 50 * time.Millisecond
 	shutdownWait      = 3 * time.Second
-	envGinMode        = "OHM9969_GIN_MODE"
-	envServerPort     = "OHM9969_SERVER_PORT"
-	envServerHost     = "OHM9969_SERVER_HOST"
-	envAppVersion     = "OHM9969_APP_VERSION"
+	envGinMode        = "OHM9996_GIN_MODE"
+	envServerPort     = "OHM9996_SERVER_PORT"
+	envServerHost     = "OHM9996_SERVER_HOST"
+	envAppVersion     = "OHM9996_APP_VERSION"
 	customPort        = 9090
 	customReadSec     = 5
 	customIdleSec     = 30
@@ -72,7 +72,7 @@ func waitErr(t *testing.T, errCh <-chan error) error {
 // setStartEnv configures host/port/mode for StartREST tests.
 func setStartEnv(t *testing.T, port int) {
 	t.Helper()
-	// OHM9969_ keys match production config loading.
+	// OHM9996_ keys match production config loading.
 	t.Setenv(envGinMode, gin.TestMode)
 	t.Setenv(envServerHost, testHost)
 	t.Setenv(envServerPort, fmt.Sprintf("%d", port))

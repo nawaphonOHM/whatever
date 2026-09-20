@@ -21,11 +21,11 @@ const (
 )
 
 // Config defines configuration options for connecting to MongoDB.
-// All environment variable keys use the OHM9969_MONGODB_ prefix.
+// All environment variable keys use the OHM9996_MONGODB_ prefix.
 type Config struct {
-	BaseFields    `envPrefix:"OHM9969_MONGODB_"`
-	TimeoutFields `envPrefix:"OHM9969_MONGODB_"`
-	PoolFields    `envPrefix:"OHM9969_MONGODB_"`
+	BaseFields    `envPrefix:"OHM9996_MONGODB_"`
+	TimeoutFields `envPrefix:"OHM9996_MONGODB_"`
+	PoolFields    `envPrefix:"OHM9996_MONGODB_"`
 }
 
 // DefaultConfig returns MongoDB configuration with recommended production
@@ -51,7 +51,7 @@ func DefaultConfig() *Config {
 }
 
 // LoadConfig loads MongoDB configuration from environment variables with
-// OHM9969_MONGODB_* prefix and validates the resulting settings.
+// OHM9996_MONGODB_* prefix and validates the resulting settings.
 func LoadConfig(filenames ...string) (*Config, error) {
 	cfg, err := intcfg.Load[Config](filenames...)
 	if err != nil {

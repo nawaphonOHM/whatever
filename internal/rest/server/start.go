@@ -7,7 +7,7 @@ import (
 )
 
 // StartREST initializes and runs the HTTP server.
-// It loads OHM9969_ configuration, mounts reserved health
+// It loads OHM9996_ configuration, mounts reserved health
 // endpoints, validates routes, and shuts down on signals.
 func StartREST(registrations []*rest.RRestAPIRegistration) error {
 	srv, err := NewFromRegistrations(registrations)

@@ -13,11 +13,11 @@ import (
 
 // Constants for environment variable keys and test fixtures.
 const (
-	envConnectTimeout    = "OHM9969_MONGODB_CONNECT_TIMEOUT"
-	envServerSelection   = "OHM9969_MONGODB_SERVER_SELECTION_TIMEOUT"
-	envSocketTimeout     = "OHM9969_MONGODB_SOCKET_TIMEOUT"
-	envURI               = "OHM9969_MONGODB_URI"
-	envDatabase          = "OHM9969_MONGODB_DATABASE"
+	envConnectTimeout    = "OHM9996_MONGODB_CONNECT_TIMEOUT"
+	envServerSelection   = "OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT"
+	envSocketTimeout     = "OHM9996_MONGODB_SOCKET_TIMEOUT"
+	envURI               = "OHM9996_MONGODB_URI"
+	envDatabase          = "OHM9996_MONGODB_DATABASE"
 	testFailURI          = "mongodb://127.0.0.1:59999"
 	testDefaultURI       = "mongodb://localhost:27017"
 	testDBName           = "testdb"

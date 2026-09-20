@@ -10,19 +10,19 @@ details remain internal to this library.
 The client loads and validates configuration from environment variables when it
 is started. Configuration values are intentionally not exposed as public
 structs or functional options, so importing applications use the standardized
-`OHM9969_MONGODB_*` environment variables.
+`OHM9996_MONGODB_*` environment variables.
 
 | Environment variable | Default |
 | --- | --- |
-| `OHM9969_MONGODB_URI` | `mongodb://localhost:27017` |
-| `OHM9969_MONGODB_DATABASE` | empty |
-| `OHM9969_MONGODB_CONNECT_TIMEOUT` | `10s` |
-| `OHM9969_MONGODB_SERVER_SELECTION_TIMEOUT` | `5s` |
-| `OHM9969_MONGODB_SOCKET_TIMEOUT` | `10s` |
-| `OHM9969_MONGODB_MAX_POOL_SIZE` | `100` |
-| `OHM9969_MONGODB_MIN_POOL_SIZE` | `5` |
-| `OHM9969_MONGODB_MAX_CONN_IDLE_TIME` | `10m` |
-| `OHM9969_MONGODB_APP_NAME` | empty |
+| `OHM9996_MONGODB_URI` | `mongodb://localhost:27017` |
+| `OHM9996_MONGODB_DATABASE` | empty |
+| `OHM9996_MONGODB_CONNECT_TIMEOUT` | `10s` |
+| `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | `5s` |
+| `OHM9996_MONGODB_SOCKET_TIMEOUT` | `10s` |
+| `OHM9996_MONGODB_MAX_POOL_SIZE` | `100` |
+| `OHM9996_MONGODB_MIN_POOL_SIZE` | `5` |
+| `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | `10m` |
+| `OHM9996_MONGODB_APP_NAME` | empty |
 
 The environment-backed configuration, defaults, validation, and driver option
 construction live in `internal/mongodb`. They are not part of the API available

@@ -19,10 +19,10 @@ func createDotEnvFile(t *testing.T) string {
 	tmpDir := t.TempDir()
 	envPath := filepath.Join(tmpDir, ".env.mongodb")
 	content := []byte(`
-OHM9969_MONGODB_URI=mongodb://dotenv-host:27017
-OHM9969_MONGODB_DATABASE=dotenv_db
-OHM9969_MONGODB_MAX_POOL_SIZE=75
-OHM9969_MONGODB_APP_NAME=dotenv-app
+OHM9996_MONGODB_URI=mongodb://dotenv-host:27017
+OHM9996_MONGODB_DATABASE=dotenv_db
+OHM9996_MONGODB_MAX_POOL_SIZE=75
+OHM9996_MONGODB_APP_NAME=dotenv-app
 `)
 	err := os.WriteFile(envPath, content, testFilePerm)
 	require.NoError(t, err)
