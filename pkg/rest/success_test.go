@@ -65,7 +65,7 @@ func assertEnvelopeFields(t *testing.T, data []byte, fixedTime time.Time) {
 }
 
 // TestSuccessResponse_DTOUnmarshaling tests JSON envelope deserialization
-// into the public SuccessResponse and Envelope DTO types.
+// into the public SuccessResponse and Envelope DTO contracts.
 func TestSuccessResponse_DTOUnmarshaling(t *testing.T) {
 	fixedTime := getFixedTime()
 	resp := newSuccessResponse("payload", "ok").withTimestamp(fixedTime)

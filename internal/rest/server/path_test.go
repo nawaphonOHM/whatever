@@ -3,17 +3,17 @@ package server
 import (
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 )
 
 // pathCase is one CalculateFullPath table row.
 type pathCase struct {
 	name     string
-	prefix   rest.Pathz
-	path     rest.Pathz
+	prefix   contracts.Pathz
+	path     contracts.Pathz
 	expected string
-	version  rest.APIVersioning
+	version  contracts.APIVersioning
 }
 
 // pathCases returns CalculateFullPath coverage rows.

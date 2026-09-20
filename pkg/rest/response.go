@@ -4,19 +4,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 )
 
 // MediaTypeProblemJSON is the canonical media type for RFC 9457 Problem
 // Details.
-const MediaTypeProblemJSON = "application/problem+json"
+const MediaTypeProblemJSON = contracts.MediaTypeProblemJSON
 
-// Response represents any HTTP response that can write itself to a Gin context.
-type Response interface {
-	// StatusCode returns the HTTP status code of the response.
-	StatusCode() int
-	// Write renders the response to the given Gin context.
-	Write(*gin.Context)
-}
+// Response represents any HTTP response that can write itself to a Gin
+// context.
+type Response = contracts.Response
 
 // noContentResponse represents an empty HTTP 204 No Content response.
 type noContentResponse struct{}

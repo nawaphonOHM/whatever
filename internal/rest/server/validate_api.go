@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 )
 
 // routeKey builds a unique method+path registration key.
@@ -12,7 +12,7 @@ func routeKey(method, path string) string {
 }
 
 // errNilAPIAt formats a nil API validation error.
-func errNilAPIAt(apiIdx int, prefix rest.Pathz) error {
+func errNilAPIAt(apiIdx int, prefix contracts.Pathz) error {
 	return fmt.Errorf(
 		"%w: API at index %d in prefix %q is nil",
 		ErrNilAPI,
@@ -22,7 +22,7 @@ func errNilAPIAt(apiIdx int, prefix rest.Pathz) error {
 }
 
 // errNilHandlerAt formats a nil handler validation error.
-func errNilHandlerAt(apiIdx int, prefix rest.Pathz) error {
+func errNilHandlerAt(apiIdx int, prefix contracts.Pathz) error {
 	return fmt.Errorf(
 		"%w: API at index %d in prefix %q has nil handler",
 		ErrNilHandler,
@@ -32,7 +32,7 @@ func errNilHandlerAt(apiIdx int, prefix rest.Pathz) error {
 }
 
 // errInvalidMethodAt formats an invalid method validation error.
-func errInvalidMethodAt(apiIdx int, method rest.HTTPMethod) error {
+func errInvalidMethodAt(apiIdx int, method contracts.HTTPMethod) error {
 	return fmt.Errorf(
 		"%w: API at index %d has invalid method code %d",
 		ErrInvalidMethod,
@@ -42,8 +42,8 @@ func errInvalidMethodAt(apiIdx int, method rest.HTTPMethod) error {
 }
 
 // checkAPINonNil ensures API and handler pointers exist.
-func checkAPINonNil(api *rest.ExportableAPI, apiIdx int,
-	prefix rest.Pathz) error {
+func checkAPINonNil(api *contracts.ExportableAPI, apiIdx int,
+	prefix contracts.Pathz) error {
 	if api == nil {
 		return errNilAPIAt(apiIdx, prefix)
 	}
@@ -55,9 +55,9 @@ func checkAPINonNil(api *rest.ExportableAPI, apiIdx int,
 
 // validateAPIEntry checks a single exportable API entry.
 func validateAPIEntry(
-	api *rest.ExportableAPI,
+	api *contracts.ExportableAPI,
 	apiIdx int,
-	prefix rest.Pathz,
+	prefix contracts.Pathz,
 ) error {
 	if err := checkAPINonNil(api, apiIdx, prefix); err != nil {
 		return err
@@ -96,8 +96,8 @@ func checkDuplicate(seen map[string]bool, key string) error {
 
 // buildValidatedRoute creates a route and checks collisions.
 func buildValidatedRoute(
-	reg *rest.RRestAPIRegistration,
-	api *rest.ExportableAPI,
+	reg *contracts.RRestAPIRegistration,
+	api *contracts.ExportableAPI,
 	seen map[string]bool,
 ) (*validatedRoute, error) {
 	fullPath := CalculateFullPath(reg.Version, reg.Prefix, api.Path)

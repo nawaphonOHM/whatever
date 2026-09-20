@@ -4,19 +4,19 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 )
 
 const serverContextKey = "_server_context"
 
-// Context implements rest.Context wrapping gin.Context.
+// Context implements contracts.Context wrapping gin.Context.
 type Context struct {
 	ginCtx  *gin.Context
 	Request *http.Request
 }
 
-// Compile-time assertion that Context implements rest.Context.
-var _ rest.Context = (*Context)(nil)
+// Compile-time assertion that Context implements contracts.Context.
+var _ contracts.Context = (*Context)(nil)
 
 func existingContext(ginCtx *gin.Context) *Context {
 	val, exists := ginCtx.Get(serverContextKey)

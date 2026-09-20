@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,6 +35,13 @@ func performProbeRequest(h *Handler, path string) *httptest.ResponseRecorder {
 	return w
 }
 
+// testResponseEnvelope represents the expected envelope structure in tests.
+type testResponseEnvelope[T any] struct {
+	Data      T         `json:"data"`
+	Timestamp time.Time `json:"timestamp"`
+	Success   bool      `json:"success"`
+}
+
 // verifyProbeResponse validates the HTTP status and JSON response body.
 func verifyProbeResponse(
 	t *testing.T,
@@ -42,7 +49,7 @@ func verifyProbeResponse(
 	expectedStatus string,
 ) {
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp rest.SuccessResponse[Status]
+	var resp testResponseEnvelope[Status]
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 

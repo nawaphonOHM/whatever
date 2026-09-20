@@ -3,10 +3,10 @@
 package health
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
 // Status represents the response payload for health probes.
@@ -14,6 +14,13 @@ type Status struct {
 	Status    string    `json:"status"`
 	Timestamp time.Time `json:"timestamp"`
 	Version   string    `json:"version,omitempty"`
+}
+
+// responseEnvelope represents the JSON response envelope for health probes.
+type responseEnvelope struct {
+	Timestamp time.Time `json:"timestamp"`
+	Data      Status    `json:"data"`
+	Success   bool      `json:"success"`
 }
 
 // Handler manages internal liveness (/health) and readiness (/ready)
@@ -29,22 +36,24 @@ func New(version string) *Handler {
 	}
 }
 
+func (h *Handler) writeStatus(c *gin.Context, status string) {
+	c.JSON(http.StatusOK, responseEnvelope{
+		Data: Status{
+			Status:    status,
+			Timestamp: time.Now().UTC(),
+			Version:   h.version,
+		},
+		Timestamp: time.Now().UTC(),
+		Success:   true,
+	})
+}
+
 // Health handles GET /health liveness probe requests.
 func (h *Handler) Health(c *gin.Context) {
-	resp := rest.OK(Status{
-		Status:    "up",
-		Timestamp: time.Now().UTC(),
-		Version:   h.version,
-	})
-	resp.Write(c)
+	h.writeStatus(c, "up")
 }
 
 // Ready handles GET /ready readiness probe requests.
 func (h *Handler) Ready(c *gin.Context) {
-	resp := rest.OK(Status{
-		Status:    "ready",
-		Timestamp: time.Now().UTC(),
-		Version:   h.version,
-	})
-	resp.Write(c)
+	h.writeStatus(c, "ready")
 }

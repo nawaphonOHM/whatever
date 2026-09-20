@@ -12,6 +12,9 @@ const (
 
 // Sentinel validation errors.
 var (
+	ErrNilBluePrint = errors.New(
+		"blueprint cannot be nil",
+	)
 	ErrReservedPath = errors.New(
 		"route conflicts with reserved health/readiness endpoint",
 	)

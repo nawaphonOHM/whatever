@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,18 +13,19 @@ import (
 func TestStartREST_ReservedPathRejected(t *testing.T) {
 	// Arrange
 	t.Setenv(envGinMode, gin.TestMode)
-	regs := []*rest.RRestAPIRegistration{{
-		Apis: []*rest.ExportableAPI{{
+	bp := contracts.NewBluePrint()
+	bluePrint := bp.WithAPIs(&contracts.RRestAPIRegistration{
+		Apis: []*contracts.ExportableAPI{{
 			Path:   ReservedHealthPath,
-			Method: rest.GET,
-			Handler: func(rest.Context) rest.Response {
-				return rest.OK("override")
+			Method: contracts.GET,
+			Handler: func(contracts.Context) contracts.Response {
+				return testOK("override")
 			},
 		}},
-	}}
+	})
 
 	// Act
-	err := StartREST(regs)
+	err := StartREST(bluePrint)
 
 	// Assert
 	require.Error(t, err)
@@ -35,28 +36,28 @@ func TestStartREST_ReservedPathRejected(t *testing.T) {
 func TestStartREST_DuplicateRejected(t *testing.T) {
 	// Arrange
 	t.Setenv(envGinMode, gin.TestMode)
-	handler := func(rest.Context) rest.Response {
-		return rest.NoContent()
+	handler := func(contracts.Context) contracts.Response {
+		return testNoContent()
 	}
-	regs := []*rest.RRestAPIRegistration{
-		{
+	bluePrint := contracts.NewBluePrint().WithAPIs(
+		&contracts.RRestAPIRegistration{
 			Version: 1,
 			Prefix:  "/x",
-			Apis: []*rest.ExportableAPI{{
-				Path: "", Method: rest.GET, Handler: handler,
+			Apis: []*contracts.ExportableAPI{{
+				Path: "", Method: contracts.GET, Handler: handler,
 			}},
 		},
-		{
+		&contracts.RRestAPIRegistration{
 			Version: 1,
 			Prefix:  "/x",
-			Apis: []*rest.ExportableAPI{{
-				Path: "", Method: rest.GET, Handler: handler,
+			Apis: []*contracts.ExportableAPI{{
+				Path: "", Method: contracts.GET, Handler: handler,
 			}},
 		},
-	}
+	)
 
 	// Act
-	err := StartREST(regs)
+	err := StartREST(bluePrint)
 
 	// Assert
 	require.Error(t, err)
@@ -69,9 +70,14 @@ func TestStartREST_NilRegistrationRejected(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
 
 	// Act
-	err := StartREST([]*rest.RRestAPIRegistration{nil})
+	err := StartREST(contracts.NewBluePrint().WithAPIs(nil))
 
 	// Assert
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNilRegistration)
+}
+
+// TestStartREST_NilBluePrintRejected rejects a nil blueprint.
+func TestStartREST_NilBluePrintRejected(t *testing.T) {
+	assert.ErrorIs(t, StartREST(nil), ErrNilBluePrint)
 }

@@ -3,20 +3,20 @@ package server
 import (
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // dummyHandler is a no-op handler used by validation tests.
-func dummyHandler(rest.Context) rest.Response {
-	return rest.NoContent()
+func dummyHandler(contracts.Context) contracts.Response {
+	return testNoContent()
 }
 
 // TestValidateRegistrations_NilRegistration rejects nil groups.
 func TestValidateRegistrations_NilRegistration(t *testing.T) {
 	// Act
-	_, err := validateRegistrations([]*rest.RRestAPIRegistration{nil})
+	_, err := validateRegistrations([]*contracts.RRestAPIRegistration{nil})
 
 	// Assert
 	require.Error(t, err)
@@ -26,9 +26,9 @@ func TestValidateRegistrations_NilRegistration(t *testing.T) {
 // TestValidateRegistrations_NilAPI rejects nil API entries.
 func TestValidateRegistrations_NilAPI(t *testing.T) {
 	// Arrange
-	regs := []*rest.RRestAPIRegistration{{
+	regs := []*contracts.RRestAPIRegistration{{
 		Prefix: "/x",
-		Apis:   []*rest.ExportableAPI{nil},
+		Apis:   []*contracts.ExportableAPI{nil},
 	}}
 
 	// Act
@@ -42,11 +42,11 @@ func TestValidateRegistrations_NilAPI(t *testing.T) {
 // TestValidateRegistrations_NilHandler rejects nil handlers.
 func TestValidateRegistrations_NilHandler(t *testing.T) {
 	// Arrange
-	regs := []*rest.RRestAPIRegistration{{
+	regs := []*contracts.RRestAPIRegistration{{
 		Prefix: "/x",
-		Apis: []*rest.ExportableAPI{{
+		Apis: []*contracts.ExportableAPI{{
 			Path:    "/y",
-			Method:  rest.GET,
+			Method:  contracts.GET,
 			Handler: nil,
 		}},
 	}}
@@ -62,11 +62,11 @@ func TestValidateRegistrations_NilHandler(t *testing.T) {
 // TestValidateRegistrations_InvalidMethod rejects bad methods.
 func TestValidateRegistrations_InvalidMethod(t *testing.T) {
 	// Arrange
-	regs := []*rest.RRestAPIRegistration{{
+	regs := []*contracts.RRestAPIRegistration{{
 		Prefix: "/x",
-		Apis: []*rest.ExportableAPI{{
+		Apis: []*contracts.ExportableAPI{{
 			Path:    "/y",
-			Method:  rest.HTTPMethod(invalidMethodCode),
+			Method:  contracts.HTTPMethod(invalidMethodCode),
 			Handler: dummyHandler,
 		}},
 	}}

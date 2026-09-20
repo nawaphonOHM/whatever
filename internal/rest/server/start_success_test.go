@@ -7,32 +7,32 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// pingRegs returns a versioned /ping registration set.
-func pingRegs() []*rest.RRestAPIRegistration {
-	return []*rest.RRestAPIRegistration{{
+// pingBlueprint returns a versioned /ping blueprint.
+func pingBlueprint() *contracts.BluePrint {
+	return contracts.NewBluePrint().WithAPIs(&contracts.RRestAPIRegistration{
 		Version: 1,
 		Prefix:  "/api",
-		Apis: []*rest.ExportableAPI{{
+		Apis: []*contracts.ExportableAPI{{
 			Path:   "/ping",
-			Method: rest.GET,
-			Handler: func(rest.Context) rest.Response {
-				return rest.OK("pong")
+			Method: contracts.GET,
+			Handler: func(contracts.Context) contracts.Response {
+				return testOK("pong")
 			},
 		}},
-	}}
+	})
 }
 
 // startRESTAsync launches StartREST and waits for bind.
 func startRESTAsync(
-	regs []*rest.RRestAPIRegistration,
+	bluePrint *contracts.BluePrint,
 ) <-chan error {
 	errCh := make(chan error, 1)
-	go func() { errCh <- StartREST(regs) }()
+	go func() { errCh <- StartREST(bluePrint) }()
 	time.Sleep(startWait)
 	return errCh
 }
@@ -58,7 +58,7 @@ func TestStartREST_Success(t *testing.T) {
 	// Arrange
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	errCh := startRESTAsync(pingRegs())
+	errCh := startRESTAsync(pingBlueprint())
 
 	// Act
 	url := fmt.Sprintf(

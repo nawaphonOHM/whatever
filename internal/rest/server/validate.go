@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 )
 
 // registrationScan holds mutable validation state.
@@ -14,8 +14,8 @@ type registrationScan struct {
 
 // appendRoute validates one API and appends it when valid.
 func (s *registrationScan) appendRoute(
-	reg *rest.RRestAPIRegistration,
-	api *rest.ExportableAPI,
+	reg *contracts.RRestAPIRegistration,
+	api *contracts.ExportableAPI,
 	apiIdx int,
 ) error {
 	if err := validateAPIEntry(api, apiIdx, reg.Prefix); err != nil {
@@ -31,7 +31,7 @@ func (s *registrationScan) appendRoute(
 
 // requireRegistration rejects a nil registration group.
 func requireRegistration(
-	reg *rest.RRestAPIRegistration,
+	reg *contracts.RRestAPIRegistration,
 	regIdx int,
 ) error {
 	if reg != nil {
@@ -45,7 +45,7 @@ func requireRegistration(
 }
 
 // scanAPIs validates every API entry in a registration group.
-func (s *registrationScan) scanAPIs(reg *rest.RRestAPIRegistration) error {
+func (s *registrationScan) scanAPIs(reg *contracts.RRestAPIRegistration) error {
 	for apiIdx, api := range reg.Apis {
 		if err := s.appendRoute(reg, api, apiIdx); err != nil {
 			return err
@@ -56,7 +56,7 @@ func (s *registrationScan) scanAPIs(reg *rest.RRestAPIRegistration) error {
 
 // scanRegistration validates one registration group.
 func (s *registrationScan) scanRegistration(
-	reg *rest.RRestAPIRegistration,
+	reg *contracts.RRestAPIRegistration,
 	regIdx int,
 ) error {
 	if err := requireRegistration(reg, regIdx); err != nil {
@@ -67,7 +67,7 @@ func (s *registrationScan) scanRegistration(
 
 // validateRegistrations validates registrations and returns routes.
 func validateRegistrations(
-	registrations []*rest.RRestAPIRegistration,
+	registrations []*contracts.RRestAPIRegistration,
 ) ([]*validatedRoute, error) {
 	scan := &registrationScan{
 		seen: make(map[string]bool),
