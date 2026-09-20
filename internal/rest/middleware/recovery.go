@@ -2,11 +2,12 @@ package middleware
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/problem"
 )
 
 // Recovery returns a middleware that recovers from any panics,
@@ -31,7 +32,8 @@ func logAndAbortPanic(c *gin.Context, l *slog.Logger, r any) {
 	)
 
 	c.Abort()
-	resp := rest.InternalServerError(
+	resp := problem.New(
+		http.StatusInternalServerError,
 		"INTERNAL_SERVER_ERROR",
 		"An unexpected internal server error occurred",
 	)

@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/internal/rest/problem"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,18 +15,24 @@ func TestContext_AbortWithResponse(t *testing.T) {
 	r := gin.New()
 	r.GET("/abort", func(gc *gin.Context) {
 		c := newContext(gc)
-		c.AbortWithResponse(rest.BadRequest("INVALID", "bad input"))
+		c.AbortWithResponse(
+			problem.New(http.StatusBadRequest, "INVALID", "bad input"),
+		)
 	}, func(*gin.Context) { t.Fatal("handler ran after abort") })
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/abort", nil))
 	assert.Equal(t, testBadStatus, w.Code)
-	assert.Equal(t, rest.MediaTypeProblemJSON, w.Header().Get("Content-Type"))
+	assert.Equal(
+		t,
+		contracts.MediaTypeProblemJSON,
+		w.Header().Get("Content-Type"),
+	)
 }
 
 func TestContext_AbortWithProblem(t *testing.T) {
 	r := gin.New()
 	r.GET("/problem", func(gc *gin.Context) {
-		prob := rest.Unauthorized("UNAUTH", "denied")
+		prob := problem.New(http.StatusUnauthorized, "UNAUTH", "denied")
 		newContext(gc).AbortWithProblem(prob)
 	})
 	w := httptest.NewRecorder()

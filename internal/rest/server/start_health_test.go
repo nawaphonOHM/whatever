@@ -6,22 +6,22 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/internal/rest/health"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // emptyRegs returns an empty registration slice.
-func emptyRegs() []*rest.RRestAPIRegistration {
-	return make([]*rest.RRestAPIRegistration, 0)
+func emptyBlueprint() *contracts.BluePrint {
+	return contracts.NewBluePrint()
 }
 
 // fetchHealth decodes the reserved health payload.
 func fetchHealth(
 	t *testing.T,
 	port int,
-) rest.SuccessResponse[health.Status] {
+) testSuccessResponse[health.Status] {
 	t.Helper()
 	url := fmt.Sprintf(
 		"http://%s:%d%s", testHost, port, ReservedHealthPath,
@@ -30,7 +30,7 @@ func fetchHealth(
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	var body rest.SuccessResponse[health.Status]
+	var body testSuccessResponse[health.Status]
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 	return body
 }
@@ -40,7 +40,7 @@ func TestStartREST_HealthEndpoint(t *testing.T) {
 	// Arrange
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	errCh := startRESTAsync(emptyRegs())
+	errCh := startRESTAsync(emptyBlueprint())
 
 	// Act
 	body := fetchHealth(t, port)

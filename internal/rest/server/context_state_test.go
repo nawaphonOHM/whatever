@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +25,12 @@ func setBasicState(c *Context, now time.Time) {
 	c.Set("time", now)
 }
 
-func assertBasicState(t *testing.T, c rest.Context, value any, now time.Time) {
+func assertBasicState(
+	t *testing.T,
+	c contracts.Context,
+	value any,
+	now time.Time,
+) {
 	assert.Equal(t, testValue, value)
 	assert.Equal(t, testValue, c.MustGet(testKey))
 	assert.True(t, c.GetBool("bool"))
@@ -49,7 +54,7 @@ func setTypedState(c *Context) {
 	c.Set("slice", []string{testValue})
 }
 
-func assertTypedState(t *testing.T, c rest.Context) {
+func assertTypedState(t *testing.T, c contracts.Context) {
 	assert.Equal(t, int64(testInt64Value), c.GetInt64("int64"))
 	assert.Equal(t, uint(testUintValue), c.GetUint("uint"))
 	assert.Equal(t, uint64(testUint64Value), c.GetUint64("uint64"))
@@ -69,7 +74,7 @@ func TestContext_StateMapsAndMissingValues(t *testing.T) {
 	assert.Panics(t, func() { c.MustGet("missing") })
 }
 
-func assertMapState(t *testing.T, c rest.Context) {
+func assertMapState(t *testing.T, c contracts.Context) {
 	stringsMap := map[string]string{testKey: testValue}
 	slicesMap := map[string][]string{testKey: {testValue}}
 	assert.Equal(t, stringsMap, c.GetStringMapString("strings"))

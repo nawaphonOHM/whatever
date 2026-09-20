@@ -1,6 +1,6 @@
 package server
 
-import "github.com/nawaphonOHM/whatever/pkg/rest"
+import "github.com/nawaphonOHM/whatever/internal/rest/contracts"
 
 // Set stores a key/value pair exclusively for this context.
 func (c *Context) Set(key string, value any) {
@@ -47,7 +47,7 @@ func (c *Context) AbortWithStatus(code int) {
 }
 
 // AbortWithResponse aborts and serializes the provided Response.
-func (c *Context) AbortWithResponse(resp rest.Response) {
+func (c *Context) AbortWithResponse(resp contracts.Response) {
 	if c.ginCtx == nil {
 		return
 	}
@@ -58,7 +58,7 @@ func (c *Context) AbortWithResponse(resp rest.Response) {
 }
 
 // AbortWithProblem aborts and serializes the provided ProblemDetails.
-func (c *Context) AbortWithProblem(prob rest.Response) {
+func (c *Context) AbortWithProblem(prob contracts.Response) {
 	c.AbortWithResponse(prob)
 }
 

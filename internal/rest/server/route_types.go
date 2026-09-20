@@ -1,11 +1,11 @@
 package server
 
-import "github.com/nawaphonOHM/whatever/pkg/rest"
+import "github.com/nawaphonOHM/whatever/internal/rest/contracts"
 
 // validatedRoute is a fully resolved route ready for engine mount.
 type validatedRoute struct {
-	Handler     rest.Handler
+	Handler     contracts.Handler
 	Path        string
 	Method      string
-	Middlewares []rest.Middleware
+	Middlewares []contracts.Middleware
 }
