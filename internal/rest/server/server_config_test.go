@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestConfig_LoadFromEnv loads server config from OHM9969_ keys.
+// TestConfig_LoadFromEnv loads server config from OHM9996_ keys.
 func TestConfig_LoadFromEnv(t *testing.T) {
 	// Arrange
 	t.Setenv(envServerPort, "9090")

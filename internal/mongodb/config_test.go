@@ -16,29 +16,29 @@ const (
 // setupEmptyEnv clears all mongodb environment variable overrides.
 func setupEmptyEnv(t *testing.T) {
 	// Clear all connection string and database env vars.
-	t.Setenv("OHM9969_MONGODB_URI", "")
-	t.Setenv("OHM9969_MONGODB_DATABASE", "")
-	t.Setenv("OHM9969_MONGODB_CONNECT_TIMEOUT", "")
-	t.Setenv("OHM9969_MONGODB_SERVER_SELECTION_TIMEOUT", "")
-	t.Setenv("OHM9969_MONGODB_SOCKET_TIMEOUT", "")
-	t.Setenv("OHM9969_MONGODB_MAX_POOL_SIZE", "")
-	t.Setenv("OHM9969_MONGODB_MIN_POOL_SIZE", "")
-	t.Setenv("OHM9969_MONGODB_MAX_CONN_IDLE_TIME", "")
-	t.Setenv("OHM9969_MONGODB_APP_NAME", "")
+	t.Setenv("OHM9996_MONGODB_URI", "")
+	t.Setenv("OHM9996_MONGODB_DATABASE", "")
+	t.Setenv("OHM9996_MONGODB_CONNECT_TIMEOUT", "")
+	t.Setenv("OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT", "")
+	t.Setenv("OHM9996_MONGODB_SOCKET_TIMEOUT", "")
+	t.Setenv("OHM9996_MONGODB_MAX_POOL_SIZE", "")
+	t.Setenv("OHM9996_MONGODB_MIN_POOL_SIZE", "")
+	t.Setenv("OHM9996_MONGODB_MAX_CONN_IDLE_TIME", "")
+	t.Setenv("OHM9996_MONGODB_APP_NAME", "")
 }
 
 // setupCustomEnv sets custom values for all mongodb environment variables.
 func setupCustomEnv(t *testing.T) {
 	// Set custom connection parameters.
-	t.Setenv("OHM9969_MONGODB_URI", "mongodb://user:pass@remote:27018")
-	t.Setenv("OHM9969_MONGODB_DATABASE", "analytics")
-	t.Setenv("OHM9969_MONGODB_CONNECT_TIMEOUT", "20s")
-	t.Setenv("OHM9969_MONGODB_SERVER_SELECTION_TIMEOUT", "15s")
-	t.Setenv("OHM9969_MONGODB_SOCKET_TIMEOUT", "30s")
-	t.Setenv("OHM9969_MONGODB_MAX_POOL_SIZE", "200")
-	t.Setenv("OHM9969_MONGODB_MIN_POOL_SIZE", "10")
-	t.Setenv("OHM9969_MONGODB_MAX_CONN_IDLE_TIME", "15m")
-	t.Setenv("OHM9969_MONGODB_APP_NAME", "my-service")
+	t.Setenv("OHM9996_MONGODB_URI", "mongodb://user:pass@remote:27018")
+	t.Setenv("OHM9996_MONGODB_DATABASE", "analytics")
+	t.Setenv("OHM9996_MONGODB_CONNECT_TIMEOUT", "20s")
+	t.Setenv("OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT", "15s")
+	t.Setenv("OHM9996_MONGODB_SOCKET_TIMEOUT", "30s")
+	t.Setenv("OHM9996_MONGODB_MAX_POOL_SIZE", "200")
+	t.Setenv("OHM9996_MONGODB_MIN_POOL_SIZE", "10")
+	t.Setenv("OHM9996_MONGODB_MAX_CONN_IDLE_TIME", "15m")
+	t.Setenv("OHM9996_MONGODB_APP_NAME", "my-service")
 }
 
 // verifyDefaultTimeouts checks default timeout durations.

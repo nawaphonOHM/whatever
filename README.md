@@ -75,7 +75,7 @@ The structured logger package provides HTTP request logging middleware and reque
 
 ### `pkg/mongodb`
 
-The MongoDB package provides a zero-boilerplate entrypoint for connecting microservices to MongoDB clusters. Calling `mongodb.Connect(ctx)` loads configuration automatically from `OHM9969_MONGODB_*` environment variables, connects to the cluster, validates connectivity via ping, and returns a managed `*mongodb.Client`. The client exposes native `*mongo.Database` and `*mongo.Collection` handles for executing queries directly via the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`).
+The MongoDB package provides a zero-boilerplate entrypoint for connecting microservices to MongoDB clusters. Calling `mongodb.Connect(ctx)` loads configuration automatically from `OHM9996_MONGODB_*` environment variables, connects to the cluster, validates connectivity via ping, and returns a managed `*mongodb.Client`. The client exposes native `*mongo.Database` and `*mongo.Collection` handles for executing queries directly via the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`).
 
 ---
 
@@ -138,7 +138,7 @@ The `pkg/mongodb` package encapsulates MongoDB connection establishment, connect
 
 ### Connecting & Lifecycle
 
-Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9969_MONGODB_*` environment variables, initializes connection pools, and verifies connectivity via an initial ping:
+Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9996_MONGODB_*` environment variables, initializes connection pools, and verifies connectivity via an initial ping:
 
 ```go
 package database
@@ -171,7 +171,7 @@ func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
 
 ### Database & Collection Handles
 
-Once connected, access collections and databases directly. If no database name is specified, operations automatically use the default database configured in `OHM9969_MONGODB_DATABASE`:
+Once connected, access collections and databases directly. If no database name is specified, operations automatically use the default database configured in `OHM9996_MONGODB_DATABASE`:
 
 ```go
 package repository
@@ -198,7 +198,7 @@ func NewUserRepository(client *mongodb.Client) *UserRepository {
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
-    // Automatically targets the default database from OHM9969_MONGODB_DATABASE
+    // Automatically targets the default database from OHM9996_MONGODB_DATABASE
     coll := r.client.Collection("users")
 
     var user User
@@ -259,34 +259,34 @@ Any attempt by a consuming application to register a route at `/health` or `/rea
 
 ## Configuration
 
-All environment variables read by the library use the **`OHM9969_`** prefix.
+All environment variables read by the library use the **`OHM9996_`** prefix.
 
 ### REST Server Configuration
 
 | Variable | Description | Default |
 |---|---|---|
-| `OHM9969_SERVER_HOST` | Network interface address to bind | `""` (all interfaces) |
-| `OHM9969_SERVER_PORT` | HTTP server port | `8080` |
-| `OHM9969_APP_VERSION` | Application version reported by health endpoints | `""` (empty) |
-| `OHM9969_GIN_MODE` | Gin engine mode (`debug`, `release`, `test`) | `release` |
-| `OHM9969_SERVER_READ_TIMEOUT` | Maximum duration for reading request | `10s` |
-| `OHM9969_SERVER_WRITE_TIMEOUT` | Maximum duration for writing response | `10s` |
-| `OHM9969_SERVER_IDLE_TIMEOUT` | Maximum duration for keep-alive connections | `60s` |
-| `OHM9969_SERVER_SHUTDOWN_TIMEOUT` | Graceful shutdown timeout before forcing exit | `10s` |
+| `OHM9996_SERVER_HOST` | Network interface address to bind | `""` (all interfaces) |
+| `OHM9996_SERVER_PORT` | HTTP server port | `8080` |
+| `OHM9996_APP_VERSION` | Application version reported by health endpoints | `""` (empty) |
+| `OHM9996_GIN_MODE` | Gin engine mode (`debug`, `release`, `test`) | `release` |
+| `OHM9996_SERVER_READ_TIMEOUT` | Maximum duration for reading request | `10s` |
+| `OHM9996_SERVER_WRITE_TIMEOUT` | Maximum duration for writing response | `10s` |
+| `OHM9996_SERVER_IDLE_TIMEOUT` | Maximum duration for keep-alive connections | `60s` |
+| `OHM9996_SERVER_SHUTDOWN_TIMEOUT` | Graceful shutdown timeout before forcing exit | `10s` |
 
 ### MongoDB Configuration
 
 | Variable | Description | Default |
 |---|---|---|
-| `OHM9969_MONGODB_URI` | MongoDB connection URI string | `mongodb://localhost:27017` |
-| `OHM9969_MONGODB_DATABASE` | Default database name for collections | `""` (empty) |
-| `OHM9969_MONGODB_CONNECT_TIMEOUT` | Initial connection timeout | `10s` |
-| `OHM9969_MONGODB_SERVER_SELECTION_TIMEOUT` | Server selection timeout | `5s` |
-| `OHM9969_MONGODB_SOCKET_TIMEOUT` | Socket read/write timeout | `10s` |
-| `OHM9969_MONGODB_MAX_POOL_SIZE` | Maximum connection pool size | `100` |
-| `OHM9969_MONGODB_MIN_POOL_SIZE` | Minimum connection pool size | `5` |
-| `OHM9969_MONGODB_MAX_CONN_IDLE_TIME` | Maximum duration a connection remains idle | `10m` |
-| `OHM9969_MONGODB_APP_NAME` | Client metadata application name sent to MongoDB | `""` (empty) |
+| `OHM9996_MONGODB_URI` | MongoDB connection URI string | `mongodb://localhost:27017` |
+| `OHM9996_MONGODB_DATABASE` | Default database name for collections | `""` (empty) |
+| `OHM9996_MONGODB_CONNECT_TIMEOUT` | Initial connection timeout | `10s` |
+| `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | Server selection timeout | `5s` |
+| `OHM9996_MONGODB_SOCKET_TIMEOUT` | Socket read/write timeout | `10s` |
+| `OHM9996_MONGODB_MAX_POOL_SIZE` | Maximum connection pool size | `100` |
+| `OHM9996_MONGODB_MIN_POOL_SIZE` | Minimum connection pool size | `5` |
+| `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | Maximum duration a connection remains idle | `10m` |
+| `OHM9996_MONGODB_APP_NAME` | Client metadata application name sent to MongoDB | `""` (empty) |
 
 Both the REST server engine and `mongodb.Connect` load an optional `.env` file when present. Configuration precedence
 is system environment variables, then `.env`, then library defaults. An absent `.env` file is not an error.

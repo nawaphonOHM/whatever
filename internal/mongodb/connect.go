@@ -47,7 +47,7 @@ func initAndPingClient(
 }
 
 // Connect loads MongoDB configuration from environment variables
-// (OHM9969_MONGODB_*), establishes a connection, verifies ping connectivity,
+// (OHM9996_MONGODB_*), establishes a connection, verifies ping connectivity,
 // and returns a managed Client.
 func Connect(ctx context.Context, opts ...Option) (*Client, error) {
 	cfg, err := LoadConfig()

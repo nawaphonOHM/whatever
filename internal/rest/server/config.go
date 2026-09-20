@@ -18,19 +18,19 @@ type dur = time.Duration
 
 // timeoutFields groups duration settings for the HTTP server.
 type timeoutFields struct {
-	ReadTimeout     dur `env:"OHM9969_SERVER_READ_TIMEOUT" envDefault:"10s"`
-	WriteTimeout    dur `env:"OHM9969_SERVER_WRITE_TIMEOUT" envDefault:"10s"`
-	IdleTimeout     dur `env:"OHM9969_SERVER_IDLE_TIMEOUT" envDefault:"60s"`
-	ShutdownTimeout dur `env:"OHM9969_SERVER_SHUTDOWN_TIMEOUT" envDefault:"10s"`
+	ReadTimeout     dur `env:"OHM9996_SERVER_READ_TIMEOUT" envDefault:"10s"`
+	WriteTimeout    dur `env:"OHM9996_SERVER_WRITE_TIMEOUT" envDefault:"10s"`
+	IdleTimeout     dur `env:"OHM9996_SERVER_IDLE_TIMEOUT" envDefault:"60s"`
+	ShutdownTimeout dur `env:"OHM9996_SERVER_SHUTDOWN_TIMEOUT" envDefault:"10s"`
 }
 
 // Config defines the configuration for the HTTP server.
-// All environment variable keys use the OHM9969_ prefix.
+// All environment variable keys use the OHM9996_ prefix.
 type Config struct {
-	Host       string `env:"OHM9969_SERVER_HOST" envDefault:""`
-	Mode       string `env:"OHM9969_GIN_MODE" envDefault:"release"`
-	AppVersion string `env:"OHM9969_APP_VERSION" envDefault:""`
-	Port       int    `env:"OHM9969_SERVER_PORT" envDefault:"8080"`
+	Host       string `env:"OHM9996_SERVER_HOST" envDefault:""`
+	Mode       string `env:"OHM9996_GIN_MODE" envDefault:"release"`
+	AppVersion string `env:"OHM9996_APP_VERSION" envDefault:""`
+	Port       int    `env:"OHM9996_SERVER_PORT" envDefault:"8080"`
 	timeoutFields
 }
 
