@@ -18,9 +18,13 @@ const (
 	envSocketTimeout     = "OHM9996_MONGODB_SOCKET_TIMEOUT"
 	envURI               = "OHM9996_MONGODB_URI"
 	envDatabase          = "OHM9996_MONGODB_DATABASE"
+	envUsername          = "OHM9996_MONGODB_USERNAME"
+	envPassword          = "OHM9996_MONGODB_PASSWORD"
 	testFailURI          = "mongodb://127.0.0.1:59999"
 	testDefaultURI       = "mongodb://localhost:27017"
 	testDBName           = "testdb"
+	testUser             = "testuser"
+	testPassword         = "testpass"
 	testShortTimeout     = "50ms"
 	errPingSubstring     = "failed to ping mongodb"
 	expectedNilClientErr = "mongodb client is not initialized"
@@ -31,6 +35,8 @@ const (
 func setupPingFailureEnv(t *testing.T) {
 	t.Setenv(envURI, testFailURI)
 	t.Setenv(envDatabase, testDBName)
+	t.Setenv(envUsername, testUser)
+	t.Setenv(envPassword, testPassword)
 	t.Setenv(envConnectTimeout, testShortTimeout)
 	t.Setenv(envServerSelection, testShortTimeout)
 	t.Setenv(envSocketTimeout, testShortTimeout)
@@ -38,6 +44,10 @@ func setupPingFailureEnv(t *testing.T) {
 
 // TestConnect_InvalidConfig tests connection failure on invalid configuration.
 func TestConnect_InvalidConfig(t *testing.T) {
+	t.Setenv(envURI, testFailURI)
+	t.Setenv(envDatabase, testDBName)
+	t.Setenv(envUsername, testUser)
+	t.Setenv(envPassword, testPassword)
 	t.Setenv(envConnectTimeout, "-5s")
 
 	ctx := context.Background()
@@ -78,6 +88,9 @@ func TestSentinelErrors(t *testing.T) {
 // TestConnect_CanceledContext verifies behavior when context is pre-canceled.
 func TestConnect_CanceledContext(t *testing.T) {
 	t.Setenv(envURI, testDefaultURI)
+	t.Setenv(envDatabase, testDBName)
+	t.Setenv(envUsername, testUser)
+	t.Setenv(envPassword, testPassword)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

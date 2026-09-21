@@ -42,10 +42,29 @@ func (c *Config) validatePoolSettings() error {
 	return nil
 }
 
-// validateFields checks URI and config boundaries.
+// validateRequiredBaseFields checks that URI, Database, Username, and Password are present.
+func (c *Config) validateRequiredBaseFields() error {
+	checks := []struct {
+		val string
+		err string
+	}{
+		{val: c.URI, err: "mongodb uri cannot be empty"},
+		{val: c.Database, err: "mongodb database cannot be empty"},
+		{val: c.Username, err: "mongodb username cannot be empty"},
+		{val: c.Password, err: "mongodb password cannot be empty"},
+	}
+	for _, chk := range checks {
+		if chk.val == "" {
+			return errors.New(chk.err)
+		}
+	}
+	return nil
+}
+
+// validateFields checks URI, database, credentials, and config boundaries.
 func (c *Config) validateFields() error {
-	if c.URI == "" {
-		return errors.New("mongodb uri cannot be empty")
+	if err := c.validateRequiredBaseFields(); err != nil {
+		return err
 	}
 	if err := c.validateTimeouts(); err != nil {
 		return err

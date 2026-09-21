@@ -15,6 +15,8 @@ import (
 const (
 	testUnreachablePoolMax = uint64(10)
 	testUnreachablePoolMin = uint64(1)
+	testUnreachUser        = "unreach_user"
+	testUnreachPass        = "unreach_pass"
 )
 
 // createUnreachableConfig returns a Config pointing to an unreachable port.
@@ -22,6 +24,8 @@ func createUnreachableConfig() *config.Config {
 	return &config.Config{
 		URI:                    testUnreachableURI,
 		Database:               testDefaultDB,
+		Username:               testUnreachUser,
+		Password:               testUnreachPass,
 		ConnectTimeout:         testShortDur,
 		ServerSelectionTimeout: testShortDur,
 		SocketTimeout:          testShortDur,
@@ -55,6 +59,9 @@ func TestConnectWithConfig_InvalidURIFormat(t *testing.T) {
 	ctx := context.Background()
 	invalidURICfg := &config.Config{
 		URI:            "://invalid uri",
+		Database:       testDefaultDB,
+		Username:       testUnreachUser,
+		Password:       testUnreachPass,
 		ConnectTimeout: 1 * time.Second,
 	}
 	client, err := ConnectWithConfig(ctx, invalidURICfg)

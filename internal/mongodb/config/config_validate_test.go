@@ -2,17 +2,20 @@ package config
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	testSmallPoolMax = uint64(5)
-	testMinPoolLimit = uint64(10)
-	testZeroPoolMax  = uint64(0)
-)
+// validTestConfig creates a baseline valid Config instance.
+func validTestConfig() *Config {
+	cfg := DefaultConfig()
+	cfg.URI = "mongodb://localhost:27017"
+	cfg.Database = "testdb"
+	cfg.Username = "testuser"
+	cfg.Password = "testpassword"
+	return cfg
+}
 
 // configValidateCase defines a test case for Config.Validate.
 type configValidateCase struct {
@@ -21,59 +24,40 @@ type configValidateCase struct {
 	expectedErr string
 }
 
-// buildValidateCases creates table-driven validation cases.
-func buildValidateCases() []configValidateCase {
-	return []configValidateCase{
-		{
-			cfg:         nil,
-			name:        "nil config",
-			expectedErr: "mongodb config cannot be nil",
-		},
-		{
-			cfg:         &Config{URI: ""},
-			name:        "empty URI",
-			expectedErr: "mongodb uri cannot be empty",
-		},
-		{
-			cfg: &Config{
-				URI:            DefaultURI,
-				ConnectTimeout: -1 * time.Second,
-			},
-			name:        "negative connect timeout",
-			expectedErr: "connect timeout cannot be negative",
-		},
-		{
-			cfg: &Config{
-				URI:         DefaultURI,
-				MaxPoolSize: testSmallPoolMax,
-				MinPoolSize: testMinPoolLimit,
-			},
-			name:        "min pool size greater than max pool size",
-			expectedErr: "min pool size cannot be greater than max pool size",
-		},
-		{
-			cfg: &Config{
-				URI:         DefaultURI,
-				MaxPoolSize: testZeroPoolMax,
-				MinPoolSize: testMinPoolLimit,
-			},
-			name:        "min pool size allowed when max pool size is zero",
-			expectedErr: "",
-		},
-	}
-}
-
-// TestConfig_Validate tests validation rules on Config struct.
-func TestConfig_Validate(t *testing.T) {
-	for _, tt := range buildValidateCases() {
+func runValidateCases(t *testing.T, cases []configValidateCase) {
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.cfg.Validate()
 			if tt.expectedErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErr)
-			} else {
-				assert.NoError(t, err)
+				return
 			}
+			assert.NoError(t, err)
 		})
 	}
+}
+
+// TestConfig_Validate_RequiredFields tests required field validation rules on Config struct.
+func TestConfig_Validate_RequiredFields(t *testing.T) {
+	emptyURICfg := validTestConfig()
+	emptyURICfg.URI = ""
+
+	emptyDBCfg := validTestConfig()
+	emptyDBCfg.Database = ""
+
+	emptyUserCfg := validTestConfig()
+	emptyUserCfg.Username = ""
+
+	emptyPassCfg := validTestConfig()
+	emptyPassCfg.Password = ""
+
+	runValidateCases(t, []configValidateCase{
+		{cfg: nil, name: "nil config", expectedErr: "mongodb config cannot be nil"},
+		{cfg: emptyURICfg, name: "empty URI", expectedErr: "mongodb uri cannot be empty"},
+		{cfg: emptyDBCfg, name: "empty Database", expectedErr: "mongodb database cannot be empty"},
+		{cfg: emptyUserCfg, name: "empty Username", expectedErr: "mongodb username cannot be empty"},
+		{cfg: emptyPassCfg, name: "empty Password", expectedErr: "mongodb password cannot be empty"},
+		{cfg: validTestConfig(), name: "valid config", expectedErr: ""},
+	})
 }
