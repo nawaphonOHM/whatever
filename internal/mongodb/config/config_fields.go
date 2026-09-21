@@ -6,8 +6,10 @@ import (
 
 // BaseFields defines connection endpoints and metadata for MongoDB.
 type BaseFields struct {
-	URI      string `env:"URI" envDefault:"mongodb://localhost:27017"`
-	Database string `env:"DATABASE" envDefault:""`
+	URI      string `env:"URI"`
+	Database string `env:"DATABASE"`
+	Username string `env:"USERNAME"`
+	Password string `env:"PASSWORD"`
 	AppName  string `env:"APP_NAME" envDefault:""`
 }
 

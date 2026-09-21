@@ -12,14 +12,16 @@ import (
 )
 
 const (
-	testCustomURI = "mongodb://custom-host:27018"
-	testAppSvc    = "order-service"
-	testMax50     = uint64(50)
-	testMin10     = uint64(10)
-	testConn15    = 15 * time.Second
-	testSelect8   = 8 * time.Second
-	testSock25    = 25 * time.Second
-	testIdle5     = 5 * time.Minute
+	testCustomURI  = "mongodb://custom-host:27018"
+	testAppSvc     = "order-service"
+	testCustomUser = "testuser"
+	testCustomPass = "testpass"
+	testMax50      = uint64(50)
+	testMin10      = uint64(10)
+	testConn15     = 15 * time.Second
+	testSelect8    = 8 * time.Second
+	testSock25     = 25 * time.Second
+	testIdle5      = 5 * time.Minute
 )
 
 // buildCustomTestConfig constructs a Config populated with custom parameters.
@@ -27,6 +29,8 @@ func buildCustomTestConfig() *config.Config {
 	return &config.Config{
 		URI:                    testCustomURI,
 		Database:               testCollOrders,
+		Username:               testCustomUser,
+		Password:               testCustomPass,
 		AppName:                testAppSvc,
 		ConnectTimeout:         testConn15,
 		ServerSelectionTimeout: testSelect8,
@@ -49,6 +53,13 @@ func verifyCustomDriverTimeouts(
 	assert.Equal(t, testIdle5, *clientOpts.MaxConnIdleTime)
 }
 
+// verifyCustomDriverAuth asserts custom credentials on client options.
+func verifyCustomDriverAuth(t *testing.T, clientOpts *options.ClientOptions) {
+	require.NotNil(t, clientOpts.Auth)
+	assert.Equal(t, testCustomUser, clientOpts.Auth.Username)
+	assert.Equal(t, testCustomPass, clientOpts.Auth.Password)
+}
+
 // TestBuildClientOptions_CustomConfig tests options with explicit values.
 func TestBuildClientOptions_CustomConfig(t *testing.T) {
 	// Build client options from fully populated config.
@@ -60,7 +71,8 @@ func TestBuildClientOptions_CustomConfig(t *testing.T) {
 	assert.Equal(t, testCustomURI, clientOpts.GetURI())
 	assert.Equal(t, testAppSvc, *clientOpts.AppName)
 
-	// Verify pool and timeout limits.
+	// Verify credentials, pool, and timeouts.
+	verifyCustomDriverAuth(t, clientOpts)
 	assert.Equal(t, testMax50, *clientOpts.MaxPoolSize)
 	assert.Equal(t, testMin10, *clientOpts.MinPoolSize)
 	verifyCustomDriverTimeouts(t, clientOpts)

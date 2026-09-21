@@ -6,6 +6,16 @@ import (
 	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
+// applyAuth sets authentication credentials on driver options if configured.
+func applyAuth(opts *options.ClientOptions, c *config.Config) {
+	if c.Username != "" || c.Password != "" {
+		opts.SetAuth(options.Credential{
+			Username: c.Username,
+			Password: c.Password,
+		})
+	}
+}
+
 // applyConnectTimeouts sets connect and server selection timeouts.
 func applyConnectTimeouts(opts *options.ClientOptions, c *config.Config) {
 	if c.ConnectTimeout > 0 {
@@ -67,6 +77,7 @@ func BuildClientOptions(
 	}
 
 	opts := options.Client().ApplyURI(c.URI)
+	applyAuth(opts, c)
 	applyConnectTimeouts(opts, c)
 	applySocketTimeout(opts, c)
 	applyPoolSizes(opts, c)
