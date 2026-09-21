@@ -1,13 +1,17 @@
-// Package mongodb provides internal configuration and connection management
-// for MongoDB.
-package mongodb
+// Package config provides configuration parsing, validation, and defaults
+// for MongoDB connections.
+package config
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 )
+
+// ErrNilConfig is returned when operations receive a nil configuration.
+var ErrNilConfig = errors.New("mongodb config cannot be nil")
 
 // Default configuration constants.
 const (
@@ -32,21 +36,15 @@ type Config struct {
 // defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		BaseFields: BaseFields{
-			URI:      DefaultURI,
-			Database: "",
-			AppName:  "",
-		},
-		TimeoutFields: TimeoutFields{
-			ConnectTimeout:         DefaultConnectTimeout,
-			ServerSelectionTimeout: DefaultServerSelection,
-			SocketTimeout:          DefaultSocketTimeout,
-			MaxConnIdleTime:        DefaultMaxConnIdleTime,
-		},
-		PoolFields: PoolFields{
-			MaxPoolSize: DefaultMaxPoolSize,
-			MinPoolSize: DefaultMinPoolSize,
-		},
+		URI:                    DefaultURI,
+		Database:               "",
+		AppName:                "",
+		ConnectTimeout:         DefaultConnectTimeout,
+		ServerSelectionTimeout: DefaultServerSelection,
+		SocketTimeout:          DefaultSocketTimeout,
+		MaxConnIdleTime:        DefaultMaxConnIdleTime,
+		MaxPoolSize:            DefaultMaxPoolSize,
+		MinPoolSize:            DefaultMinPoolSize,
 	}
 }
 

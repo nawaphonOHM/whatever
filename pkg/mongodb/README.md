@@ -25,7 +25,7 @@ structs or functional options, so importing applications use the standardized
 | `OHM9996_MONGODB_APP_NAME` | empty |
 
 The environment-backed configuration, defaults, validation, and driver option
-construction live in `internal/mongodb`. They are not part of the API available
+construction live in `internal/mongodb/config` and `internal/mongodb/client`. They are not part of the API available
 to importing projects.
 
 ## Usage

@@ -1,11 +1,13 @@
-package mongodb
+package client
 
 import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 // applyConnectTimeouts sets connect and server selection timeouts.
-func applyConnectTimeouts(opts *options.ClientOptions, c *Config) {
+func applyConnectTimeouts(opts *options.ClientOptions, c *config.Config) {
 	if c.ConnectTimeout > 0 {
 		opts.SetConnectTimeout(c.ConnectTimeout)
 	}
@@ -15,14 +17,14 @@ func applyConnectTimeouts(opts *options.ClientOptions, c *Config) {
 }
 
 // applySocketTimeout sets socket timeout on driver options.
-func applySocketTimeout(opts *options.ClientOptions, c *Config) {
+func applySocketTimeout(opts *options.ClientOptions, c *config.Config) {
 	if c.SocketTimeout > 0 {
 		opts.SetTimeout(c.SocketTimeout)
 	}
 }
 
 // applyPoolSizes sets max and min pool sizes on driver options.
-func applyPoolSizes(opts *options.ClientOptions, c *Config) {
+func applyPoolSizes(opts *options.ClientOptions, c *config.Config) {
 	if c.MaxPoolSize > 0 {
 		opts.SetMaxPoolSize(c.MaxPoolSize)
 	}
@@ -32,7 +34,7 @@ func applyPoolSizes(opts *options.ClientOptions, c *Config) {
 }
 
 // applyPoolMetadata sets idle timeout and app name metadata.
-func applyPoolMetadata(opts *options.ClientOptions, c *Config) {
+func applyPoolMetadata(opts *options.ClientOptions, c *config.Config) {
 	if c.MaxConnIdleTime > 0 {
 		opts.SetMaxConnIdleTime(c.MaxConnIdleTime)
 	}
@@ -56,12 +58,12 @@ func applyExtraOptions(
 // BuildClientOptions creates official mongo-driver ClientOptions from Config
 // and merges any additional driver options.
 func BuildClientOptions(
-	cfg *Config,
+	cfg *config.Config,
 	extraOpts ...*options.ClientOptions,
 ) *options.ClientOptions {
 	c := cfg
 	if c == nil {
-		c = DefaultConfig()
+		c = config.DefaultConfig()
 	}
 
 	opts := options.Client().ApplyURI(c.URI)

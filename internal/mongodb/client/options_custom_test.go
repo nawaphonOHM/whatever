@@ -1,4 +1,4 @@
-package mongodb
+package client
 
 import (
 	"testing"
@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 const (
@@ -21,23 +23,17 @@ const (
 )
 
 // buildCustomTestConfig constructs a Config populated with custom parameters.
-func buildCustomTestConfig() *Config {
-	return &Config{
-		BaseFields: BaseFields{
-			URI:      testCustomURI,
-			Database: testCollOrders,
-			AppName:  testAppSvc,
-		},
-		TimeoutFields: TimeoutFields{
-			ConnectTimeout:         testConn15,
-			ServerSelectionTimeout: testSelect8,
-			SocketTimeout:          testSock25,
-			MaxConnIdleTime:        testIdle5,
-		},
-		PoolFields: PoolFields{
-			MaxPoolSize: testMax50,
-			MinPoolSize: testMin10,
-		},
+func buildCustomTestConfig() *config.Config {
+	return &config.Config{
+		URI:                    testCustomURI,
+		Database:               testCollOrders,
+		AppName:                testAppSvc,
+		ConnectTimeout:         testConn15,
+		ServerSelectionTimeout: testSelect8,
+		SocketTimeout:          testSock25,
+		MaxConnIdleTime:        testIdle5,
+		MaxPoolSize:            testMax50,
+		MinPoolSize:            testMin10,
 	}
 }
 

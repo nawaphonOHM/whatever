@@ -1,4 +1,4 @@
-package mongodb
+package client
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 const (
@@ -16,8 +18,8 @@ const (
 )
 
 // createUnreachableConfig returns a Config pointing to an unreachable port.
-func createUnreachableConfig() *Config {
-	return &Config{
+func createUnreachableConfig() *config.Config {
+	return &config.Config{
 		URI:                    testUnreachableURI,
 		Database:               testDefaultDB,
 		ConnectTimeout:         testShortDur,
@@ -32,14 +34,16 @@ func createUnreachableConfig() *Config {
 func TestConnectWithConfig_NilConfig(t *testing.T) {
 	ctx := context.Background()
 	client, err := ConnectWithConfig(ctx, nil)
-	assert.ErrorIs(t, err, ErrNilConfig)
+	assert.ErrorIs(t, err, config.ErrNilConfig)
 	assert.Nil(t, client)
 }
 
 // TestConnectWithConfig_InvalidConfig tests rejection of invalid config.
 func TestConnectWithConfig_InvalidConfig(t *testing.T) {
 	ctx := context.Background()
-	invalidCfg := &Config{URI: ""}
+	invalidCfg := &config.Config{
+		URI: "",
+	}
 	client, err := ConnectWithConfig(ctx, invalidCfg)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid mongodb config")
@@ -49,7 +53,7 @@ func TestConnectWithConfig_InvalidConfig(t *testing.T) {
 // TestConnectWithConfig_InvalidURIFormat tests client creation failure.
 func TestConnectWithConfig_InvalidURIFormat(t *testing.T) {
 	ctx := context.Background()
-	invalidURICfg := &Config{
+	invalidURICfg := &config.Config{
 		URI:            "://invalid uri",
 		ConnectTimeout: 1 * time.Second,
 	}
