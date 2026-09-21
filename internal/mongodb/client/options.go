@@ -1,4 +1,4 @@
-package mongodb
+package client
 
 import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"

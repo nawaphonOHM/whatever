@@ -1,4 +1,4 @@
-package mongodb
+package client
 
 import (
 	"testing"
@@ -7,10 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 const (
-	testDefaultMax5 = uint64(5)
+	testDefaultMaxPool = uint64(100)
+	testDefaultMax5    = uint64(5)
 )
 
 // verifyDefaultDriverPool verifies pool size options on client options.
@@ -25,12 +28,12 @@ func verifyDefaultDriverPool(t *testing.T, clientOpts *options.ClientOptions) {
 // TestBuildClientOptions_DefaultConfig tests options built from DefaultConfig.
 func TestBuildClientOptions_DefaultConfig(t *testing.T) {
 	// Build client options from default config.
-	cfg := DefaultConfig()
+	cfg := config.DefaultConfig()
 	clientOpts := BuildClientOptions(cfg)
 	require.NotNil(t, clientOpts)
 
 	// Verify timeouts on driver client options.
-	assert.Equal(t, DefaultURI, clientOpts.GetURI())
+	assert.Equal(t, config.DefaultURI, clientOpts.GetURI())
 	assert.Equal(t, 10*time.Second, *clientOpts.ConnectTimeout)
 	assert.Equal(t, 5*time.Second, *clientOpts.ServerSelectionTimeout)
 	assert.Equal(t, 10*time.Second, *clientOpts.Timeout)
@@ -43,7 +46,7 @@ func TestBuildClientOptions_NilConfig(t *testing.T) {
 	clientOpts := BuildClientOptions(nil)
 	require.NotNil(t, clientOpts)
 
-	assert.Equal(t, DefaultURI, clientOpts.GetURI())
+	assert.Equal(t, config.DefaultURI, clientOpts.GetURI())
 	assert.Equal(t, 10*time.Second, *clientOpts.ConnectTimeout)
 }
 
@@ -62,10 +65,12 @@ func verifyZeroDriverOptions(t *testing.T, clientOpts *options.ClientOptions) {
 // TestBuildClientOptions_ZeroValues tests options with zero-valued config.
 func TestBuildClientOptions_ZeroValues(t *testing.T) {
 	// Only URI is set on zero-valued config.
-	cfg := &Config{URI: DefaultURI}
+	cfg := &config.Config{
+		URI: config.DefaultURI,
+	}
 	clientOpts := BuildClientOptions(cfg)
 	require.NotNil(t, clientOpts)
 
-	assert.Equal(t, DefaultURI, clientOpts.GetURI())
+	assert.Equal(t, config.DefaultURI, clientOpts.GetURI())
 	verifyZeroDriverOptions(t, clientOpts)
 }

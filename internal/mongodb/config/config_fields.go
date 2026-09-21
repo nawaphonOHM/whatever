@@ -1,11 +1,8 @@
-package mongodb
+package config
 
 import (
 	"time"
 )
-
-// dur aliases time.Duration for concise struct definitions.
-type dur = time.Duration
 
 // BaseFields defines connection endpoints and metadata for MongoDB.
 type BaseFields struct {
@@ -16,10 +13,10 @@ type BaseFields struct {
 
 // TimeoutFields defines timeout settings for MongoDB connections.
 type TimeoutFields struct {
-	ConnectTimeout         dur `env:"CONNECT_TIMEOUT" envDefault:"10s"`
-	ServerSelectionTimeout dur `env:"SERVER_SELECTION_TIMEOUT" envDefault:"5s"`
-	SocketTimeout          dur `env:"SOCKET_TIMEOUT" envDefault:"10s"`
-	MaxConnIdleTime        dur `env:"MAX_CONN_IDLE_TIME" envDefault:"10m"`
+	ConnectTimeout         time.Duration `env:"CONNECT_TIMEOUT" envDefault:"10s"`
+	ServerSelectionTimeout time.Duration `env:"SERVER_SELECTION_TIMEOUT" envDefault:"5s"`
+	SocketTimeout          time.Duration `env:"SOCKET_TIMEOUT" envDefault:"10s"`
+	MaxConnIdleTime        time.Duration `env:"MAX_CONN_IDLE_TIME" envDefault:"10m"`
 }
 
 // PoolFields defines connection pooling settings for MongoDB.

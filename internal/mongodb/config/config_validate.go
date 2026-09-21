@@ -1,4 +1,4 @@
-package mongodb
+package config
 
 import (
 	"errors"
@@ -56,7 +56,7 @@ func (c *Config) validateFields() error {
 // Validate checks that the configuration values are valid.
 func (c *Config) Validate() error {
 	if c == nil {
-		return errors.New("mongodb config cannot be nil")
+		return ErrNilConfig
 	}
 	return c.validateFields()
 }

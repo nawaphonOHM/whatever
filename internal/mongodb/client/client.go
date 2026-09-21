@@ -1,4 +1,6 @@
-package mongodb
+// Package client provides the managed MongoDB client wrapper, connection
+// lifecycle management, and official mongo-driver options construction.
+package client
 
 import (
 	"context"
@@ -8,10 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
-// Sentinel errors for MongoDB client operations.
+// ErrNilClient Sentinel errors for MongoDB client operations.
 var (
 	ErrNilClient = errors.New("mongodb client is not initialized")
-	ErrNilConfig = errors.New("mongodb config cannot be nil")
 )
 
 // Client wraps the official mongo.Client and manages connection pooling,

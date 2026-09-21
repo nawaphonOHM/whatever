@@ -39,15 +39,13 @@ func DefaultConfig() *Config {
 	timeout := time.Duration(defaultTimeoutSec) * time.Second
 	idle := time.Duration(defaultIdleTimeoutSec) * time.Second
 	return &Config{
-		Host:       "",
-		Port:       defaultServerPort,
-		Mode:       gin.ReleaseMode,
-		AppVersion: "",
-		timeoutFields: timeoutFields{
-			ReadTimeout:     timeout,
-			WriteTimeout:    timeout,
-			IdleTimeout:     idle,
-			ShutdownTimeout: timeout,
-		},
+		Host:            "",
+		Port:            defaultServerPort,
+		Mode:            gin.ReleaseMode,
+		AppVersion:      "",
+		ReadTimeout:     timeout,
+		WriteTimeout:    timeout,
+		IdleTimeout:     idle,
+		ShutdownTimeout: timeout,
 	}
 }

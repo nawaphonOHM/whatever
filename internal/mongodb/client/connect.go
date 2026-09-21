@@ -1,4 +1,4 @@
-package mongodb
+package client
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 // verifyPingAndDisconnect verifies ping and disconnects if ping fails.
@@ -29,7 +31,7 @@ func verifyPingAndDisconnect(
 // connectivity.
 func initAndPingClient(
 	ctx context.Context,
-	cfg *Config,
+	cfg *config.Config,
 	opts ...Option,
 ) (*Client, error) {
 	optionsContainer := NewOptions(opts...)
@@ -50,7 +52,7 @@ func initAndPingClient(
 // (OHM9996_MONGODB_*), establishes a connection, verifies ping connectivity,
 // and returns a managed Client.
 func Connect(ctx context.Context, opts ...Option) (*Client, error) {
-	cfg, err := LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -61,11 +63,11 @@ func Connect(ctx context.Context, opts ...Option) (*Client, error) {
 // It verifies connectivity via Ping using the provided context.
 func ConnectWithConfig(
 	ctx context.Context,
-	cfg *Config,
+	cfg *config.Config,
 	opts ...Option,
 ) (*Client, error) {
 	if cfg == nil {
-		return nil, ErrNilConfig
+		return nil, config.ErrNilConfig
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid mongodb config: %w", err)

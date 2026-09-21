@@ -1,4 +1,4 @@
-package mongodb
+package client
 
 import (
 	"testing"
@@ -6,11 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 // TestBuildClientOptions_WithExtraDriverOptions tests merging extra options.
 func TestBuildClientOptions_WithExtraDriverOptions(t *testing.T) {
-	cfg := DefaultConfig()
+	cfg := config.DefaultConfig()
 	extra1 := options.Client().SetDirect(true)
 	extra2 := options.Client().SetAppName("override-app")
 
