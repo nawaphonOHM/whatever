@@ -523,7 +523,7 @@ linters:
           severity: warning
           disabled: false
           exclude: [ "" ]
-          arguments: [ 80 ]
+          arguments: [ 120 ]
         # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#max-control-nesting
         - name: max-control-nesting
           severity: warning
