@@ -31,7 +31,10 @@ func newServerFromConfig(
 	cfg *Config,
 	bp *contracts.BluePrint,
 ) (*Server, error) {
-	srv := New(cfg)
+	srv, err := New(cfg)
+	if err != nil {
+		return nil, err
+	}
 	if err := registerBlueprint(srv, cfg, bp); err != nil {
 		return nil, err
 	}

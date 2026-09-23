@@ -48,22 +48,27 @@ func applyServerDefaults(c *Config) {
 // buildHTTPServer constructs the net/http server for cfg and engine.
 func buildHTTPServer(c *Config, engine *gin.Engine) *http.Server {
 	return &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", c.Host, c.Port),
-		Handler:      engine,
-		ReadTimeout:  c.ReadTimeout,
-		WriteTimeout: c.WriteTimeout,
-		IdleTimeout:  c.IdleTimeout,
+		Addr:              fmt.Sprintf("%s:%d", c.Host, c.Port),
+		Handler:           engine,
+		ReadTimeout:       c.ReadTimeout,
+		ReadHeaderTimeout: c.ReadHeaderTimeout,
+		WriteTimeout:      c.WriteTimeout,
+		IdleTimeout:       c.IdleTimeout,
+		MaxHeaderBytes:    c.MaxHeaderBytes,
 	}
 }
 
 // New creates and initializes a new Server instance.
-func New(cfg *Config) *Server {
+func New(cfg *Config) (*Server, error) {
 	c := resolveConfig(cfg)
 	applyServerDefaults(c)
 	engine := gin.New()
+	if err := applyServerOptions(engine, c); err != nil {
+		return nil, err
+	}
 	return &Server{
 		Engine:     engine,
 		Config:     c,
 		httpServer: buildHTTPServer(c, engine),
-	}
+	}, nil
 }

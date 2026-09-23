@@ -20,9 +20,14 @@ const (
 )
 
 // newMiddlewareEngine builds an engine with default middlewares.
-func newMiddlewareEngine() *gin.Engine {
+func newMiddlewareEngine(t *testing.T, enableAccessLog bool) *gin.Engine {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
-	srv := New(&Config{Mode: gin.TestMode})
+	cfg := DefaultConfig()
+	cfg.Mode = gin.TestMode
+	cfg.EnableAccessLog = enableAccessLog
+	srv, err := New(cfg)
+	require.NoError(t, err)
 	srv.SetupDefaultMiddlewares()
 	srv.Engine.GET("/only-get", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -44,7 +49,7 @@ func decodeProblem(
 // TestSetupDefaultMiddlewares_NoRoute returns RFC 9457 404.
 func TestSetupDefaultMiddlewares_NoRoute(t *testing.T) {
 	// Arrange
-	engine := newMiddlewareEngine()
+	engine := newMiddlewareEngine(t, true)
 	w := httptest.NewRecorder()
 
 	// Act
@@ -63,7 +68,7 @@ func TestSetupDefaultMiddlewares_NoRoute(t *testing.T) {
 // TestSetupDefaultMiddlewares_NoMethod returns RFC 9457 405.
 func TestSetupDefaultMiddlewares_NoMethod(t *testing.T) {
 	// Arrange
-	engine := newMiddlewareEngine()
+	engine := newMiddlewareEngine(t, false)
 	w := httptest.NewRecorder()
 
 	// Act

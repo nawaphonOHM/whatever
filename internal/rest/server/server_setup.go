@@ -47,14 +47,12 @@ func (s *Server) SetupMiddlewares(
 	corsCfg middleware.CORSConfig,
 	loggerSkipPaths ...string,
 ) {
-	s.Engine.HandleMethodNotAllowed = true
-	skipPaths := defaultSkipPaths(loggerSkipPaths...)
-	s.Engine.Use(
-		middleware.RequestID(),
-		logger.WithConfig(logger.Config{SkipPaths: skipPaths}),
-		middleware.Recovery(),
-		middleware.CORS(corsCfg),
-	)
+	s.Engine.Use(middleware.RequestID())
+	if s.Config == nil || s.Config.EnableAccessLog {
+		skipPaths := defaultSkipPaths(loggerSkipPaths...)
+		s.Engine.Use(logger.WithConfig(logger.Config{SkipPaths: skipPaths}))
+	}
+	s.Engine.Use(middleware.Recovery(), middleware.CORS(corsCfg))
 	attachErrorHandlers(s.Engine)
 }
 

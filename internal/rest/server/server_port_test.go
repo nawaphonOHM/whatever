@@ -25,14 +25,15 @@ func TestServer_StartPortInUse(t *testing.T) {
 	// Arrange
 	l, port := occupyPort(t)
 	defer func() { assert.NoError(t, l.Close()) }()
-	srv := New(&Config{
+	srv, err := New(&Config{
 		Host: testHost,
 		Port: port,
 		Mode: gin.TestMode,
 	})
+	require.NoError(t, err)
 
 	// Act
-	err := srv.Start(context.Background())
+	err = srv.Start(context.Background())
 
 	// Assert
 	require.Error(t, err)
