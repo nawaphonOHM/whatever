@@ -57,6 +57,18 @@ func loadEnvFiles(filenames []string) error {
 	return loadDefaultEnv()
 }
 
+type defaulter interface {
+	SetDefaults()
+}
+
+// parseTarget applies defaults if available and parses environment variables.
+func parseTarget[T any](target *T) error {
+	if d, ok := any(target).(defaulter); ok {
+		d.SetDefaults()
+	}
+	return env.Parse(target)
+}
+
 // Load parses environment variables into a struct of type T.
 // It searches for .env files in filenames, or default locations if none.
 // Values precedence: System Environment > .env file > Struct Default Tags.
@@ -66,7 +78,7 @@ func Load[T any](filenames ...string) (*T, error) {
 	}
 
 	var target T
-	if err := env.Parse(&target); err != nil {
+	if err := parseTarget(&target); err != nil {
 		return nil, fmt.Errorf("failed to parse environment config: %w", err)
 	}
 

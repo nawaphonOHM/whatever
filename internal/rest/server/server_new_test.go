@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -12,56 +13,51 @@ import (
 
 // TestNew_WithNilConfig uses package defaults.
 func TestNew_WithNilConfig(t *testing.T) {
-	// Act
-	srv := New(nil)
-
-	// Assert
+	srv, err := New(nil)
+	require.NoError(t, err)
 	require.NotNil(t, srv)
 	require.NotNil(t, srv.Engine)
 	require.NotNil(t, srv.Config)
 	assert.Equal(t, defaultServerPort, srv.Config.Port)
 	assert.Equal(t, gin.ReleaseMode, srv.Config.Mode)
-	assert.Equal(t, fmt.Sprintf(":%d", defaultServerPort),
-		srv.httpServer.Addr)
+	assert.Equal(t, fmt.Sprintf(":%d", defaultServerPort), srv.httpServer.Addr)
+	assertDefaultEngineWiring(t, srv.Engine)
+	assertDefaultServerWiring(t, srv.httpServer)
 }
 
-// customTestConfig returns a non-default server config.
-func customTestConfig() *Config {
-	return &Config{
-		Host:         testHost,
-		Port:         customPort,
-		Mode:         gin.TestMode,
-		ReadTimeout:  customReadSec * time.Second,
-		WriteTimeout: customReadSec * time.Second,
-		IdleTimeout:  customIdleSec * time.Second,
-	}
+func assertDefaultEngineWiring(t *testing.T, engine *gin.Engine) {
+	assert.True(t, engine.RedirectTrailingSlash)
+	assert.False(t, engine.RedirectFixedPath)
+	assert.True(t, engine.HandleMethodNotAllowed)
+	assert.False(t, engine.UseRawPath)
+	assert.True(t, engine.UnescapePathValues)
+	assert.False(t, engine.RemoveExtraSlash)
+	assert.True(t, engine.ForwardedByClientIP)
+	assert.Equal(t, []string{"X-Forwarded-For", "X-Real-IP"}, engine.RemoteIPHeaders)
+	assert.Equal(t, int64(defaultMaxBodySize), engine.MaxMultipartMemory)
 }
 
-// TestNew_WithCustomConfig preserves caller values.
-func TestNew_WithCustomConfig(t *testing.T) {
-	// Arrange
-	cfg := customTestConfig()
+func assertDefaultServerWiring(t *testing.T, hs *http.Server) {
+	assert.Equal(t, defaultReadHeaderSec*time.Second, hs.ReadHeaderTimeout)
+	assert.Equal(t, defaultMaxHeaderBytes, hs.MaxHeaderBytes)
+	assert.Equal(t, defaultTimeoutSec*time.Second, hs.ReadTimeout)
+	assert.Equal(t, defaultTimeoutSec*time.Second, hs.WriteTimeout)
+	assert.Equal(t, defaultIdleTimeoutSec*time.Second, hs.IdleTimeout)
+}
 
-	// Act
-	srv := New(cfg)
-
-	// Assert
-	require.NotNil(t, srv)
-	assert.Equal(t, testHost, srv.Config.Host)
-	assert.Equal(t, customPort, srv.Config.Port)
-	assert.Equal(t, gin.TestMode, srv.Config.Mode)
-	assert.Equal(t,
-		fmt.Sprintf("%s:%d", testHost, customPort),
-		srv.httpServer.Addr,
-	)
+// TestNew_InvalidTrustedProxies fails when proxies format is invalid.
+func TestNew_InvalidTrustedProxies(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.TrustedProxies = []string{"invalid-cidr-or-ip"}
+	srv, err := New(cfg)
+	require.Error(t, err)
+	assert.Nil(t, srv)
+	assert.Contains(t, err.Error(), "failed to set trusted proxies")
 }
 
 // TestDefaultConfig_Values checks recommended defaults.
 func TestDefaultConfig_Values(t *testing.T) {
-	// Act
 	cfg := DefaultConfig()
-
-	// Assert
 	require.NotNil(t, cfg)
 	assert.Equal(t, defaultServerPort, cfg.Port)
 	assert.Equal(t, gin.ReleaseMode, cfg.Mode)

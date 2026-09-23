@@ -45,11 +45,12 @@ func getFreePort(t *testing.T) int {
 func newBoundServer(t *testing.T) (*Server, int) {
 	t.Helper()
 	port := getFreePort(t)
-	srv := New(&Config{
+	srv, err := New(&Config{
 		Host: testHost,
 		Port: port,
 		Mode: gin.TestMode,
 	})
+	require.NoError(t, err)
 	// /ping is the shared smoke endpoint for lifecycle tests.
 	srv.Engine.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
