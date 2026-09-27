@@ -39,6 +39,14 @@ func verifyPingAndDisconnect(
 	return nil
 }
 
+// resolveDatabaseName extracts the target database name from config.
+func resolveDatabaseName(cfg *config.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.Database
+}
+
 // attemptConnection establishes a driver client with specified TLS and verifies ping.
 func attemptConnection(
 	ctx context.Context,
@@ -57,7 +65,7 @@ func attemptConnection(
 	if err := verifyPingAndDisconnect(ctx, rawClient); err != nil {
 		return nil, err
 	}
-	return NewClient(rawClient, ""), nil
+	return NewClient(rawClient, resolveDatabaseName(cfg)), nil
 }
 
 // fallbackTLSAttempt attempts connection with TLS enabled upon TLS requirement error.

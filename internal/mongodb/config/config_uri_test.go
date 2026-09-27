@@ -77,4 +77,15 @@ func TestConfig_BuildURI(t *testing.T) {
 		expected := "mongodb://user:pass@localhost:27017/?uuidRepresentation=unspecified&tls=false"
 		assert.Equal(t, expected, cfg.BuildURI(false))
 	})
+
+	t.Run("unauthenticated connection without credentials", func(t *testing.T) {
+		cfg := &Config{
+			Host:               "localhost",
+			Port:               testStandardURIPort,
+			Protocol:           ProtocolMongoDB,
+			UUIDRepresentation: UUIDRepresentationStandard,
+		}
+		expected := "mongodb://localhost:27017/?uuidRepresentation=standard&tls=false"
+		assert.Equal(t, expected, cfg.BuildURI(false))
+	})
 }

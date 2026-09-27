@@ -17,14 +17,14 @@ const (
 
 // createTLSTestConfig creates a populated test configuration.
 func createTLSTestConfig(protocol string) *config.Config {
-	return &config.Config{
-		Host:               testTLSHost,
-		Port:               testOptionsPort,
-		Username:           testTLSUser,
-		Password:           testTLSPass,
-		Protocol:           protocol,
-		UUIDRepresentation: config.UUIDRepresentationStandard,
-	}
+	cfg := config.DefaultConfig()
+	cfg.Host = testTLSHost
+	cfg.Port = testOptionsPort
+	cfg.Username = testTLSUser
+	cfg.Password = testTLSPass
+	cfg.Protocol = protocol
+	cfg.UUIDRepresentation = config.UUIDRepresentationStandard
+	return cfg
 }
 
 // TestBuildClientOptionsWithTLS_Enabled tests options with TLS enabled override.
@@ -58,5 +58,5 @@ func TestBuildClientOptions_MongoDBSrv(t *testing.T) {
 func TestBuildClientOptionsWithTLS_NilConfig(t *testing.T) {
 	clientOpts := BuildClientOptionsWithTLS(nil, true)
 	require.NotNil(t, clientOpts)
-	assert.Empty(t, clientOpts.GetURI())
+	assert.Equal(t, "mongodb://:27017/?uuidRepresentation=unspecified&tls=true", clientOpts.GetURI())
 }

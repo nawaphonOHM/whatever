@@ -30,7 +30,19 @@ func BuildClientOptionsWithTLS(
 		c = config.DefaultConfig()
 	}
 
-	opts := options.Client().ApplyURI(c.BuildURI(enableTLS))
+	opts := options.Client().
+		ApplyURI(c.BuildURI(enableTLS)).
+		SetConnectTimeout(c.ConnectTimeout).
+		SetServerSelectionTimeout(c.ServerSelectionTimeout).
+		SetTimeout(c.SocketTimeout).
+		SetMaxConnIdleTime(c.MaxConnIdleTime).
+		SetMaxPoolSize(c.MaxPoolSize).
+		SetMinPoolSize(c.MinPoolSize)
+
+	if c.AppName != "" {
+		opts.SetAppName(c.AppName)
+	}
+
 	return applyExtraOptions(opts, extraOpts)
 }
 

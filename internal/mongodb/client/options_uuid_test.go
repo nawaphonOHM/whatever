@@ -18,14 +18,14 @@ const (
 
 // buildUUIDConfig creates a Config with specified UUID representation.
 func buildUUIDConfig(rep string) *config.Config {
-	return &config.Config{
-		Host:               testUUIDHost,
-		Port:               testOptionsPort,
-		Username:           testUUIDUser,
-		Password:           testUUIDPass,
-		Protocol:           config.ProtocolMongoDB,
-		UUIDRepresentation: rep,
-	}
+	cfg := config.DefaultConfig()
+	cfg.Host = testUUIDHost
+	cfg.Port = testOptionsPort
+	cfg.Username = testUUIDUser
+	cfg.Password = testUUIDPass
+	cfg.Protocol = config.ProtocolMongoDB
+	cfg.UUIDRepresentation = rep
+	return cfg
 }
 
 // TestBuildClientOptions_UUIDRepresentations tests options with all UUID representations.

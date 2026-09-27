@@ -6,8 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
+)
+
+const (
+	defaultPort                   = 27017
+	defaultConnectTimeoutSec      = 10
+	defaultServerSelectionTimeout = 5
+	defaultSocketTimeoutSec       = 10
+	defaultMaxConnIdleMinutes     = 10
+	defaultMaxPoolSize            = 100
+	defaultMinPoolSize            = 5
 )
 
 // ErrNilConfig is returned when operations receive a nil configuration.
@@ -16,11 +27,23 @@ var ErrNilConfig = errors.New("mongodb config cannot be nil")
 // exitFunc is a package-level hook for os.Exit, allowing tests to intercept process termination.
 var exitFunc = os.Exit
 
+// SetDefaults populates the configuration with initial default values.
+func (c *Config) SetDefaults() {
+	*c = *DefaultConfig()
+}
+
 // DefaultConfig returns MongoDB configuration with recommended defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		Protocol:           ProtocolMongoDB,
-		UUIDRepresentation: UUIDRepresentationUnspecified,
+		Port:                   defaultPort,
+		Protocol:               ProtocolMongoDB,
+		UUIDRepresentation:     UUIDRepresentationUnspecified,
+		ConnectTimeout:         defaultConnectTimeoutSec * time.Second,
+		ServerSelectionTimeout: defaultServerSelectionTimeout * time.Second,
+		SocketTimeout:          defaultSocketTimeoutSec * time.Second,
+		MaxConnIdleTime:        defaultMaxConnIdleMinutes * time.Minute,
+		MaxPoolSize:            defaultMaxPoolSize,
+		MinPoolSize:            defaultMinPoolSize,
 	}
 }
 
@@ -33,9 +56,6 @@ type requiredKeyCheck struct {
 func (c *Config) buildRequiredKeyChecks() []requiredKeyCheck {
 	return []requiredKeyCheck{
 		{key: "OHM9996_MONGODB_HOST", missing: c.Host == ""},
-		{key: "OHM9996_MONGODB_USERNAME", missing: c.Username == ""},
-		{key: "OHM9996_MONGODB_PASSWORD", missing: c.Password == ""},
-		{key: "OHM9996_MONGODB_PORT", missing: c.Port == 0},
 	}
 }
 

@@ -42,7 +42,7 @@ func runValidateCases(t *testing.T, cases []configValidateCase) {
 	}
 }
 
-// TestConfig_Validate_RequiredFields tests required field validation rules on Config struct.
+// TestConfig_Validate_RequiredFields tests required field and credentials validation rules on Config struct.
 func TestConfig_Validate_RequiredFields(t *testing.T) {
 	emptyHostCfg := validTestConfig()
 	emptyHostCfg.Host = ""
@@ -53,12 +53,25 @@ func TestConfig_Validate_RequiredFields(t *testing.T) {
 	emptyPassCfg := validTestConfig()
 	emptyPassCfg.Password = ""
 
+	unauthenticatedCfg := validTestConfig()
+	unauthenticatedCfg.Username = ""
+	unauthenticatedCfg.Password = ""
+
 	runValidateCases(t, []configValidateCase{
 		{cfg: nil, name: "nil config", expectedErr: "mongodb config cannot be nil"},
 		{cfg: emptyHostCfg, name: "empty Host", expectedErr: "mongodb host cannot be empty"},
-		{cfg: emptyUserCfg, name: "empty Username", expectedErr: "mongodb username cannot be empty"},
-		{cfg: emptyPassCfg, name: "empty Password", expectedErr: "mongodb password cannot be empty"},
-		{cfg: validTestConfig(), name: "valid config", expectedErr: ""},
+		{
+			cfg:         emptyUserCfg,
+			name:        "empty Username with Password provided",
+			expectedErr: "mongodb username cannot be empty when password is provided",
+		},
+		{
+			cfg:         emptyPassCfg,
+			name:        "empty Password with Username provided",
+			expectedErr: "mongodb password cannot be empty when username is provided",
+		},
+		{cfg: unauthenticatedCfg, name: "unauthenticated config with both empty", expectedErr: ""},
+		{cfg: validTestConfig(), name: "valid authenticated config", expectedErr: ""},
 	})
 }
 

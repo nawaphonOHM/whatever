@@ -19,14 +19,14 @@ const (
 )
 
 func createValidTestConfig() *config.Config {
-	return &config.Config{
-		Host:               "127.0.0.1",
-		Port:               testMockPort,
-		Username:           testMockUser,
-		Password:           testMockPass,
-		Protocol:           config.ProtocolMongoDB,
-		UUIDRepresentation: config.UUIDRepresentationUnspecified,
-	}
+	cfg := config.DefaultConfig()
+	cfg.Host = "127.0.0.1"
+	cfg.Port = testMockPort
+	cfg.Username = testMockUser
+	cfg.Password = testMockPass
+	cfg.Protocol = config.ProtocolMongoDB
+	cfg.UUIDRepresentation = config.UUIDRepresentationUnspecified
+	return cfg
 }
 
 func setupMockPing(fn func(context.Context, *mongo.Client) error) func() {

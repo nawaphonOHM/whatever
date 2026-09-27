@@ -19,14 +19,14 @@ const (
 
 // createUnreachableConfig returns a Config pointing to an unreachable port.
 func createUnreachableConfig() *config.Config {
-	return &config.Config{
-		Host:               "127.0.0.1",
-		Port:               testUnreachPort,
-		Username:           testUnreachUser,
-		Password:           testUnreachPass,
-		Protocol:           config.ProtocolMongoDB,
-		UUIDRepresentation: config.UUIDRepresentationUnspecified,
-	}
+	cfg := config.DefaultConfig()
+	cfg.Host = "127.0.0.1"
+	cfg.Port = testUnreachPort
+	cfg.Username = testUnreachUser
+	cfg.Password = testUnreachPass
+	cfg.Protocol = config.ProtocolMongoDB
+	cfg.UUIDRepresentation = config.UUIDRepresentationUnspecified
+	return cfg
 }
 
 // TestConnectWithConfig_NilConfig tests rejection of nil config.

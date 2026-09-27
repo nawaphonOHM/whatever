@@ -18,14 +18,14 @@ const (
 
 // buildCustomTestConfig constructs a Config populated with custom parameters.
 func buildCustomTestConfig() *config.Config {
-	return &config.Config{
-		Host:               testCustomHost,
-		Port:               testCustomPortVal,
-		Username:           testCustomUser,
-		Password:           testCustomPass,
-		Protocol:           config.ProtocolMongoDB,
-		UUIDRepresentation: config.UUIDRepresentationStandard,
-	}
+	cfg := config.DefaultConfig()
+	cfg.Host = testCustomHost
+	cfg.Port = testCustomPortVal
+	cfg.Username = testCustomUser
+	cfg.Password = testCustomPass
+	cfg.Protocol = config.ProtocolMongoDB
+	cfg.UUIDRepresentation = config.UUIDRepresentationStandard
+	return cfg
 }
 
 // TestBuildClientOptions_CustomConfig tests options with explicit values.
@@ -38,16 +38,21 @@ func TestBuildClientOptions_CustomConfig(t *testing.T) {
 	assert.Equal(t, expectedURI, clientOpts.GetURI())
 }
 
+// buildSpecialAuthTestConfig constructs a Config with special auth characters.
+func buildSpecialAuthTestConfig() *config.Config {
+	cfg := config.DefaultConfig()
+	cfg.Host = testCustomHost
+	cfg.Port = testCustomPortVal
+	cfg.Username = "user@name:special"
+	cfg.Password = "p@ss/word#123"
+	cfg.Protocol = config.ProtocolMongoDB
+	cfg.UUIDRepresentation = config.UUIDRepresentationStandard
+	return cfg
+}
+
 // TestBuildClientOptions_SpecialCharactersAuth tests options with special chars.
 func TestBuildClientOptions_SpecialCharactersAuth(t *testing.T) {
-	cfg := &config.Config{
-		Host:               testCustomHost,
-		Port:               testCustomPortVal,
-		Username:           "user@name:special",
-		Password:           "p@ss/word#123",
-		Protocol:           config.ProtocolMongoDB,
-		UUIDRepresentation: config.UUIDRepresentationStandard,
-	}
+	cfg := buildSpecialAuthTestConfig()
 	clientOpts := BuildClientOptions(cfg)
 	require.NotNil(t, clientOpts)
 	require.NotNil(t, clientOpts.Auth)

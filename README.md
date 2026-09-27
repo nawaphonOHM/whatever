@@ -279,13 +279,22 @@ All environment variables read by the library use the **`OHM9996_`** prefix.
 | Variable | Description | Default |
 |---|---|---|
 | `OHM9996_MONGODB_HOST` | Hostname or IP address of the MongoDB server (Required) | `""` |
-| `OHM9996_MONGODB_USERNAME` | Username for authentication (Required) | `""` |
-| `OHM9996_MONGODB_PASSWORD` | Password for authentication (Required) | `""` |
-| `OHM9996_MONGODB_PORT` | Network port (1–65535, Required) | `0` |
+| `OHM9996_MONGODB_PORT` | Network port (1–65535, optional for `mongodb+srv`) | `27017` |
 | `OHM9996_MONGODB_PROTOCOL` | Connection protocol (`mongodb` or `mongodb+srv`) | `mongodb` |
+| `OHM9996_MONGODB_DATABASE` | Default application database for direct collection access | `""` (empty) |
+| `OHM9996_MONGODB_USERNAME` | Username for authentication (optional, paired with password) | `""` (empty) |
+| `OHM9996_MONGODB_PASSWORD` | Password for authentication (optional, paired with username) | `""` (empty) |
+| `OHM9996_MONGODB_AUTH_SOURCE` | Authentication database name (e.g., `admin`) | `""` (empty) |
+| `OHM9996_MONGODB_APP_NAME` | Application name for connection metadata and diagnostics | `""` (empty) |
 | `OHM9996_MONGODB_UUID_REPRESENTATION` | UUID binary representation (`unspecified`, `standard`, `csharpLegacy`, `javaLegacy`, `pythonLegacy`) | `unspecified` |
+| `OHM9996_MONGODB_CONNECT_TIMEOUT` | Maximum duration for initial TCP connection establishment | `10s` |
+| `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | Timeout for cluster server discovery and primary election | `5s` |
+| `OHM9996_MONGODB_SOCKET_TIMEOUT` | Socket read and write operation timeout | `10s` |
+| `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | Maximum idle duration before an unused connection is closed | `10m` |
+| `OHM9996_MONGODB_MAX_POOL_SIZE` | Maximum number of concurrent connections in the pool | `100` |
+| `OHM9996_MONGODB_MIN_POOL_SIZE` | Minimum number of idle connections maintained in the pool | `5` |
 
-If required configuration variables (`HOST`, `USERNAME`, `PASSWORD`, `PORT`) are missing, or if connection fails after TLS fallback, the client logs descriptive error details and triggers a peaceful termination hook (`exitFunc(0)`).
+If mandatory configuration (`HOST`) is missing, or if connection fails after TLS fallback, the client logs descriptive error details and triggers a peaceful termination hook (`exitFunc(0)`).
 
 Both the REST server engine and `mongodb.Connect` load an optional `.env` file when present. Configuration precedence
 is system environment variables, then `.env`, then library defaults. An absent `.env` file is not an error.
