@@ -19,6 +19,11 @@ var (
 	ErrNilConfig = config.ErrNilConfig
 )
 
+// SetExitFunc overrides the process exit hook used during connection failures.
+func SetExitFunc(fn func(int)) func(int) {
+	return client.SetExitFunc(fn)
+}
+
 // Connect loads MongoDB configuration from environment variables with the
 // OHM9996_MONGODB_ prefix, connects to the MongoDB deployment, verifies
 // connectivity via Ping, and returns a managed Client.

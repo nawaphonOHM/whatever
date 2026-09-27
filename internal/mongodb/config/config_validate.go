@@ -4,72 +4,69 @@ import (
 	"errors"
 )
 
-// validateConnectTimeouts verifies connect and server selection durations.
-func (c *Config) validateConnectTimeouts() error {
-	if c.ConnectTimeout < 0 {
-		return errors.New("connect timeout cannot be negative")
-	}
-	if c.ServerSelectionTimeout < 0 {
-		return errors.New("server selection timeout cannot be negative")
+// Port boundary constants for MongoDB connection.
+const (
+	MinPort = 1
+	MaxPort = 65535
+)
+
+// validateHost checks that Host is non-empty.
+func (c *Config) validateHost() error {
+	if c.Host == "" {
+		return errors.New("mongodb host cannot be empty")
 	}
 	return nil
 }
 
-// validateSocketTimeouts verifies socket and idle duration settings.
-func (c *Config) validateSocketTimeouts() error {
-	if c.SocketTimeout < 0 {
-		return errors.New("socket timeout cannot be negative")
+// credentialMismatchError generates an error when only one credential field is set.
+func (c *Config) credentialMismatchError() error {
+	if c.Username != "" {
+		return errors.New("mongodb password cannot be empty when username is provided")
 	}
-	if c.MaxConnIdleTime < 0 {
-		return errors.New("max conn idle time cannot be negative")
+	return errors.New("mongodb username cannot be empty when password is provided")
+}
+
+// validateCredentials checks that username and password are provided as a consistent pair.
+func (c *Config) validateCredentials() error {
+	hasUser := c.Username != ""
+	hasPass := c.Password != ""
+	if hasUser != hasPass {
+		return c.credentialMismatchError()
 	}
 	return nil
 }
 
-// validateTimeouts checks that all duration settings are non-negative.
-func (c *Config) validateTimeouts() error {
-	if err := c.validateConnectTimeouts(); err != nil {
+// checkPortRange checks that the port is within the valid range (1-65535).
+func (c *Config) checkPortRange() error {
+	if c.Port < MinPort || c.Port > MaxPort {
+		return errors.New("mongodb port must be between 1 and 65535")
+	}
+	return nil
+}
+
+// isSrvZeroPort checks if protocol is mongodb+srv with port omitted.
+func (c *Config) isSrvZeroPort() bool {
+	if c.Protocol != ProtocolMongoDBSrv {
+		return false
+	}
+	return c.Port == 0
+}
+
+// validatePort checks that the port is within the valid range (1-65535).
+// When Protocol is mongodb+srv, Port is optional (0 is allowed).
+func (c *Config) validatePort() error {
+	if c.isSrvZeroPort() {
+		return nil
+	}
+	return c.checkPortRange()
+}
+
+// validateIdentity checks host and credentials configuration.
+func (c *Config) validateIdentity() error {
+	if err := c.validateHost(); err != nil {
 		return err
 	}
-	return c.validateSocketTimeouts()
-}
-
-// validatePoolSettings verifies connection pool boundary constraints.
-func (c *Config) validatePoolSettings() error {
-	if c.MaxPoolSize > 0 && c.MinPoolSize > c.MaxPoolSize {
-		return errors.New("min pool size cannot be greater than max pool size")
-	}
-	return nil
-}
-
-// validateRequiredBaseFields checks that URI, Database, Username, and Password are present.
-func (c *Config) validateRequiredBaseFields() error {
-	checks := []struct {
-		val string
-		err string
-	}{
-		{val: c.URI, err: "mongodb uri cannot be empty"},
-		{val: c.Database, err: "mongodb database cannot be empty"},
-		{val: c.Username, err: "mongodb username cannot be empty"},
-		{val: c.Password, err: "mongodb password cannot be empty"},
-	}
-	for _, chk := range checks {
-		if chk.val == "" {
-			return errors.New(chk.err)
-		}
-	}
-	return nil
-}
-
-// validateFields checks URI, database, credentials, and config boundaries.
-func (c *Config) validateFields() error {
-	if err := c.validateRequiredBaseFields(); err != nil {
-		return err
-	}
-	if err := c.validateTimeouts(); err != nil {
-		return err
-	}
-	return c.validatePoolSettings()
+	return c.validateCredentials()
 }
 
 // Validate checks that the configuration values are valid.
@@ -77,5 +74,8 @@ func (c *Config) Validate() error {
 	if c == nil {
 		return ErrNilConfig
 	}
-	return c.validateFields()
+	if err := c.validateIdentity(); err != nil {
+		return err
+	}
+	return c.validateSettings()
 }

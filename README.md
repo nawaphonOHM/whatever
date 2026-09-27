@@ -75,7 +75,7 @@ The structured logger package provides HTTP request logging middleware and reque
 
 ### `pkg/mongodb`
 
-The MongoDB package provides a zero-boilerplate entrypoint for connecting microservices to MongoDB clusters. Calling `mongodb.Connect(ctx)` loads configuration automatically from `OHM9996_MONGODB_*` environment variables, connects to the cluster, validates connectivity via ping, and returns a managed `*mongodb.Client`. The client exposes native `*mongo.Database` and `*mongo.Collection` handles for executing queries directly via the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`).
+The MongoDB package provides a zero-boilerplate entrypoint for connecting microservices to MongoDB clusters. Calling `mongodb.Connect(ctx)` loads configuration automatically from `OHM9996_MONGODB_*` environment variables, connects to the cluster with automatic two-phase TLS negotiation, validates connectivity via ping, and returns a managed `*mongodb.Client`. The client exposes native `*mongo.Database` and `*mongo.Collection` handles for executing queries directly via the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`).
 
 ---
 
@@ -134,11 +134,11 @@ When registrations are evaluated, the library performs fail-fast preflight valid
 
 ## MongoDB Client (`pkg/mongodb`)
 
-The `pkg/mongodb` package encapsulates MongoDB connection establishment, connection pooling, and lifecycle management while directly exposing official driver `*mongo.Database` and `*mongo.Collection` types for zero-overhead querying.
+The `pkg/mongodb` package encapsulates MongoDB connection establishment, connection pooling, two-phase TLS negotiation, and lifecycle management while directly exposing official driver `*mongo.Database` and `*mongo.Collection` types for zero-overhead querying.
 
 ### Connecting & Lifecycle
 
-Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9996_MONGODB_*` environment variables, initializes connection pools, and verifies connectivity via an initial ping:
+Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9996_MONGODB_*` environment variables, attempts an unencrypted connection first, automatically negotiates TLS fallback if the server requires a secure transport, and verifies connectivity via an initial ping:
 
 ```go
 package database
@@ -171,7 +171,7 @@ func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
 
 ### Database & Collection Handles
 
-Once connected, access collections and databases directly. If no database name is specified, operations automatically use the default database configured in `OHM9996_MONGODB_DATABASE`:
+Once connected, access collections and databases directly:
 
 ```go
 package repository
@@ -198,8 +198,8 @@ func NewUserRepository(client *mongodb.Client) *UserRepository {
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
-    // Automatically targets the default database from OHM9996_MONGODB_DATABASE
-    coll := r.client.Collection("users")
+    // Access collection in the specified database
+    coll := r.client.Collection("users", "my_database")
 
     var user User
     err := coll.FindOne(ctx, bson.M{"email": email}).Decode(&user)
@@ -210,7 +210,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, 
 }
 
 func (r *UserRepository) RecordAudit(ctx context.Context, entry bson.M) error {
-    // Explicitly target a specific database instead of the default database
+    // Explicitly target a specific database and collection
     coll := r.client.Collection("audit_logs", "audit_db")
 
     _, err := coll.InsertOne(ctx, entry)
@@ -278,15 +278,23 @@ All environment variables read by the library use the **`OHM9996_`** prefix.
 
 | Variable | Description | Default |
 |---|---|---|
-| `OHM9996_MONGODB_URI` | MongoDB connection URI string | `mongodb://localhost:27017` |
-| `OHM9996_MONGODB_DATABASE` | Default database name for collections | `""` (empty) |
-| `OHM9996_MONGODB_CONNECT_TIMEOUT` | Initial connection timeout | `10s` |
-| `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | Server selection timeout | `5s` |
-| `OHM9996_MONGODB_SOCKET_TIMEOUT` | Socket read/write timeout | `10s` |
-| `OHM9996_MONGODB_MAX_POOL_SIZE` | Maximum connection pool size | `100` |
-| `OHM9996_MONGODB_MIN_POOL_SIZE` | Minimum connection pool size | `5` |
-| `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | Maximum duration a connection remains idle | `10m` |
-| `OHM9996_MONGODB_APP_NAME` | Client metadata application name sent to MongoDB | `""` (empty) |
+| `OHM9996_MONGODB_HOST` | Hostname or IP address of the MongoDB server (Required) | `""` |
+| `OHM9996_MONGODB_PORT` | Network port (1–65535, optional for `mongodb+srv`) | `27017` |
+| `OHM9996_MONGODB_PROTOCOL` | Connection protocol (`mongodb` or `mongodb+srv`) | `mongodb` |
+| `OHM9996_MONGODB_DATABASE` | Default application database for direct collection access | `""` (empty) |
+| `OHM9996_MONGODB_USERNAME` | Username for authentication (optional, paired with password) | `""` (empty) |
+| `OHM9996_MONGODB_PASSWORD` | Password for authentication (optional, paired with username) | `""` (empty) |
+| `OHM9996_MONGODB_AUTH_SOURCE` | Authentication database name (e.g., `admin`) | `""` (empty) |
+| `OHM9996_MONGODB_APP_NAME` | Application name for connection metadata and diagnostics | `""` (empty) |
+| `OHM9996_MONGODB_UUID_REPRESENTATION` | UUID binary representation (`unspecified`, `standard`, `csharpLegacy`, `javaLegacy`, `pythonLegacy`) | `unspecified` |
+| `OHM9996_MONGODB_CONNECT_TIMEOUT` | Maximum duration for initial TCP connection establishment | `10s` |
+| `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | Timeout for cluster server discovery and primary election | `5s` |
+| `OHM9996_MONGODB_SOCKET_TIMEOUT` | Socket read and write operation timeout | `10s` |
+| `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | Maximum idle duration before an unused connection is closed | `10m` |
+| `OHM9996_MONGODB_MAX_POOL_SIZE` | Maximum number of concurrent connections in the pool | `100` |
+| `OHM9996_MONGODB_MIN_POOL_SIZE` | Minimum number of idle connections maintained in the pool | `5` |
+
+If mandatory configuration (`HOST`) is missing, or if connection fails after TLS fallback, the client logs descriptive error details and triggers a peaceful termination hook (`exitFunc(0)`).
 
 Both the REST server engine and `mongodb.Connect` load an optional `.env` file when present. Configuration precedence
 is system environment variables, then `.env`, then library defaults. An absent `.env` file is not an error.
@@ -327,7 +335,7 @@ func main() {
     }()
 
     // 2. Initialize domain items API with MongoDB collection
-    itemsColl := mongoClient.Collection("items")
+    itemsColl := mongoClient.Collection("items", "app_db")
     itemAPI := items.NewItemAPIRegistration(itemsColl)
 
     // 3. Collect domain API registrations

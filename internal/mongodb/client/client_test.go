@@ -12,7 +12,7 @@ import (
 
 // Constants for test database and collection fixtures.
 const (
-	testMongoURI   = "mongodb://localhost:27017"
+	testMongoURI   = "mongodb://localhost:28018"
 	testDefaultDB  = "default_db"
 	testCustomDB   = "custom_db"
 	testCollUsers  = "users"

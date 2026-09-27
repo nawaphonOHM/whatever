@@ -1,28 +1,36 @@
 package config
 
-import (
-	"time"
+// Protocol constants for MongoDB connection schemes.
+const (
+	ProtocolMongoDB    = "mongodb"
+	ProtocolMongoDBSrv = "mongodb+srv"
 )
 
-// BaseFields defines connection endpoints and metadata for MongoDB.
+// UUID representation constants for MongoDB binary UUID encoding.
+const (
+	UUIDRepresentationUnspecified  = "unspecified"
+	UUIDRepresentationStandard     = "standard"
+	UUIDRepresentationCSharpLegacy = "csharpLegacy"
+	UUIDRepresentationJavaLegacy   = "javaLegacy"
+	UUIDRepresentationPythonLegacy = "pythonLegacy"
+)
+
+// BaseFields defines core connection endpoint, authentication, and application metadata.
 type BaseFields struct {
-	URI      string `env:"URI"`
-	Database string `env:"DATABASE"`
-	Username string `env:"USERNAME"`
-	Password string `env:"PASSWORD"`
-	AppName  string `env:"APP_NAME" envDefault:""`
+	Host               string `env:"OHM9996_MONGODB_HOST"`
+	Protocol           string `env:"OHM9996_MONGODB_PROTOCOL" envDefault:"mongodb"`
+	Database           string `env:"OHM9996_MONGODB_DATABASE" envDefault:""`
+	Username           string `env:"OHM9996_MONGODB_USERNAME" envDefault:""`
+	Password           string `env:"OHM9996_MONGODB_PASSWORD" envDefault:""`
+	AuthSource         string `env:"OHM9996_MONGODB_AUTH_SOURCE" envDefault:""`
+	AppName            string `env:"OHM9996_MONGODB_APP_NAME" envDefault:""`
+	UUIDRepresentation string `env:"OHM9996_MONGODB_UUID_REPRESENTATION" envDefault:"unspecified"`
+	Port               int    `env:"OHM9996_MONGODB_PORT" envDefault:"27017"`
 }
 
-// TimeoutFields defines timeout settings for MongoDB connections.
-type TimeoutFields struct {
-	ConnectTimeout         time.Duration `env:"CONNECT_TIMEOUT" envDefault:"10s"`
-	ServerSelectionTimeout time.Duration `env:"SERVER_SELECTION_TIMEOUT" envDefault:"5s"`
-	SocketTimeout          time.Duration `env:"SOCKET_TIMEOUT" envDefault:"10s"`
-	MaxConnIdleTime        time.Duration `env:"MAX_CONN_IDLE_TIME" envDefault:"10m"`
-}
-
-// PoolFields defines connection pooling settings for MongoDB.
-type PoolFields struct {
-	MaxPoolSize uint64 `env:"MAX_POOL_SIZE" envDefault:"100"`
-	MinPoolSize uint64 `env:"MIN_POOL_SIZE" envDefault:"5"`
+// Config defines configuration options for connecting to MongoDB.
+type Config struct {
+	BaseFields
+	TimeoutFields
+	PoolFields
 }
