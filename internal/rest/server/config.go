@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	otelcfg "github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
 )
 
 const (
@@ -32,6 +33,7 @@ type Config struct {
 	AppVersion  string `env:"OHM9996_APP_VERSION" envDefault:""`
 	DisplayName string `env:"OHM9996_SERVER_DISPLAY_NAME" envDefault:"application"`
 	ProfilePath string `env:"OHM9996_SERVER_PROFILE_PATH" envDefault:"/debug/pprof"`
+	OTel        *otelcfg.Config
 	ProxyFields
 	ResourceFields
 	Port int `env:"OHM9996_SERVER_PORT" envDefault:"8080"`
@@ -58,5 +60,6 @@ func DefaultConfig() *Config {
 		HTTPFields:     defaultHTTPFields(),
 		ProxyFields:    defaultProxyFields(),
 		ResourceFields: defaultResourceFields(),
+		OTel:           otelcfg.DefaultConfig(),
 	}
 }
