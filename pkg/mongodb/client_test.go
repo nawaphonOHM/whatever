@@ -13,84 +13,75 @@ import (
 
 // Constants for environment variable keys and test fixtures.
 const (
-	envConnectTimeout    = "OHM9996_MONGODB_CONNECT_TIMEOUT"
-	envServerSelection   = "OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT"
-	envSocketTimeout     = "OHM9996_MONGODB_SOCKET_TIMEOUT"
-	envURI               = "OHM9996_MONGODB_URI"
-	envDatabase          = "OHM9996_MONGODB_DATABASE"
-	envUsername          = "OHM9996_MONGODB_USERNAME"
-	envPassword          = "OHM9996_MONGODB_PASSWORD"
-	testFailURI          = "mongodb://127.0.0.1:59999"
-	testDefaultURI       = "mongodb://localhost:27017"
-	testDBName           = "testdb"
-	testUser             = "testuser"
-	testPassword         = "testpass"
-	testShortTimeout     = "50ms"
-	errPingSubstring     = "failed to ping mongodb"
-	expectedNilClientErr = "mongodb client is not initialized"
-	expectedNilConfigErr = "mongodb config cannot be nil"
+	envHost          = "OHM9996_MONGODB_HOST"
+	envPort          = "OHM9996_MONGODB_PORT"
+	envUsername      = "OHM9996_MONGODB_USERNAME"
+	envPassword      = "OHM9996_MONGODB_PASSWORD"
+	testFailHost     = "127.0.0.1"
+	testFailPort     = "59999"
+	testDefaultHost  = "localhost"
+	testDefaultPort  = "28018"
+	testUser         = "testuser"
+	testPassword     = "testpass"
+	errPingSubstring = "failed to ping mongodb"
 )
 
 // setupPingFailureEnv configures environment variables for invalid target port.
 func setupPingFailureEnv(t *testing.T) {
-	t.Setenv(envURI, testFailURI)
-	t.Setenv(envDatabase, testDBName)
+	t.Setenv(envHost, testFailHost)
+	t.Setenv(envPort, testFailPort)
 	t.Setenv(envUsername, testUser)
 	t.Setenv(envPassword, testPassword)
-	t.Setenv(envConnectTimeout, testShortTimeout)
-	t.Setenv(envServerSelection, testShortTimeout)
-	t.Setenv(envSocketTimeout, testShortTimeout)
+}
+
+func setupDefaultEnv(t *testing.T) {
+	t.Setenv(envHost, testDefaultHost)
+	t.Setenv(envPort, testDefaultPort)
+	t.Setenv(envUsername, testUser)
+	t.Setenv(envPassword, testPassword)
+}
+
+func setupExitCapture() (*bool, func()) {
+	var exitCalled bool
+	prev := mongodb.SetExitFunc(func(int) { exitCalled = true })
+	return &exitCalled, func() { mongodb.SetExitFunc(prev) }
 }
 
 // TestConnect_InvalidConfig tests connection failure on invalid configuration.
 func TestConnect_InvalidConfig(t *testing.T) {
-	t.Setenv(envURI, testFailURI)
-	t.Setenv(envDatabase, testDBName)
+	t.Setenv(envHost, testFailHost)
+	t.Setenv(envPort, "invalid-port")
 	t.Setenv(envUsername, testUser)
 	t.Setenv(envPassword, testPassword)
-	t.Setenv(envConnectTimeout, "-5s")
 
 	ctx := context.Background()
 	client, err := mongodb.Connect(ctx)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "connect timeout cannot be negative")
+	assert.Contains(t, err.Error(), "failed to load mongodb config")
 	assert.Nil(t, client)
 }
 
 // TestConnect_PingFailure tests connection timeout when MongoDB is unreachable.
 func TestConnect_PingFailure(t *testing.T) {
 	setupPingFailureEnv(t)
+	exitCalled, cleanup := setupExitCapture()
+	defer cleanup()
 
-	ctx, cancel := context.WithTimeout(
-		context.Background(), 100*time.Millisecond,
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	client, err := mongodb.Connect(ctx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errPingSubstring)
 	assert.Nil(t, client)
-}
-
-// TestSentinelErrors verifies exported sentinel error messages.
-func TestSentinelErrors(t *testing.T) {
-	assert.NotNil(t, mongodb.ErrNilClient)
-	assert.Equal(
-		t, expectedNilClientErr, mongodb.ErrNilClient.Error(),
-	)
-
-	assert.NotNil(t, mongodb.ErrNilConfig)
-	assert.Equal(
-		t, expectedNilConfigErr, mongodb.ErrNilConfig.Error(),
-	)
+	assert.True(t, *exitCalled)
 }
 
 // TestConnect_CanceledContext verifies behavior when context is pre-canceled.
 func TestConnect_CanceledContext(t *testing.T) {
-	t.Setenv(envURI, testDefaultURI)
-	t.Setenv(envDatabase, testDBName)
-	t.Setenv(envUsername, testUser)
-	t.Setenv(envPassword, testPassword)
+	setupDefaultEnv(t)
+	exitCalled, cleanup := setupExitCapture()
+	defer cleanup()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -99,4 +90,5 @@ func TestConnect_CanceledContext(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errPingSubstring)
 	assert.Nil(t, client)
+	assert.True(t, *exitCalled)
 }

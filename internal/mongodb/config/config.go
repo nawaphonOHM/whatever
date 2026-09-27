@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 )
@@ -17,58 +16,35 @@ var ErrNilConfig = errors.New("mongodb config cannot be nil")
 // exitFunc is a package-level hook for os.Exit, allowing tests to intercept process termination.
 var exitFunc = os.Exit
 
-// Default configuration constants.
-const (
-	DefaultConnectTimeout  = 10 * time.Second
-	DefaultServerSelection = 5 * time.Second
-	DefaultSocketTimeout   = 10 * time.Second
-	DefaultMaxPoolSize     = 100
-	DefaultMinPoolSize     = 5
-	DefaultMaxConnIdleTime = 10 * time.Minute
-)
-
-// Config defines configuration options for connecting to MongoDB.
-// All environment variable keys use the OHM9996_MONGODB_ prefix.
-type Config struct {
-	BaseFields    `envPrefix:"OHM9996_MONGODB_"`
-	TimeoutFields `envPrefix:"OHM9996_MONGODB_"`
-	PoolFields    `envPrefix:"OHM9996_MONGODB_"`
-}
-
-// DefaultConfig returns MongoDB configuration with recommended production
-// defaults.
+// DefaultConfig returns MongoDB configuration with recommended defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		URI:                    "",
-		Database:               "",
-		Username:               "",
-		Password:               "",
-		AppName:                "",
-		ConnectTimeout:         DefaultConnectTimeout,
-		ServerSelectionTimeout: DefaultServerSelection,
-		SocketTimeout:          DefaultSocketTimeout,
-		MaxConnIdleTime:        DefaultMaxConnIdleTime,
-		MaxPoolSize:            DefaultMaxPoolSize,
-		MinPoolSize:            DefaultMinPoolSize,
+		Protocol:           ProtocolMongoDB,
+		UUIDRepresentation: UUIDRepresentationUnspecified,
+	}
+}
+
+type requiredKeyCheck struct {
+	key     string
+	missing bool
+}
+
+// buildRequiredKeyChecks returns presence checks for mandatory configuration keys.
+func (c *Config) buildRequiredKeyChecks() []requiredKeyCheck {
+	return []requiredKeyCheck{
+		{key: "OHM9996_MONGODB_HOST", missing: c.Host == ""},
+		{key: "OHM9996_MONGODB_USERNAME", missing: c.Username == ""},
+		{key: "OHM9996_MONGODB_PASSWORD", missing: c.Password == ""},
+		{key: "OHM9996_MONGODB_PORT", missing: c.Port == 0},
 	}
 }
 
 // checkMissingRequiredKeys checks whether any required environment keys are unset.
 func checkMissingRequiredKeys(cfg *Config) []string {
-	checks := []struct {
-		val string
-		key string
-	}{
-		{val: cfg.URI, key: "OHM9996_MONGODB_URI"},
-		{val: cfg.Database, key: "OHM9996_MONGODB_DATABASE"},
-		{val: cfg.Username, key: "OHM9996_MONGODB_USERNAME"},
-		{val: cfg.Password, key: "OHM9996_MONGODB_PASSWORD"},
-	}
-
 	var missing []string
-	for _, c := range checks {
-		if c.val == "" {
-			missing = append(missing, c.key)
+	for _, check := range cfg.buildRequiredKeyChecks() {
+		if check.missing {
+			missing = append(missing, check.key)
 		}
 	}
 	return missing

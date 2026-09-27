@@ -2,74 +2,83 @@ package config
 
 import (
 	"errors"
+	"fmt"
 )
 
-// validateConnectTimeouts verifies connect and server selection durations.
-func (c *Config) validateConnectTimeouts() error {
-	if c.ConnectTimeout < 0 {
-		return errors.New("connect timeout cannot be negative")
+// Port boundary constants for MongoDB connection.
+const (
+	MinPort = 1
+	MaxPort = 65535
+)
+
+// validateHostAndUser checks that Host and Username are non-empty.
+func (c *Config) validateHostAndUser() error {
+	if c.Host == "" {
+		return errors.New("mongodb host cannot be empty")
 	}
-	if c.ServerSelectionTimeout < 0 {
-		return errors.New("server selection timeout cannot be negative")
+	if c.Username == "" {
+		return errors.New("mongodb username cannot be empty")
 	}
 	return nil
 }
 
-// validateSocketTimeouts verifies socket and idle duration settings.
-func (c *Config) validateSocketTimeouts() error {
-	if c.SocketTimeout < 0 {
-		return errors.New("socket timeout cannot be negative")
-	}
-	if c.MaxConnIdleTime < 0 {
-		return errors.New("max conn idle time cannot be negative")
+// validatePassword checks that Password is non-empty.
+func (c *Config) validatePassword() error {
+	if c.Password == "" {
+		return errors.New("mongodb password cannot be empty")
 	}
 	return nil
 }
 
-// validateTimeouts checks that all duration settings are non-negative.
-func (c *Config) validateTimeouts() error {
-	if err := c.validateConnectTimeouts(); err != nil {
+// validateRequiredFields checks that Host, Username, and Password are non-empty.
+func (c *Config) validateRequiredFields() error {
+	if err := c.validateHostAndUser(); err != nil {
 		return err
 	}
-	return c.validateSocketTimeouts()
+	return c.validatePassword()
 }
 
-// validatePoolSettings verifies connection pool boundary constraints.
-func (c *Config) validatePoolSettings() error {
-	if c.MaxPoolSize > 0 && c.MinPoolSize > c.MaxPoolSize {
-		return errors.New("min pool size cannot be greater than max pool size")
+// validatePort checks that the port is within the valid range (1-65535).
+func (c *Config) validatePort() error {
+	if c.Port < MinPort || c.Port > MaxPort {
+		return errors.New("mongodb port must be between 1 and 65535")
 	}
 	return nil
 }
 
-// validateRequiredBaseFields checks that URI, Database, Username, and Password are present.
-func (c *Config) validateRequiredBaseFields() error {
-	checks := []struct {
-		val string
-		err string
-	}{
-		{val: c.URI, err: "mongodb uri cannot be empty"},
-		{val: c.Database, err: "mongodb database cannot be empty"},
-		{val: c.Username, err: "mongodb username cannot be empty"},
-		{val: c.Password, err: "mongodb password cannot be empty"},
+// validateProtocol verifies that the protocol is either mongodb or mongodb+srv.
+func (c *Config) validateProtocol() error {
+	switch c.Protocol {
+	case ProtocolMongoDB, ProtocolMongoDBSrv:
+		return nil
+	default:
+		return fmt.Errorf("invalid mongodb protocol: %s", c.Protocol)
 	}
-	for _, chk := range checks {
-		if chk.val == "" {
-			return errors.New(chk.err)
-		}
-	}
-	return nil
 }
 
-// validateFields checks URI, database, credentials, and config boundaries.
-func (c *Config) validateFields() error {
-	if err := c.validateRequiredBaseFields(); err != nil {
+// validateUUIDRepresentation checks that the UUID representation is a supported format.
+func (c *Config) validateUUIDRepresentation() error {
+	switch c.UUIDRepresentation {
+	case UUIDRepresentationUnspecified,
+		UUIDRepresentationStandard,
+		UUIDRepresentationCSharpLegacy,
+		UUIDRepresentationJavaLegacy,
+		UUIDRepresentationPythonLegacy:
+		return nil
+	default:
+		return fmt.Errorf("invalid mongodb uuid representation: %s", c.UUIDRepresentation)
+	}
+}
+
+// validateSettings verifies port, protocol, and UUID representation settings.
+func (c *Config) validateSettings() error {
+	if err := c.validatePort(); err != nil {
 		return err
 	}
-	if err := c.validateTimeouts(); err != nil {
+	if err := c.validateProtocol(); err != nil {
 		return err
 	}
-	return c.validatePoolSettings()
+	return c.validateUUIDRepresentation()
 }
 
 // Validate checks that the configuration values are valid.
@@ -77,5 +86,8 @@ func (c *Config) Validate() error {
 	if c == nil {
 		return ErrNilConfig
 	}
-	return c.validateFields()
+	if err := c.validateRequiredFields(); err != nil {
+		return err
+	}
+	return c.validateSettings()
 }

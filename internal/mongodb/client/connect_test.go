@@ -11,39 +11,44 @@ import (
 const (
 	testConnUser = "testuser"
 	testConnPass = "testpass"
-	testConnDB   = "testdb"
+	testPort59   = "59999"
 )
 
 // setupConnectPingEnv configures environment variables targeting an
 // unreachable port.
 func setupConnectPingEnv(t *testing.T) {
-	t.Setenv("OHM9996_MONGODB_URI", testUnreachableURI)
-	t.Setenv("OHM9996_MONGODB_DATABASE", testConnDB)
+	t.Setenv("OHM9996_MONGODB_HOST", "127.0.0.1")
+	t.Setenv("OHM9996_MONGODB_PORT", testPort59)
 	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
 	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
-	t.Setenv("OHM9996_MONGODB_CONNECT_TIMEOUT", "50ms")
-	t.Setenv("OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT", "50ms")
-	t.Setenv("OHM9996_MONGODB_SOCKET_TIMEOUT", "50ms")
+}
+
+func setupConnectCanceledEnv(t *testing.T) {
+	t.Setenv("OHM9996_MONGODB_HOST", "localhost")
+	t.Setenv("OHM9996_MONGODB_PORT", "28018")
+	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
+	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
 }
 
 // TestConnect_LoadConfigFailure tests failure when config cannot be parsed.
 func TestConnect_LoadConfigFailure(t *testing.T) {
-	t.Setenv("OHM9996_MONGODB_URI", testUnreachableURI)
-	t.Setenv("OHM9996_MONGODB_DATABASE", testConnDB)
+	t.Setenv("OHM9996_MONGODB_HOST", "127.0.0.1")
+	t.Setenv("OHM9996_MONGODB_PORT", "invalid-port")
 	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
 	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
-	t.Setenv("OHM9996_MONGODB_CONNECT_TIMEOUT", "-5s")
 
 	ctx := context.Background()
 	client, err := Connect(ctx)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "connect timeout cannot be negative")
+	assert.Contains(t, err.Error(), "failed to load mongodb config")
 	assert.Nil(t, client)
 }
 
 // TestConnect_PingFailure tests connection timeout with environment variables.
 func TestConnect_PingFailure(t *testing.T) {
 	setupConnectPingEnv(t)
+	exitCalled, cleanup := setupExitCapture()
+	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextDur)
 	defer cancel()
@@ -52,14 +57,14 @@ func TestConnect_PingFailure(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to ping mongodb")
 	assert.Nil(t, client)
+	assert.True(t, *exitCalled)
 }
 
 // TestConnect_CanceledContext tests connection with pre-canceled context.
 func TestConnect_CanceledContext(t *testing.T) {
-	t.Setenv("OHM9996_MONGODB_URI", testMongoURI)
-	t.Setenv("OHM9996_MONGODB_DATABASE", testConnDB)
-	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
-	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
+	setupConnectCanceledEnv(t)
+	exitCalled, cleanup := setupExitCapture()
+	defer cleanup()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -68,4 +73,5 @@ func TestConnect_CanceledContext(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to ping mongodb")
 	assert.Nil(t, client)
+	assert.True(t, *exitCalled)
 }

@@ -10,42 +10,86 @@ import (
 	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
+const (
+	errPingFormat          = "failed to ping mongodb: %w"
+	errCreateClientFormat  = "failed to create mongodb client: %w"
+	errInvalidConfigFormat = "invalid mongodb config: %w"
+)
+
+var pingClient = defaultPingClient
+
+func defaultPingClient(ctx context.Context, rawClient *mongo.Client) error {
+	return rawClient.Ping(ctx, nil)
+}
+
 // verifyPingAndDisconnect verifies ping and disconnects if ping fails.
 func verifyPingAndDisconnect(
 	ctx context.Context,
 	rawClient *mongo.Client,
 ) error {
-	if err := rawClient.Ping(ctx, nil); err != nil {
+	if err := pingClient(ctx, rawClient); err != nil {
 		if disconnectErr := rawClient.Disconnect(ctx); disconnectErr != nil {
 			return errors.Join(
-				fmt.Errorf("failed to ping mongodb: %w", err),
+				fmt.Errorf(errPingFormat, err),
 				disconnectErr,
 			)
 		}
-		return fmt.Errorf("failed to ping mongodb: %w", err)
+		return fmt.Errorf(errPingFormat, err)
 	}
 	return nil
 }
 
-// initAndPingClient instantiates the driver client and verifies ping
-// connectivity.
-func initAndPingClient(
+// attemptConnection establishes a driver client with specified TLS and verifies ping.
+func attemptConnection(
 	ctx context.Context,
 	cfg *config.Config,
+	enableTLS bool,
 	opts ...Option,
 ) (*Client, error) {
 	optionsContainer := NewOptions(opts...)
-	clientOptions := BuildClientOptions(cfg, optionsContainer.DriverOptions...)
+	clientOptions := BuildClientOptionsWithTLS(cfg, enableTLS, optionsContainer.DriverOptions...)
 
 	rawClient, err := mongo.Connect(clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create mongodb client: %w", err)
+		return nil, fmt.Errorf(errCreateClientFormat, err)
 	}
 
 	if err := verifyPingAndDisconnect(ctx, rawClient); err != nil {
 		return nil, err
 	}
-	return NewClient(rawClient, cfg.Database), nil
+	return NewClient(rawClient, ""), nil
+}
+
+// fallbackTLSAttempt attempts connection with TLS enabled upon TLS requirement error.
+func fallbackTLSAttempt(
+	ctx context.Context,
+	cfg *config.Config,
+	opts ...Option,
+) (*Client, error) {
+	tlsClient, tlsErr := attemptConnection(ctx, cfg, true, opts...)
+	if tlsErr != nil {
+		return nil, handleConnectionError(tlsErr)
+	}
+	return tlsClient, nil
+}
+
+// initAndPingClient performs two-phase connection: attempts unencrypted connection first,
+// and falls back to TLS if the server requires TLS encryption.
+func initAndPingClient(
+	ctx context.Context,
+	cfg *config.Config,
+	opts ...Option,
+) (*Client, error) {
+	client, err := attemptConnection(ctx, cfg, false, opts...)
+	if err == nil {
+		return client, nil
+	}
+
+	if isTLSError(err) {
+		return fallbackTLSAttempt(ctx, cfg, opts...)
+	}
+
+	return nil, handleConnectionError(err)
 }
 
 // Connect loads MongoDB configuration from environment variables
@@ -70,7 +114,7 @@ func ConnectWithConfig(
 		return nil, config.ErrNilConfig
 	}
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid mongodb config: %w", err)
+		return nil, fmt.Errorf(errInvalidConfigFormat, err)
 	}
 	return initAndPingClient(ctx, cfg, opts...)
 }

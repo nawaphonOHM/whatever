@@ -12,21 +12,27 @@ is started. Configuration values are intentionally not exposed as public
 structs or functional options, so importing applications use the standardized
 `OHM9996_MONGODB_*` environment variables.
 
-| Environment variable | Default |
-| --- | --- |
-| `OHM9996_MONGODB_URI` | `mongodb://localhost:27017` |
-| `OHM9996_MONGODB_DATABASE` | empty |
-| `OHM9996_MONGODB_CONNECT_TIMEOUT` | `10s` |
-| `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | `5s` |
-| `OHM9996_MONGODB_SOCKET_TIMEOUT` | `10s` |
-| `OHM9996_MONGODB_MAX_POOL_SIZE` | `100` |
-| `OHM9996_MONGODB_MIN_POOL_SIZE` | `5` |
-| `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | `10m` |
-| `OHM9996_MONGODB_APP_NAME` | empty |
+| Environment variable | Description | Required / Default |
+| --- | --- | --- |
+| `OHM9996_MONGODB_HOST` | Hostname or IP address of the MongoDB server | Required |
+| `OHM9996_MONGODB_USERNAME` | Username for authentication | Required |
+| `OHM9996_MONGODB_PASSWORD` | Password for authentication | Required |
+| `OHM9996_MONGODB_PORT` | Network port (1–65535) | Required |
+| `OHM9996_MONGODB_PROTOCOL` | Connection protocol (`mongodb` or `mongodb+srv`) | `mongodb` |
+| `OHM9996_MONGODB_UUID_REPRESENTATION` | UUID binary representation (`unspecified`, `standard`, `csharpLegacy`, `javaLegacy`, `pythonLegacy`) | `unspecified` |
+
+If any required configuration variables (`HOST`, `USERNAME`, `PASSWORD`, `PORT`) are missing, or if connection fails after TLS fallback, the client logs a descriptive error and triggers peaceful termination (`exitFunc(0)`).
 
 The environment-backed configuration, defaults, validation, and driver option
 construction live in `internal/mongodb/config` and `internal/mongodb/client`. They are not part of the API available
 to importing projects.
+
+## Connection Lifecycle & TLS Fallback
+
+Calling `mongodb.Connect(ctx)` executes a two-phase connection flow:
+1. **Unencrypted Connection Attempt**: First attempts to connect and ping the MongoDB server without TLS (`tls=false`).
+2. **Automatic TLS Fallback**: If the server rejects the unencrypted connection indicating TLS/SSL is required (e.g., MongoDB Atlas or secured clusters), the client automatically retries connection with TLS enabled (`tls=true`).
+3. **Graceful Termination on Failure**: If connectivity cannot be established after retry or due to fatal configuration errors, the client logs the error, triggers graceful program exit, and returns the underlying error.
 
 ## Usage
 
@@ -39,10 +45,10 @@ if err != nil {
 }
 defer client.Disconnect(ctx)
 
-users := client.Collection("users")
+users := client.Collection("users", "my_db")
 // Execute native mongo-driver queries directly on users (*mongo.Collection).
 ```
 
 The public client exposes `Database`, `Collection`, `RawClient`, `Ping`,
 and `Disconnect` methods. `Ping` can be used by readiness probes to verify
-connectivity.
+connectivity. The process exit hook can be intercepted during testing via `SetExitFunc`.

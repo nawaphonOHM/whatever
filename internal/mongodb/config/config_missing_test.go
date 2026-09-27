@@ -19,24 +19,16 @@ func buildMissingTestCases() []missingTestCase {
 			name:  "all required keys unset",
 			setup: setupEmptyEnv,
 			missingKeys: []string{
-				testEnvURI, testEnvDatabase, testEnvUsername, testEnvPassword,
+				testEnvHost, testEnvUsername, testEnvPassword, testEnvPort,
 			},
 		},
 		{
-			name: "missing URI only",
+			name: "missing Host only",
 			setup: func(t *testing.T) {
 				setupCustomEnv(t)
-				t.Setenv(testEnvURI, "")
+				t.Setenv(testEnvHost, "")
 			},
-			missingKeys: []string{testEnvURI},
-		},
-		{
-			name: "missing Database only",
-			setup: func(t *testing.T) {
-				setupCustomEnv(t)
-				t.Setenv(testEnvDatabase, "")
-			},
-			missingKeys: []string{testEnvDatabase},
+			missingKeys: []string{testEnvHost},
 		},
 		{
 			name: "missing Username only",
@@ -53,6 +45,14 @@ func buildMissingTestCases() []missingTestCase {
 				t.Setenv(testEnvPassword, "")
 			},
 			missingKeys: []string{testEnvPassword},
+		},
+		{
+			name: "missing Port only",
+			setup: func(t *testing.T) {
+				setupCustomEnv(t)
+				t.Setenv(testEnvPort, "")
+			},
+			missingKeys: []string{testEnvPort},
 		},
 	}
 }

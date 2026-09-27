@@ -2,78 +2,54 @@ package config
 
 import (
 	"testing"
-	"time"
 )
 
 const (
-	testSmallPoolMax = uint64(5)
-	testMinPoolLimit = uint64(10)
-	testZeroPoolMax  = uint64(0)
-	testNegDuration  = -1 * time.Second
+	testPortZero        = 0
+	testPortNegative    = -1
+	testPortMin         = 1
+	testPortStandard    = 27017
+	testPortMax         = 65535
+	testPortOverflow    = 65536
+	testPortLarge       = 70000
+	errPortRangeMessage = "mongodb port must be between 1 and 65535"
 )
 
-func buildTimeoutCases() []configValidateCase {
-	negConnect := validTestConfig()
-	negConnect.ConnectTimeout = testNegDuration
-
-	negServerSel := validTestConfig()
-	negServerSel.ServerSelectionTimeout = testNegDuration
-
-	negSocket := validTestConfig()
-	negSocket.SocketTimeout = testNegDuration
-
-	negIdle := validTestConfig()
-	negIdle.MaxConnIdleTime = testNegDuration
+func buildInvalidPortCases() []configValidateCase {
+	c0 := validTestConfig()
+	c0.Port = testPortZero
+	cNeg := validTestConfig()
+	cNeg.Port = testPortNegative
+	cOver := validTestConfig()
+	cOver.Port = testPortOverflow
+	cLarge := validTestConfig()
+	cLarge.Port = testPortLarge
 
 	return []configValidateCase{
-		{
-			cfg:         negConnect,
-			name:        "negative connect timeout",
-			expectedErr: "connect timeout cannot be negative",
-		},
-		{
-			cfg:         negServerSel,
-			name:        "negative server selection timeout",
-			expectedErr: "server selection timeout cannot be negative",
-		},
-		{
-			cfg:         negSocket,
-			name:        "negative socket timeout",
-			expectedErr: "socket timeout cannot be negative",
-		},
-		{
-			cfg:         negIdle,
-			name:        "negative max conn idle time",
-			expectedErr: "max conn idle time cannot be negative",
-		},
+		{cfg: c0, name: "port zero", expectedErr: errPortRangeMessage},
+		{cfg: cNeg, name: "negative port", expectedErr: errPortRangeMessage},
+		{cfg: cOver, name: "port overflow 65536", expectedErr: errPortRangeMessage},
+		{cfg: cLarge, name: "port 70000", expectedErr: errPortRangeMessage},
 	}
 }
 
-func buildPoolCases() []configValidateCase {
-	invalidPool := validTestConfig()
-	invalidPool.MaxPoolSize = testSmallPoolMax
-	invalidPool.MinPoolSize = testMinPoolLimit
-
-	zeroMaxPool := validTestConfig()
-	zeroMaxPool.MaxPoolSize = testZeroPoolMax
-	zeroMaxPool.MinPoolSize = testMinPoolLimit
+func buildValidPortCases() []configValidateCase {
+	cMin := validTestConfig()
+	cMin.Port = testPortMin
+	cMax := validTestConfig()
+	cMax.Port = testPortMax
+	cStd := validTestConfig()
+	cStd.Port = testPortStandard
 
 	return []configValidateCase{
-		{
-			cfg:         invalidPool,
-			name:        "min pool size greater than max pool size",
-			expectedErr: "min pool size cannot be greater than max pool size",
-		},
-		{
-			cfg:         zeroMaxPool,
-			name:        "min pool size allowed when max pool size is zero",
-			expectedErr: "",
-		},
+		{cfg: cMin, name: "valid min boundary port 1", expectedErr: ""},
+		{cfg: cMax, name: "valid max boundary port 65535", expectedErr: ""},
+		{cfg: cStd, name: "valid standard port 27017", expectedErr: ""},
 	}
 }
 
-// TestConfig_Validate_Limits tests timeout and connection pool validation rules.
+// TestConfig_Validate_Limits tests port boundary and limit validation rules.
 func TestConfig_Validate_Limits(t *testing.T) {
-	runValidateCases(t, buildTimeoutCases())
-	runValidateCases(t, buildPoolCases())
+	runValidateCases(t, buildInvalidPortCases())
+	runValidateCases(t, buildValidPortCases())
 }

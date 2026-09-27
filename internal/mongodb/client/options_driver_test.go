@@ -41,3 +41,13 @@ func TestNewOptions_Empty(t *testing.T) {
 	require.NotNil(t, opts)
 	assert.Empty(t, opts.DriverOptions)
 }
+
+// TestBuildClientOptions_WithNilExtraOptions tests extra options when empty or nil.
+func TestBuildClientOptions_WithNilExtraOptions(t *testing.T) {
+	cfg := config.DefaultConfig()
+	clientOpts := BuildClientOptions(cfg)
+	require.NotNil(t, clientOpts)
+
+	clientOptsWithNil := BuildClientOptions(cfg, nil)
+	require.NotNil(t, clientOptsWithNil)
+}

@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	testFilePerm  = 0o600
-	testDotEnvMax = uint64(75)
+	testFilePerm   = 0o600
+	testDotEnvPort = 27017
 )
 
 // createDotEnvFile writes a temporary dotenv configuration file.
@@ -19,12 +19,12 @@ func createDotEnvFile(t *testing.T) string {
 	tmpDir := t.TempDir()
 	envPath := filepath.Join(tmpDir, ".env.mongodb")
 	content := []byte(`
-OHM9996_MONGODB_URI=mongodb://dotenv-host:27017
-OHM9996_MONGODB_DATABASE=dotenv_db
+OHM9996_MONGODB_HOST=dotenv-host
+OHM9996_MONGODB_PORT=27017
 OHM9996_MONGODB_USERNAME=dotenv_user
 OHM9996_MONGODB_PASSWORD=dotenv_pass
-OHM9996_MONGODB_MAX_POOL_SIZE=75
-OHM9996_MONGODB_APP_NAME=dotenv-app
+OHM9996_MONGODB_PROTOCOL=mongodb
+OHM9996_MONGODB_UUID_REPRESENTATION=standard
 `)
 	err := os.WriteFile(envPath, content, testFilePerm)
 	require.NoError(t, err)
@@ -33,12 +33,12 @@ OHM9996_MONGODB_APP_NAME=dotenv-app
 
 // verifyDotEnvLoadedConfig asserts loaded configuration fields match dotenv contents.
 func verifyDotEnvLoadedConfig(t *testing.T, cfg *Config) {
-	assert.Equal(t, "mongodb://dotenv-host:27017", cfg.URI)
-	assert.Equal(t, "dotenv_db", cfg.Database)
+	assert.Equal(t, "dotenv-host", cfg.Host)
+	assert.Equal(t, testDotEnvPort, cfg.Port)
 	assert.Equal(t, "dotenv_user", cfg.Username)
 	assert.Equal(t, "dotenv_pass", cfg.Password)
-	assert.Equal(t, "dotenv-app", cfg.AppName)
-	assert.Equal(t, testDotEnvMax, cfg.MaxPoolSize)
+	assert.Equal(t, "mongodb", cfg.Protocol)
+	assert.Equal(t, "standard", cfg.UUIDRepresentation)
 }
 
 // TestConfig_Load_DotEnvFile tests loading configuration from a dotenv file.
