@@ -4,7 +4,6 @@ package logger
 import (
 	"context"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -71,6 +70,7 @@ func buildLogAttrs(c *gin.Context, latency time.Duration) []slog.Attr {
 		slog.String("user_agent", c.Request.UserAgent()),
 		slog.Int("bytes_out", c.Writer.Size()),
 	}
+	attrs = append(attrs, traceAttrs(c)...)
 	if len(c.Errors) > 0 {
 		attrs = append(attrs, slog.String("errors", c.Errors.String()))
 	}
@@ -103,7 +103,7 @@ func logRequest(
 func WithConfig(cfg Config) gin.HandlerFunc {
 	logger := cfg.Logger
 	if logger == nil {
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+		logger = slog.Default()
 	}
 	skipMap := buildSkipMap(cfg.SkipPaths)
 

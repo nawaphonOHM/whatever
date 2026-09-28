@@ -38,6 +38,13 @@ func setServerConfigOverrides(t *testing.T) {
 		"OHM9996_SERVER_ENABLE_ACCESS_LOG":         envFalse,
 		"OHM9996_SERVER_ENABLE_METRICS":            envTrue,
 		"OHM9996_SERVER_ENABLE_PROFILING":          envTrue,
+		"OHM9996_OTEL_ENABLED":                     envFalse,
+		"OHM9996_OTEL_SERVICE_NAME":                "custom-otel-service",
+		"OHM9996_OTEL_EXPORTER_OTLP_ENDPOINT":      "collector:4318",
+		"OHM9996_OTEL_EXPORTER_OTLP_PROTOCOL":      "http",
+		"OHM9996_OTEL_INSECURE":                    envFalse,
+		"OHM9996_OTEL_SAMPLE_RATE":                 "0.5",
+		"OHM9996_OTEL_SKIP_PATHS":                  "/custom-skip",
 	}
 	for key, value := range values {
 		t.Setenv(key, value)

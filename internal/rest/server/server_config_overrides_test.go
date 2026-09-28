@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const overrideSampleRate = 0.5
+
 func TestConfig_EnvironmentOverrides(t *testing.T) {
 	clearServerConfigEnv(t)
 	setServerConfigOverrides(t)
@@ -51,9 +53,21 @@ func assertOverrideResource(t *testing.T, cfg *Config) {
 	assert.Equal(t, overrideHeaders, cfg.MaxHeaderBytes)
 }
 
+func assertOverrideOTel(t *testing.T, cfg *Config) {
+	assert.NotNil(t, cfg.OTel)
+	assert.False(t, cfg.OTel.Enabled)
+	assert.Equal(t, "custom-otel-service", cfg.OTel.ServiceName)
+	assert.Equal(t, "collector:4318", cfg.OTel.Endpoint)
+	assert.Equal(t, "http", cfg.OTel.Protocol)
+	assert.False(t, cfg.OTel.Insecure)
+	assert.Equal(t, overrideSampleRate, cfg.OTel.SampleRate)
+	assert.Equal(t, []string{"/custom-skip"}, cfg.OTel.SkipPaths)
+}
+
 func assertOverrideTelemetry(t *testing.T, cfg *Config) {
 	assert.Equal(t, "/custom/pprof", cfg.ProfilePath)
 	assert.False(t, cfg.EnableAccessLog)
 	assert.True(t, cfg.EnableMetrics)
 	assert.True(t, cfg.EnableProfiling)
+	assertOverrideOTel(t, cfg)
 }

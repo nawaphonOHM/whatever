@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	otelcfg "github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	otelmw "github.com/nawaphonOHM/whatever/internal/opentelemetry/middleware"
 	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/internal/rest/middleware"
 	intprob "github.com/nawaphonOHM/whatever/internal/rest/problem"
@@ -17,13 +19,25 @@ const (
 	msgMethodNotAllowed  = "Method not allowed"
 )
 
-// defaultSkipPaths returns health paths skipped by request logger.
+// defaultSkipPaths returns health paths skipped by request logger and tracer.
 func defaultSkipPaths(extra ...string) []string {
 	skip := []string{ReservedHealthPath, ReservedReadyPath}
 	if len(extra) > 0 {
 		skip = append(skip, extra...)
 	}
 	return skip
+}
+
+// resolveOTelConfig prepares OpenTelemetry config with default health skip paths.
+func (s *Server) resolveOTelConfig(extraSkipPaths ...string) *otelcfg.Config {
+	var cfg otelcfg.Config
+	if s.Config != nil && s.Config.OTel != nil {
+		cfg = *s.Config.OTel
+	} else {
+		cfg = *otelcfg.DefaultConfig()
+	}
+	cfg.SkipPaths = defaultSkipPaths(append(cfg.SkipPaths, extraSkipPaths...)...)
+	return &cfg
 }
 
 // attachErrorHandlers registers RFC 9457 404/405 handlers.
@@ -47,6 +61,7 @@ func (s *Server) SetupMiddlewares(
 	corsCfg middleware.CORSConfig,
 	loggerSkipPaths ...string,
 ) {
+	s.Engine.Use(otelmw.Middleware(s.resolveOTelConfig(loggerSkipPaths...)))
 	s.Engine.Use(middleware.RequestID())
 	if s.Config == nil || s.Config.EnableAccessLog {
 		skipPaths := defaultSkipPaths(loggerSkipPaths...)

@@ -51,9 +51,21 @@ func assertResourceDefaults(t *testing.T, cfg *Config) {
 	assert.Equal(t, defaultMaxHeaderBytes, cfg.MaxHeaderBytes)
 }
 
+func assertOTelDefaults(t *testing.T, cfg *Config) {
+	assert.NotNil(t, cfg.OTel)
+	assert.True(t, cfg.OTel.Enabled)
+	assert.Equal(t, "whatever-service", cfg.OTel.ServiceName)
+	assert.Equal(t, "localhost:4317", cfg.OTel.Endpoint)
+	assert.Equal(t, "grpc", cfg.OTel.Protocol)
+	assert.True(t, cfg.OTel.Insecure)
+	assert.Equal(t, 1.0, cfg.OTel.SampleRate)
+	assert.Nil(t, cfg.OTel.SkipPaths)
+}
+
 func assertTelemetryDefaults(t *testing.T, cfg *Config) {
 	assert.Equal(t, "/debug/pprof", cfg.ProfilePath)
 	assert.True(t, cfg.EnableAccessLog)
 	assert.False(t, cfg.EnableMetrics)
 	assert.False(t, cfg.EnableProfiling)
+	assertOTelDefaults(t, cfg)
 }
