@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
 
-A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, and zero-boilerplate managed MongoDB client connectivity.
+~~A production-ready~~, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, and zero-boilerplate managed MongoDB client connectivity.
 
 ---
 
