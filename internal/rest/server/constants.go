@@ -2,7 +2,10 @@ package server
 
 import "errors"
 
-const pathSeparator = "/"
+const (
+	pathSeparator    = "/"
+	defaultAPIPrefix = "/api"
+)
 
 // Reserved path constants for framework-managed health probes.
 const (

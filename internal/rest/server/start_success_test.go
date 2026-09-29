@@ -53,7 +53,7 @@ func assertStatusOK(t *testing.T, url string) {
 	assert.NoError(t, resp.Body.Close())
 }
 
-// TestStartREST_Success boots, serves /v1/api/ping, then exits.
+// TestStartREST_Success boots, serves /api/v1/ping, then exits.
 func TestStartREST_Success(t *testing.T) {
 	// Arrange
 	port := getFreePort(t)
@@ -62,7 +62,7 @@ func TestStartREST_Success(t *testing.T) {
 
 	// Act
 	url := fmt.Sprintf(
-		"http://%s:%d/v1/api/ping", testHost, port,
+		"http://%s:%d/api/v1/ping", testHost, port,
 	)
 	assertStatusOK(t, url)
 

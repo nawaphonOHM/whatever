@@ -43,7 +43,7 @@ func verifyTraceAttributes(t *testing.T, span sdktrace.ReadOnlySpan) {
 	for _, a := range span.Attributes() {
 		attrs[string(a.Key)] = a.Value.AsInterface()
 	}
-	assert.Equal(t, "/v1/items/:id", attrs["http.route"])
+	assert.Equal(t, "/api/v1/items/:id", attrs["http.route"])
 	assert.Equal(t, "GET", attrs["http.method"])
 	assert.Equal(t, int64(http.StatusOK), attrs["http.status_code"])
 }
@@ -60,7 +60,7 @@ func verifyCorrelatedLog(t *testing.T, data []byte, span sdktrace.ReadOnlySpan) 
 // executeTracedRequest runs an HTTP GET request with traceparent and verifies response.
 func executeTracedRequest(t *testing.T, srv *Server) {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodGet, "/v1/items/42", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/items/42", nil)
 	req.Header.Set("traceparent", otelTraceParent)
 	w := httptest.NewRecorder()
 	srv.Engine.ServeHTTP(w, req)
@@ -73,7 +73,7 @@ func assertRecordedSpan(t *testing.T, span sdktrace.ReadOnlySpan) {
 	t.Helper()
 	assert.Equal(t, otelTestTraceID, span.SpanContext().TraceID().String())
 	assert.Equal(t, otelTestParent, span.Parent().SpanID().String())
-	assert.Equal(t, "GET /v1/items/:id", span.Name())
+	assert.Equal(t, "GET /api/v1/items/:id", span.Name())
 	verifyTraceAttributes(t, span)
 }
 
