@@ -1,6 +1,9 @@
 # whatever
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever)
 
 ~~A production-ready~~, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, and zero-boilerplate managed MongoDB client connectivity.
 
@@ -8,9 +11,10 @@
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
+- [Prerequisites & Installation](#prerequisites--installation)
 - [Architecture & Directory Layout](#architecture--directory-layout)
-- [Public Packages](#public-packages)
+- [Package Catalog & Feature Matrix](#package-catalog--feature-matrix)
+- [Quick Start](#quick-start)
 - [REST Routing & Blueprint API](#rest-routing--blueprint-api)
   - [Declarative Registration Model](#declarative-registration-model)
   - [HTTP Methods](#http-methods)
@@ -55,19 +59,134 @@
   - [Database & Collection Handles](#database--collection-handles)
   - [Readiness & Health Verification](#readiness--health-verification)
   - [Raw Driver Access](#raw-driver-access)
+  - [Termination Hooks & Sentinel Errors](#termination-hooks--sentinel-errors)
 - [Configuration](#configuration)
   - [REST Server Configuration](#rest-server-configuration)
   - [OpenTelemetry Tracing Configuration](#opentelemetry-tracing-configuration)
   - [MongoDB Configuration](#mongodb-configuration)
+  - [Structured Logger Configuration](#structured-logger-configuration)
 - [Consumer Bootstrap](#consumer-bootstrap)
 - [Development Workflows](#development-workflows)
+  - [Makefile Targets](#makefile-targets)
+  - [Testing & Code Coverage](#testing--code-coverage)
+  - [Static Analysis & Linting](#static-analysis--linting)
+  - [Code Formatting](#code-formatting)
+  - [Dependency Management & Verification](#dependency-management--verification)
+  - [Full Verification Pipeline](#full-verification-pipeline)
 - [Continuous Integration](#continuous-integration)
+
+---
+
+## Prerequisites & Installation
+
+### Prerequisites
+
+- **Go**: Version `1.27.1` or higher (tested with Go `1.27+`)
+
+### Installation
+
+Install the library in your Go module:
+
+```bash
+go get github.com/nawaphonOHM/whatever
+```
+
+---
+
+## Architecture & Directory Layout
+
+This repository is structured as a modular library. Consuming microservices import public packages under `pkg/` while internal engine wiring, telemetry providers, and route validation logic remain encapsulated under `internal/`.
+
+```
+.
+├── internal/
+│   ├── mongodb/
+│   │   ├── client/            # Managed MongoDB v2 client wrapper, pooling, and TLS fallback
+│   │   └── config/            # MongoDB environment configuration loader and validation
+│   ├── opentelemetry/
+│   │   ├── config/            # OTel exporter and sampler configuration
+│   │   ├── middleware/        # OTel HTTP tracing middleware and W3C trace propagation
+│   │   └── provider/          # Tracer provider initialization, samplers, and OTLP exporters
+│   └── rest/
+│       ├── config/            # REST server environment configuration loader and validation
+│       ├── contracts/         # Core API, Context, Blueprint, and Response interfaces
+│       ├── health/            # Built-in liveness (/health) and readiness (/ready) probe handlers
+│       ├── middleware/        # CORS, Panic Recovery, Request ID, and Access Log middlewares
+│       ├── problem/           # RFC 9457 Problem Details error response implementation
+│       └── server/            # Gin engine bootstrap, preflight route validation, and server lifecycle
+├── pkg/
+│   ├── logger/                # Gin HTTP access logging middleware with OTel trace correlation
+│   ├── logging/               # Structured slog-based logging utilities with TRACE/FATAL levels
+│   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
+│   └── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # Continuous integration pipeline
+├── Makefile                   # Local development, test, and build targets
+├── go.mod                     # Go module definition (Go 1.27.1+)
+├── go.sum                     # Go module checksums
+└── README.md                  # Project documentation
+```
+
+---
+
+## Package Catalog & Feature Matrix
+
+The toolkit is divided into focused public packages under `pkg/`:
+
+| Package | Primary Role | Key Types & Functions | Underlying Technology |
+|---|---|---|---|
+| [`pkg/rest`](#pkgrest) | Declarative REST API framework, context, response envelopes, & server lifecycle | `rest.NewBluePrint()`, `rest.ExportableAPI`, `rest.StartREST()`, `rest.OK()`, `rest.BadRequest()` | `gin-gonic/gin`, RFC 9457 |
+| [`pkg/logging`](#pkglogging) | Structured slog logging with extended levels & OTel trace injection | `logging.New()`, `logging.TraceContext()`, `logging.FatalContext()`, `logging.NewTraceHandler()` | `log/slog`, `go.opentelemetry.io/otel` |
+| [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
+| [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
+
+### `pkg/rest`
+
+The primary REST framework package provides declarative route registration contracts, typed request context access, standardized JSON response envelopes, and complete server lifecycle management:
+
+- **Declarative Blueprint Routing**: Define route groups using `rest.RRestAPIRegistration` and `rest.ExportableAPI` with semantic versioning (`/v1`, `/v2`) and automated canonical URL path calculation.
+- **Preflight Route Validation**: Detects conflicting paths, duplicate route definitions, missing handlers, and reserved health endpoint collisions at bootstrap before binding sockets.
+- **RFC 9457 Problem Details**: Compliant error representations (`rest.BadRequest`, `rest.Unauthorized`, `rest.Forbidden`, `rest.NotFound`, `rest.InternalServerError`, `rest.Error`).
+- **Standardized Response Builders**: Consistent JSON success formatting (`rest.OK`, `rest.Created`, `rest.NoContent`, `rest.JSON`).
+- **Context Abstraction**: Unified `rest.Context` interface for URL params, query parameters, headers, cookies, JSON payload binding (`c.ShouldBindJSON`), and typed context values.
+- **CORS & Metadata Configuration**: Flexible CORS configuration via `rest.NewCorsSetting()` and `rest.NewMeta()`.
+- **Built-in Probes & Lifecycle**: Mounts reserved `/health` (liveness) and `/ready` (readiness) probe endpoints and provides signal-driven graceful shutdown via `rest.StartREST(bp)`.
+
+### `pkg/logging`
+
+Structured logging built on Go standard library `log/slog` with extended severity levels, flexible formatters, and native OpenTelemetry correlation:
+
+- **Extended Severity Levels**: Native support for `TRACE` (level -8) and `FATAL` (level 12) in addition to standard `DEBUG`, `INFO`, `WARN`, `ERROR`.
+- **Custom Output Formatters**: Easy configuration for JSON (`FormatJSON`, `NewJSON`) and Text (`FormatText`, `NewText`) outputs.
+- **Global & Instance Support**: Use package-level convenience functions (`logging.InfoContext`, `logging.ErrorContext`, `logging.FatalContext`) or isolated `*logging.Logger` instances.
+- **OpenTelemetry Correlation**: Automatic `trace_id` and `span_id` attribute injection from active context spans via `TraceHandler`.
+- **Injectable Process Control**: Configurable exit hook for fatal logging (`SetExitFunc`), ideal for testing.
+
+### `pkg/logger`
+
+Zero-allocation Gin HTTP access logging middleware designed for production observability:
+
+- **Comprehensive Request Metrics**: Automatically logs request duration/latency, client IP, HTTP method, URL path, query string, response status code, and response payload size in bytes.
+- **Trace Context Extraction**: Automatically extracts active span and trace IDs from the Gin request context or W3C distributed tracing headers.
+- **Status-Based Log Leveling**: Assigns `INFO` for 2xx/3xx responses, `WARN` for 4xx client errors, and `ERROR` for 5xx server errors.
+- **Path Filtering**: Exclude high-frequency health probes or metrics scrapers via configurable `SkipPaths`.
+
+### `pkg/mongodb`
+
+~~Production-ready~~ managed client for MongoDB deployments using the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`):
+
+- **Zero-Boilerplate Initialization**: Seamlessly reads and validates configuration from `OHM9996_MONGODB_*` environment variables.
+- **Two-Phase Automatic TLS Fallback**: Attempts unencrypted connection first and automatically negotiates TLS if required by the remote cluster (e.g. MongoDB Atlas).
+- **Managed Connection Pool**: Configurable connection limits (`MaxPoolSize`, `MinPoolSize`), socket timeouts, and connect timeouts.
+- **Health Verification**: Built-in `Ping(ctx)` method to verify live cluster connectivity during readiness checks.
+- **Direct Handle & Raw Driver Access**: Provides `client.Database(...)` and `client.Collection(...)` helpers with fallback to default database, and `client.RawClient()` for transactions and change streams.
 
 ---
 
 ## Quick Start
 
-Get a production-ready HTTP REST microservice up and running with declarative API registrations and standardized responses:
+Get ~~a production-ready~~ HTTP REST microservice up and running with declarative API registrations and standardized responses:
 
 ```go
 package main
@@ -125,56 +244,6 @@ func main() {
 	}
 }
 ```
-
----
-
-## Architecture & Directory Layout
-
-This repository is structured as a modular library. Applications import public packages under `pkg/` while internal engine wiring, telemetry providers, and route validation live under `internal/`.
-
-```
-├── internal/
-│   ├── mongodb/               # Private MongoDB connection lifecycle and configuration
-│   ├── opentelemetry/         # OTLP tracing providers, samplers, and propagation middlewares
-│   └── rest/
-│       ├── config/            # Internal environment variable loading and validation
-│       ├── contracts/         # Core API, Context, Blueprint, and Response interfaces
-│       ├── health/            # Liveness (/health) and readiness (/ready) probe handlers
-│       ├── middleware/        # CORS, Panic Recovery, Request ID, and Access Log middlewares
-│       ├── problem/           # RFC 9457 Problem Details envelope implementation
-│       └── server/            # Gin engine bootstrap, preflight validation, and lifecycle management
-├── pkg/
-│   ├── logger/                # Gin HTTP request logging middleware with OTel trace correlation
-│   ├── logging/               # Structured slog-based logging utilities with TRACE/FATAL levels
-│   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
-│   └── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
-├── .github/workflows/ci.yml   # Continuous integration pipeline
-├── Makefile                   # Local development, test, and build targets
-└── README.md
-```
-
-## Public Packages
-
-### `pkg/rest`
-
-The primary REST framework package provides declarative route registration contracts, typed request context access, and standardized JSON response envelopes:
-
-- **Blueprint & Registration Contracts**: `rest.NewBluePrint()`, `rest.ExportableAPI`, `rest.RRestAPIRegistration`, `rest.NewMeta()`, `rest.NewCorsSetting()`, and HTTP method constants (`rest.GET`, `rest.POST`, `rest.PUT`, `rest.DELETE`, `rest.PATCH`, `rest.OPTIONS`, `rest.HEAD`, `rest.CONNECT`, `rest.TRACE`).
-- **Standardized Response Builders**: `rest.OK`, `rest.Created`, `rest.NoContent`, `rest.JSON`, and RFC 9457 Problem Details (`rest.BadRequest`, `rest.Unauthorized`, `rest.Forbidden`, `rest.NotFound`, `rest.InternalServerError`, `rest.Error`).
-- **Context Abstraction**: `rest.Context` provides unified access to route parameters, query strings, headers, form data, payload binding (`c.ShouldBindJSON`), and typed context values.
-- **Server Lifecycle**: `rest.StartREST(bp)` initializes the server, binds ports, configures timeouts, mounts health probes, and performs signal-driven graceful shutdown.
-
-### `pkg/logging`
-
-Structured logging built on standard library `log/slog` with support for TRACE and FATAL levels, custom output formatters (JSON/Text), and automatic OpenTelemetry `trace_id` and `span_id` correlation.
-
-### `pkg/logger`
-
-Pre-configured Gin HTTP access logging middleware that captures request latencies, client IPs, response statuses, user agents, and OpenTelemetry trace contexts.
-
-### `pkg/mongodb`
-
-The MongoDB package provides a zero-boilerplate entrypoint for connecting microservices to MongoDB clusters with automated environment configuration loading, connection pooling, two-phase TLS negotiation, ping verification, and direct `*mongo.Database` / `*mongo.Collection` handle access via the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`).
 
 ---
 
@@ -523,10 +592,10 @@ For client unmarshaling and type-safe testing, the generic `rest.SuccessResponse
 
 ```go
 type SuccessResponse[T any] struct {
-	Success   bool      `json:"success"`
-	Data      T         `json:"data"`
-	Message   string    `json:"message,omitempty"`
+	Data      T         `json:"data,omitempty"`
 	Timestamp time.Time `json:"timestamp"`
+	Message   string    `json:"message,omitempty"`
+	Success   bool      `json:"success"`
 }
 ```
 
@@ -792,6 +861,12 @@ engine.Use(logger.WithConfig(logger.Config{
 	Logger:    logging.Default().Slog(),
 	SkipPaths: []string{"/health", "/ready", "/metrics"},
 }))
+
+// Helper to extract request ID from context or X-Request-ID header
+engine.GET("/ping", func(c *gin.Context) {
+	reqID := logger.GetRequestID(c) // checks c.Get(logger.RequestIDKey) or c.GetHeader(logger.HeaderXRequestID)
+	c.JSON(200, gin.H{"request_id": reqID})
+})
 ```
 
 #### Captured Access Log Attributes:
@@ -1000,28 +1075,28 @@ Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The libr
 package database
 
 import (
-    "context"
-    "log"
-    "time"
+	"context"
+	"log"
+	"time"
 
-    "github.com/nawaphonOHM/whatever/pkg/mongodb"
+	"github.com/nawaphonOHM/whatever/pkg/mongodb"
 )
 
 func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
-    client, err := mongodb.Connect(ctx)
-    if err != nil {
-        log.Fatalf("Failed to connect to MongoDB: %v", err)
-    }
+	client, err := mongodb.Connect(ctx)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
 
-    cleanup := func() {
-        disconnectCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-        defer cancel()
-        if err := client.Disconnect(disconnectCtx); err != nil {
-            log.Printf("Failed to gracefully disconnect MongoDB: %v", err)
-        }
-    }
+	cleanup := func() {
+		disconnectCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := client.Disconnect(disconnectCtx); err != nil {
+			log.Printf("Failed to gracefully disconnect MongoDB: %v", err)
+		}
+	}
 
-    return client, cleanup
+	return client, cleanup
 }
 ```
 
@@ -1033,44 +1108,44 @@ Once connected, access collections and databases directly:
 package repository
 
 import (
-    "context"
+	"context"
 
-    "github.com/nawaphonOHM/whatever/pkg/mongodb"
-    "go.mongodb.org/mongo-driver/v2/bson"
+	"github.com/nawaphonOHM/whatever/pkg/mongodb"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type User struct {
-    ID    string `bson:"_id,omitempty"`
-    Email string `bson:"email"`
-    Name  string `bson:"name"`
+	ID    string `bson:"_id,omitempty"`
+	Email string `bson:"email"`
+	Name  string `bson:"name"`
 }
 
 type UserRepository struct {
-    client *mongodb.Client
+	client *mongodb.Client
 }
 
 func NewUserRepository(client *mongodb.Client) *UserRepository {
-    return &UserRepository{client: client}
+	return &UserRepository{client: client}
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
-    // Access collection in the specified database
-    coll := r.client.Collection("users", "my_database")
+	// Access collection in the specified database (or default database if dbName is omitted)
+	coll := r.client.Collection("users", "my_database")
 
-    var user User
-    err := coll.FindOne(ctx, bson.M{"email": email}).Decode(&user)
-    if err != nil {
-        return nil, err
-    }
-    return &user, nil
+	var user User
+	err := coll.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (r *UserRepository) RecordAudit(ctx context.Context, entry bson.M) error {
-    // Explicitly target a specific database and collection
-    coll := r.client.Collection("audit_logs", "audit_db")
+	// Explicitly target a specific database and collection
+	coll := r.client.Collection("audit_logs", "audit_db")
 
-    _, err := coll.InsertOne(ctx, entry)
-    return err
+	_, err := coll.InsertOne(ctx, entry)
+	return err
 }
 ```
 
@@ -1081,7 +1156,7 @@ Use `Ping(ctx)` to verify active cluster connectivity (useful in custom readines
 ```go
 // Sends a primary read-preference ping command to the MongoDB cluster
 if err := client.Ping(ctx); err != nil {
-    log.Printf("MongoDB health check failed: %v", err)
+	log.Printf("MongoDB health check failed: %v", err)
 }
 ```
 
@@ -1093,10 +1168,26 @@ When advanced MongoDB features are needed—such as multi-document transactions,
 rawClient := client.RawClient()
 session, err := rawClient.StartSession()
 if err != nil {
-    return err
+	return err
 }
 defer session.EndSession(ctx)
 ```
+
+### Termination Hooks & Sentinel Errors
+
+When MongoDB configuration is invalid or connection fails during initialization, `mongodb.Connect` logs diagnostic information and invokes a configurable exit hook (`os.Exit(0)` by default). This hook can be overridden in testing environments:
+
+```go
+// Override the process termination hook (returns previous hook)
+prevExit := mongodb.SetExitFunc(func(code int) {
+	// Custom exit logic or test assertion
+})
+defer mongodb.SetExitFunc(prevExit)
+```
+
+The package also exports sentinel errors:
+- `mongodb.ErrNilClient`: Returned when attempting operations on an uninitialized client instance.
+- `mongodb.ErrNilConfig`: Returned when internal configuration resolving is nil.
 
 ---
 
@@ -1172,6 +1263,21 @@ Configuration values are resolved using the following order of precedence:
 | `OHM9996_MONGODB_MIN_POOL_SIZE` | `uint64` | `5` | Minimum number of idle connections maintained in the pool |
 
 If mandatory configuration (`HOST`) is missing, or if connection fails after TLS fallback, the client logs descriptive error details and triggers a peaceful termination hook (`exitFunc(0)`).
+
+### Structured Logger Configuration
+
+Structured logging via `pkg/logging` is configured programmatically via `logging.Config` or `logging.DefaultConfig()`. In addition, framework-level HTTP access logging in the REST server is toggled via the `OHM9996_SERVER_ENABLE_ACCESS_LOG` environment variable.
+
+| Field / Option | Type | Default | Description |
+|---|---|---|---|
+| `Level` | `logging.Level` | `LevelInfo` (`"INFO"`) | Minimum log level threshold (`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`) |
+| `Format` | `logging.Format` | `FormatJSON` (`"json"`) | Log output formatting scheme (`json` or `text`) |
+| `AddSource` | `bool` | `false` | When true, includes caller file path and line number in record attributes |
+| `DisableTraceCorrelation` | `bool` | `false` | When false, automatically correlates OpenTelemetry `trace_id` and `span_id` |
+| `Output` | `io.Writer` | `os.Stdout` | Target output stream for serialized log records |
+| `ReplaceAttr` | `ReplaceAttrFunc` | `nil` | Custom attribute transformation and filtering callback |
+| `ExitFunc` | `func(int)` | `os.Exit` | Custom termination function executed on `Fatal` and `FatalContext` calls |
+| `OHM9996_SERVER_ENABLE_ACCESS_LOG` | `bool` | `true` | Environment variable controlling Gin HTTP access logging middleware |
 
 ---
 
@@ -1268,7 +1374,7 @@ func main() {
 
 ## Development Workflows
 
-The project includes a `Makefile` providing standard development, testing, linting, and verification targets:
+The project includes a comprehensive `Makefile` providing standard development, testing, linting, formatting, and dependency verification targets for contributors and CI pipelines:
 
 ### Makefile Targets
 
@@ -1284,32 +1390,60 @@ The project includes a `Makefile` providing standard development, testing, linti
 | `make all` | `make test vet build` | Runs the full verification pipeline (`test`, `vet`, and `build`) |
 | `make clean` | `rm -rf bin tmp coverage.out coverage.html profile.out` | Cleans temporary test coverage, profiling, and build artifact files |
 
-### Testing & Coverage
+### Testing & Code Coverage
 
-Execute the full test suite with the race detector enabled:
+Execute the full unit and integration test suite with Go's race detector enabled:
 ```bash
 make test
 ```
 
-Generate an HTML code coverage report and view detailed line coverage:
+Generate a code coverage profile and export an interactive HTML visualization:
 ```bash
+# Generate coverage.out and coverage.html
 make test-coverage
+
+# View generated coverage report in browser (optional)
+xdg-open coverage.html 2>/dev/null || open coverage.html 2>/dev/null || echo "Report generated: coverage.html"
 ```
 
-### Static Analysis & Verification
+### Static Analysis & Linting
 
-Run static code analysis and module integrity checks:
+Run automated linters and static analyzers to catch issues early:
 ```bash
-# Run linters
+# Run golangci-lint (with automatic fallback to go vet)
 make lint
 
-# Run go vet
+# Run go vet explicitly across all packages
 make vet
+```
 
-# Verify and tidy dependencies
+### Code Formatting
+
+Ensure all Go source files adhere to standard formatting conventions:
+```bash
+# Format all packages and simplify code
+gofmt -s -w .
+
+# Or run go fmt
+go fmt ./...
+```
+
+### Dependency Management & Verification
+
+Maintain clean `go.mod` and `go.sum` files and verify cryptographic checksums of dependencies:
+```bash
+# Tidy unused requirements and verify module checksums
 make tidy
 
-# Run complete test, vet, and build verification
+# Or run individual commands
+go mod tidy
+go mod verify
+```
+
+### Full Verification Pipeline
+
+Run the complete verification pipeline locally before submitting changes or creating pull requests:
+```bash
 make all
 ```
 
