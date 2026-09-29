@@ -15,7 +15,7 @@ import (
 
 const (
 	testAPIVersion = "1.2.3"
-	itemsPath      = "/v1/items"
+	itemsPath      = "/api/v1/items"
 )
 
 // sampleRegs returns a simple versioned registration set.

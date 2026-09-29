@@ -12,7 +12,7 @@ import (
 
 // TestServer_OTel_NotFound verifies spans for 404 RFC9457 responses.
 func TestServer_OTel_NotFound(t *testing.T) {
-	assertErrorSpan(t, http.MethodGet, "/v1/nonexistent", http.StatusNotFound)
+	assertErrorSpan(t, http.MethodGet, "/api/v1/nonexistent", http.StatusNotFound)
 }
 
 // TestServer_OTel_MethodNotAllowed verifies spans for 405 RFC9457 responses.
@@ -22,7 +22,7 @@ func TestServer_OTel_MethodNotAllowed(t *testing.T) {
 
 	srv := buildTracedServer(t, DefaultConfig(), itemsBluePrint())
 	w405 := httptest.NewRecorder()
-	srv.Engine.ServeHTTP(w405, httptest.NewRequest(http.MethodPost, "/v1/items/1", nil))
+	srv.Engine.ServeHTTP(w405, httptest.NewRequest(http.MethodPost, "/api/v1/items/1", nil))
 	assert.Equal(t, http.StatusMethodNotAllowed, w405.Code)
 
 	spans := exporter.GetSpans().Snapshots()
@@ -62,7 +62,7 @@ func TestServer_OTel_DisabledTelemetry(t *testing.T) {
 	cfg.OTel.Enabled = false
 	srv := buildTracedServer(t, cfg, itemsBluePrint())
 
-	w := performGet(srv, "/v1/items/42")
+	w := performGet(srv, "/api/v1/items/42")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Empty(t, exporter.GetSpans().Snapshots())
 }

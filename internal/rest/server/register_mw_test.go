@@ -13,7 +13,7 @@ import (
 
 const (
 	mwPath     = "/mw"
-	mwFullPath = "/v1/mw"
+	mwFullPath = "/api/v1/mw"
 	mwMarkerA  = "A"
 	mwMarkerB  = "B"
 	mwMarkerH  = "H"

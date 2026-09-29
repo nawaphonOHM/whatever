@@ -33,20 +33,20 @@ func TestServer_OTel_CustomSkipPaths(t *testing.T) {
 	exporter, cleanup, srv := buildCustomSkipServer(t)
 	defer cleanup()
 
-	assert.Equal(t, http.StatusOK, performGet(srv, "/v1/items/skip").Code)
+	assert.Equal(t, http.StatusOK, performGet(srv, "/api/v1/items/skip").Code)
 	assert.Empty(t, exporter.GetSpans().Snapshots())
 
-	assert.Equal(t, http.StatusOK, performGet(srv, "/v1/items/real").Code)
+	assert.Equal(t, http.StatusOK, performGet(srv, "/api/v1/items/real").Code)
 	spans := exporter.GetSpans().Snapshots()
 	require.Len(t, spans, 1)
-	assert.Equal(t, "GET /v1/items/:id", spans[0].Name())
+	assert.Equal(t, "GET /api/v1/items/:id", spans[0].Name())
 }
 
 func buildCustomSkipServer(t *testing.T) (*tracetest.InMemoryExporter, func(), *Server) {
 	t.Helper()
 	exporter, cleanup := setupTestTracer(t)
 	cfg := DefaultConfig()
-	cfg.OTel.SkipPaths = []string{"/v1/items/skip"}
+	cfg.OTel.SkipPaths = []string{"/api/v1/items/skip"}
 	srv := buildTracedServer(t, cfg, itemsBluePrint())
 	return exporter, cleanup, srv
 }

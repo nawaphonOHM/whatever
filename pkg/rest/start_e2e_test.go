@@ -5,73 +5,69 @@ import (
 	"testing"
 )
 
+// newTestE2EBlueprint creates a blueprint with sample versioned and unversioned routes.
+func newTestE2EBlueprint() *BluePrint {
+	regPing := &RRestAPIRegistration{
+		Version: 1, Prefix: "/api",
+		Apis: []*ExportableAPI{{
+			Path: "/ping", Method: GET,
+			Handler: func(Context) Response { return OK("pong") },
+		}},
+	}
+	regItems := &RRestAPIRegistration{
+		Version: 1, Prefix: "/items",
+		Apis: []*ExportableAPI{{
+			Path: "/:id", Method: GET,
+			Handler: func(c Context) Response { return OK(c.Param("id")) },
+		}},
+	}
+	regStatus := &RRestAPIRegistration{
+		Version: 0, Prefix: "/status",
+		Apis: []*ExportableAPI{{
+			Path: "", Method: GET,
+			Handler: func(Context) Response { return OK("healthy") },
+		}},
+	}
+	return NewBluePrint().WithAPIs(regPing, regItems, regStatus)
+}
+
 // TestStartREST_Success boots, serves a registered route, then exits.
 func TestStartREST_Success(t *testing.T) {
-	// Arrange
 	port := getFreePort(t)
 	setStartEnv(t, port)
+	errCh := startRESTAsync(newTestE2EBlueprint())
 
-	api := &ExportableAPI{
-		Path:   "/ping",
-		Method: GET,
-		Handler: func(Context) Response {
-			return OK("pong")
-		},
-	}
-	reg := &RRestAPIRegistration{
-		Version: 1,
-		Prefix:  "/api",
-		Apis:    []*ExportableAPI{api},
-	}
-	bp := NewBluePrint().WithAPIs(reg)
-	errCh := startRESTAsync(bp)
+	assertStatusOK(t, fmt.Sprintf("http://%s:%d/api/v1/ping", testHost, port))
+	assertStatusOK(t, fmt.Sprintf("http://%s:%d/api/v1/items/42", testHost, port))
+	assertStatusOK(t, fmt.Sprintf("http://%s:%d/api/status", testHost, port))
 
-	// Act
-	url := fmt.Sprintf(
-		"http://%s:%d/v1/api/ping", testHost, port,
-	)
-	assertStatusOK(t, url)
-
-	// Shutdown via signal
 	signalAndWait(t, errCh)
 }
 
 // TestStartREST_CustomCORS verifies custom CORS headers are applied.
 func TestStartREST_CustomCORS(t *testing.T) {
-	// Arrange
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	bp := newCustomCORSBlueprint()
-	errCh := startRESTAsync(bp)
+	errCh := startRESTAsync(newCustomCORSBlueprint())
 
-	// Act: Send OPTIONS preflight request
 	url := fmt.Sprintf("http://%s:%d/health", testHost, port)
 	resp := corsPreflightRequest(t, url)
 	defer closeBody(t, resp.Body)
 
-	// Assert CORS headers match custom configuration
 	assertCORSHeaders(t, resp, "https://example.com", "POST, PATCH")
-
-	// Shutdown via signal
 	signalAndWait(t, errCh)
 }
 
 // TestStartREST_DefaultCORS verifies default CORS headers when unconfigured.
 func TestStartREST_DefaultCORS(t *testing.T) {
-	// Arrange
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	bp := NewBluePrint()
-	errCh := startRESTAsync(bp)
+	errCh := startRESTAsync(NewBluePrint())
 
-	// Act: Send OPTIONS preflight request
 	url := fmt.Sprintf("http://%s:%d/health", testHost, port)
 	resp := corsPreflightRequest(t, url)
 	defer closeBody(t, resp.Body)
 
-	// Assert default permissive CORS headers
 	assertCORSHeaders(t, resp, "*", "")
-
-	// Shutdown via signal
 	signalAndWait(t, errCh)
 }
