@@ -1,9 +1,12 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
 const connErrorLogFormat = "failed to connect to mongodb: %v; exiting peacefully\n"
@@ -66,4 +69,17 @@ func handleConnectionError(err error) error {
 	logConnectionError(err)
 	exitFunc(0)
 	return err
+}
+
+// fallbackTLSAttempt attempts connection with TLS enabled upon TLS requirement error.
+func fallbackTLSAttempt(
+	ctx context.Context,
+	cfg *config.Config,
+	opts ...Option,
+) (*Client, error) {
+	tlsClient, tlsErr := attemptConnection(ctx, cfg, true, opts...)
+	if tlsErr != nil {
+		return nil, handleConnectionError(tlsErr)
+	}
+	return tlsClient, nil
 }

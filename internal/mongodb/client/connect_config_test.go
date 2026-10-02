@@ -87,3 +87,26 @@ func TestConnectWithConfig_WithOptions(t *testing.T) {
 	assert.Nil(t, client)
 	assert.True(t, *exitCalled)
 }
+
+func verifyDisabledPingClient(t *testing.T, ctx context.Context, client *Client, exitCalled *bool) {
+	require.NotNil(t, client)
+	assert.False(t, *exitCalled)
+	assert.Error(t, client.Ping(ctx))
+	assert.NoError(t, client.Disconnect(context.Background()))
+}
+
+// TestConnectWithConfig_DisabledPing_Success tests connection succeeds when EnablePing is false.
+func TestConnectWithConfig_DisabledPing_Success(t *testing.T) {
+	exitCalled, restore := interceptExitHook()
+	defer restore()
+
+	cfg := createUnreachableConfig()
+	cfg.EnablePing = false
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextDur)
+	defer cancel()
+
+	client, err := ConnectWithConfig(ctx, cfg)
+	require.NoError(t, err)
+	verifyDisabledPingClient(t, ctx, client, exitCalled)
+}

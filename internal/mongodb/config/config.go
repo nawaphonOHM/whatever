@@ -38,6 +38,7 @@ func DefaultConfig() *Config {
 		Port:                   defaultPort,
 		Protocol:               ProtocolMongoDB,
 		UUIDRepresentation:     UUIDRepresentationUnspecified,
+		EnablePing:             true,
 		ConnectTimeout:         defaultConnectTimeoutSec * time.Second,
 		ServerSelectionTimeout: defaultServerSelectionTimeout * time.Second,
 		SocketTimeout:          defaultSocketTimeoutSec * time.Second,
