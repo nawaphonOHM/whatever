@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever)
 
-~~A production-ready~~, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, and zero-boilerplate managed MongoDB client connectivity.
+A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, zero-boilerplate managed MongoDB client connectivity, and isolated Testcontainers-based MongoDB integration testing.
 
 ---
 
@@ -14,8 +14,14 @@
 - [Prerequisites & Installation](#prerequisites--installation)
 - [Architecture & Directory Layout](#architecture--directory-layout)
 - [Package Catalog & Feature Matrix](#package-catalog--feature-matrix)
+  - [`pkg/rest`](#pkgrest)
+  - [`pkg/logging`](#pkglogging)
+  - [`pkg/logger`](#pkglogger)
+  - [`pkg/mongodb`](#pkgmongodb)
+  - [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb)
 - [Quick Start](#quick-start)
 - [REST Routing & Blueprint API](#rest-routing--blueprint-api)
+  - [Blueprint & Server Middleware Pipeline](#blueprint--server-middleware-pipeline)
   - [Declarative Registration Model](#declarative-registration-model)
   - [HTTP Methods](#http-methods)
   - [API Versioning & Path Resolution](#api-versioning--path-resolution)
@@ -56,12 +62,25 @@
   - [Collision Protection Guarantees](#collision-protection-guarantees)
 - [MongoDB Client (`pkg/mongodb`)](#mongodb-client-pkgmongodb)
   - [Connecting & Lifecycle](#connecting--lifecycle)
+  - [Two-Phase Automatic TLS Fallback](#two-phase-automatic-tls-fallback)
+  - [Startup Ping Verification](#startup-ping-verification)
   - [Database & Collection Handles](#database--collection-handles)
   - [Readiness & Health Verification](#readiness--health-verification)
   - [Raw Driver Access](#raw-driver-access)
   - [Termination Hooks & Sentinel Errors](#termination-hooks--sentinel-errors)
+- [MongoDB Testcontainers (`pkg/testcontainers/mongodb`)](#mongodb-testcontainers-pkgtestcontainersmongodb)
+  - [Container Lifecycle & Startup](#container-lifecycle--startup)
+  - [Functional Options & Customization](#functional-options--customization)
+  - [Connection Getters & Managed Client](#connection-getters--managed-client)
+  - [Integration Testing Patterns](#integration-testing-patterns)
+  - [Constants & Sentinel Errors](#constants--sentinel-errors)
 - [Configuration](#configuration)
-  - [REST Server Configuration](#rest-server-configuration)
+  - [Server General Settings](#server-general-settings)
+  - [Server Timeouts](#server-timeouts)
+  - [Server Resource Limits](#server-resource-limits)
+  - [HTTP Path & Routing Handling](#http-path--routing-handling)
+  - [Upstream Proxy & Forwarded Headers](#upstream-proxy--forwarded-headers)
+  - [CORS Policy Configuration](#cors-policy-configuration)
   - [OpenTelemetry Tracing Configuration](#opentelemetry-tracing-configuration)
   - [MongoDB Configuration](#mongodb-configuration)
   - [Structured Logger Configuration](#structured-logger-configuration)
@@ -107,18 +126,22 @@ This repository is structured as a modular library. Consuming microservices impo
 │   │   ├── config/            # OTel exporter and sampler configuration
 │   │   ├── middleware/        # OTel HTTP tracing middleware and W3C trace propagation
 │   │   └── provider/          # Tracer provider initialization, samplers, and OTLP exporters
-│   └── rest/
-│       ├── config/            # REST server environment configuration loader and validation
-│       ├── contracts/         # Core API, Context, Blueprint, and Response interfaces
-│       ├── health/            # Built-in liveness (/health) and readiness (/ready) probe handlers
-│       ├── middleware/        # CORS, Panic Recovery, Request ID, and Access Log middlewares
-│       ├── problem/           # RFC 9457 Problem Details error response implementation
-│       └── server/            # Gin engine bootstrap, preflight route validation, and server lifecycle
+│   ├── rest/
+│   │   ├── config/            # REST server environment configuration loader and validation
+│   │   ├── contracts/         # Core API, Context, Blueprint, and Response interfaces
+│   │   ├── health/            # Built-in liveness (/health) and readiness (/ready) probe handlers
+│   │   ├── middleware/        # CORS, Panic Recovery, Request ID, and Access Log middlewares
+│   │   ├── problem/           # RFC 9457 Problem Details error response implementation
+│   │   └── server/            # Gin engine bootstrap, preflight route validation, and server lifecycle
+│   └── testcontainers/
+│       └── mongodb/           # Testcontainers MongoDB module integration, lifecycle, and client wiring
 ├── pkg/
 │   ├── logger/                # Gin HTTP access logging middleware with OTel trace correlation
 │   ├── logging/               # Structured slog-based logging utilities with TRACE/FATAL levels
 │   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
-│   └── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
+│   ├── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
+│   └── testcontainers/
+│       └── mongodb/           # Public Testcontainers MongoDB testing runner, options, and container handle
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             # Continuous integration pipeline
@@ -140,12 +163,13 @@ The toolkit is divided into focused public packages under `pkg/`:
 | [`pkg/logging`](#pkglogging) | Structured slog logging with extended levels & OTel trace injection | `logging.New()`, `logging.TraceContext()`, `logging.FatalContext()`, `logging.NewTraceHandler()` | `log/slog`, `go.opentelemetry.io/otel` |
 | [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
+| [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb) | Ephemeral MongoDB containers with automated lifecycle and connection wiring for integration tests | `mongodb.Run()`, `container.Client()`, `container.ConnectionString()`, `container.Terminate()` | `testcontainers-go`, Docker |
 
 ### `pkg/rest`
 
 The primary REST framework package provides declarative route registration contracts, typed request context access, standardized JSON response envelopes, and complete server lifecycle management:
 
-- **Declarative Blueprint Routing**: Define route groups using `rest.RRestAPIRegistration` and `rest.ExportableAPI` with semantic versioning (`/v1`, `/v2`) and automated canonical URL path calculation.
+- **Declarative Blueprint Routing**: Define route groups using `rest.RRestAPIRegistration` and `rest.ExportableAPI` with semantic versioning (`/api/v1`, `/api/v2`) and automated canonical URL path calculation.
 - **Preflight Route Validation**: Detects conflicting paths, duplicate route definitions, missing handlers, and reserved health endpoint collisions at bootstrap before binding sockets.
 - **RFC 9457 Problem Details**: Compliant error representations (`rest.BadRequest`, `rest.Unauthorized`, `rest.Forbidden`, `rest.NotFound`, `rest.InternalServerError`, `rest.Error`).
 - **Standardized Response Builders**: Consistent JSON success formatting (`rest.OK`, `rest.Created`, `rest.NoContent`, `rest.JSON`).
@@ -174,7 +198,7 @@ Zero-allocation Gin HTTP access logging middleware designed for production obser
 
 ### `pkg/mongodb`
 
-~~Production-ready~~ managed client for MongoDB deployments using the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`):
+Managed client for MongoDB deployments using the official MongoDB Go driver v2 (`go.mongodb.org/mongo-driver/v2`):
 
 - **Zero-Boilerplate Initialization**: Seamlessly reads and validates configuration from `OHM9996_MONGODB_*` environment variables.
 - **Two-Phase Automatic TLS Fallback**: Attempts unencrypted connection first and automatically negotiates TLS if required by the remote cluster (e.g. MongoDB Atlas).
@@ -182,18 +206,28 @@ Zero-allocation Gin HTTP access logging middleware designed for production obser
 - **Health Verification**: Built-in `Ping(ctx)` method to verify live cluster connectivity during readiness checks.
 - **Direct Handle & Raw Driver Access**: Provides `client.Database(...)` and `client.Collection(...)` helpers with fallback to default database, and `client.RawClient()` for transactions and change streams.
 
+### `pkg/testcontainers/mongodb`
+
+Dedicated Testcontainers integration for spin-up and teardown of ephemeral MongoDB instances in automated test suites:
+
+- **Ephemeral Container Lifecycle**: Spin up isolated, throwaway MongoDB containers in Go tests using `mongodb.Run(ctx, opts...)` and terminate them cleanly with `container.Terminate(ctx)`.
+- **Preconfigured Managed Client**: Directly obtain a ready-to-use, ping-verified `*pkg/mongodb.Client` prewired with mapped host and port via `container.Client(ctx)`.
+- **Dynamic Connection Introspection**: Resolve mapped external ports, host addresses, and full connection strings via `container.Port(ctx)`, `container.Host(ctx)`, and `container.ConnectionString(ctx)`.
+- **Declarative Container Customization**: Configure custom Docker images (`WithImage`), replica set names (`WithReplicaSet`), default database initialization (`WithDatabase`), credentials (`WithUsername`, `WithPassword`), environment variables (`WithEnv`), and raw container customizers (`WithContainerOptions`).
+
 ---
 
 ## Quick Start
 
-Get ~~a production-ready~~ HTTP REST microservice up and running with declarative API registrations and standardized responses:
+Get a high-performance HTTP REST microservice running with declarative routing, structured logging, and signal-driven graceful shutdown in just a few lines of code:
 
 ```go
 package main
 
 import (
-	"log"
+	"os"
 
+	"github.com/nawaphonOHM/whatever/pkg/logging"
 	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
 
@@ -203,10 +237,18 @@ type Item struct {
 }
 
 func main() {
-	// 1. Define API routes using ExportableAPI and RRestAPIRegistration
+	// 1. Initialize structured JSON logging
+	logger := logging.New(logging.Config{
+		Output: os.Stdout,
+		Level:  logging.LevelInfo,
+		Format: logging.FormatJSON,
+	})
+	logging.SetDefault(logger)
+
+	// 2. Declare API route endpoints and versioned group
 	itemRoutes := &rest.RRestAPIRegistration{
-		Version: 1,       // Generates /v1 prefix
-		Prefix:  "/items", // Path prefix: /v1/items
+		Version: 1,       // Generates /api/v1 prefix (/api/v1/items)
+		Prefix:  "/items",
 		Apis: []*rest.ExportableAPI{
 			{
 				Path:   "",
@@ -216,6 +258,7 @@ func main() {
 						{ID: "1", Name: "Widget"},
 						{ID: "2", Name: "Gadget"},
 					}
+					logging.Info("Fetched item catalog", "count", len(items))
 					return rest.OK(items, "Items retrieved successfully")
 				},
 			},
@@ -233,15 +276,23 @@ func main() {
 		},
 	}
 
-	// 2. Initialize a BluePrint and attach registered API groups
-	bp := rest.NewBluePrint().WithAPIs(itemRoutes)
+	// 3. Configure CORS policy and assemble application blueprint
+	cors := rest.NewCorsSetting().
+		WithAllowOrigin("http://localhost:3000").
+		WithAllowHTTPMethods(rest.GET, rest.POST, rest.OPTIONS)
 
-	// 3. Start the REST server
-	// StartREST loads OHM9996_ configuration, validates routes against collisions,
-	// attaches health endpoints (/health, /ready), and manages graceful shutdown on SIGINT/SIGTERM.
+	bp := rest.NewBluePrint().
+		WithMeta(rest.NewMeta().WithCors(cors)).
+		WithAPIs(itemRoutes)
+
+	// 4. Start the REST server
+	// StartREST initializes Gin, binds OHM9996_ configuration, validates routes,
+	// mounts health probes (/health, /ready), and manages graceful shutdown on SIGINT/SIGTERM.
+	logging.Info("Starting REST service...")
 	if err := rest.StartREST(bp); err != nil {
-		log.Fatalf("Server stopped with error: %v", err)
+		logging.Fatal("Server terminated with error", "error", err)
 	}
+	logging.Info("Server exited cleanly")
 }
 ```
 
@@ -250,6 +301,30 @@ func main() {
 ## REST Routing & Blueprint API
 
 The library utilizes a declarative routing paradigm built on top of `rest.BluePrint`, `rest.RRestAPIRegistration`, and `rest.ExportableAPI`. Rather than registering routes imperatively on a mutable router instance, domain packages declare their routing contracts as pure data structures. The engine then validates, computes canonical URLs, and mounts the entire tree into the underlying Gin engine during `rest.StartREST(bp)`.
+
+### Blueprint & Server Middleware Pipeline
+
+Application bootstrap is centered around `rest.BluePrint`, constructed via `rest.NewBluePrint()`. A blueprint encapsulates server metadata (such as CORS policies) and registered API route groups:
+
+| Blueprint Method | Description |
+|---|---|
+| `rest.NewBluePrint()` | Initializes an empty `*rest.BluePrint` builder |
+| `bp.WithMeta(meta *rest.Meta)` | Assigns server metadata (e.g. CORS settings) to the blueprint |
+| `bp.WithAPIs(apis ...*rest.RRestAPIRegistration)` | Replaces the registered API route groups with the provided slice |
+| `bp.AddAPIs(apis ...*rest.RRestAPIRegistration)` | Appends additional API route groups to the blueprint |
+| `bp.Meta()` | Returns the configured `*rest.Meta` or `nil` |
+| `bp.Apis()` | Returns a copy slice of all registered API route groups |
+
+When `rest.StartREST(bp)` is invoked, it configures the underlying HTTP engine and automatically provisions an enterprise-grade middleware and lifecycle pipeline:
+
+1. **OpenTelemetry Distributed Tracing**: Automatic tracing middleware (`otelmw.Middleware`) extracting W3C `traceparent` headers and instrumenting HTTP spans.
+2. **Request ID Tracking**: Generates or propagates `X-Request-ID` headers across all requests via `middleware.RequestID()`.
+3. **Structured HTTP Access Logging**: High-throughput access logger (`pkg/logger`) recording method, path, status, latency, client IP, and trace IDs (configurable via `OHM9996_SERVER_ENABLE_ACCESS_LOG`).
+4. **Panic Recovery**: Robust recovery middleware (`middleware.Recovery()`) capturing unhandled panics and writing RFC 9457 Problem Details error responses.
+5. **CORS Handling**: Attaches CORS middleware (`middleware.CORS()`) using rules configured via `bp.WithMeta(rest.NewMeta().WithCors(...))` or permissive environment defaults.
+6. **Liveness & Readiness Probes**: Mounts reserved health check endpoints (`GET /health` and `GET /ready`) exempted from both `/api` and version prefixes.
+7. **Runtime Profiling (pprof)**: Exposes profiling endpoints at `OHM9996_SERVER_PROFILE_PATH` when enabled (`OHM9996_SERVER_ENABLE_PROFILING=true`).
+8. **Signal-Driven Graceful Shutdown**: Automatically captures `SIGINT` and `SIGTERM` signals and allows inflight requests to complete within `OHM9996_SERVER_SHUTDOWN_TIMEOUT`.
 
 ### Declarative Registration Model
 
@@ -265,8 +340,8 @@ import (
 // NewUserAPIs returns declarative API registrations for user endpoints.
 func NewUserAPIs() *rest.RRestAPIRegistration {
 	return &rest.RRestAPIRegistration{
-		Version: 1,       // Generates /v1 prefix
-		Prefix:  "/users", // Route group prefix: /v1/users
+		Version: 1,       // Generates /api/v1 prefix
+		Prefix:  "/users", // Route group prefix: /api/v1/users
 		Apis: []*rest.ExportableAPI{
 			{
 				Path:       "",
@@ -330,20 +405,20 @@ Full route paths are computed using a deterministic canonical resolution algorit
 $$\text{FullPath} = \text{CalculateFullPath}(\text{Version}, \text{Prefix}, \text{Path})$$
 
 #### Resolution Rules:
-1. **Version Prefix**: If `Version > 0`, the version segment `/v<Version>` is prepended (e.g. `Version: 1` becomes `/v1`). If the prefix already starts with `/v<Version>`, it is not duplicated.
+1. **API and Version Prefixes**: Every non-reserved route is resolved as `/api[/v<N>]<prefix><path>`. If `Version > 0`, the version segment `/v<Version>` follows the mandatory `/api` prefix (e.g. `Version: 1` becomes `/api/v1`). If the prefix already starts with `/api` or `/v<Version>`, that leading token is not duplicated.
 2. **Path Normalization**: Leading slashes are added automatically if omitted, trailing slashes are trimmed (except for the root `/`), and redundant duplicate slashes (`//`) are normalized to a single slash (`/`).
-3. **Reserved Route Exemption**: Internal framework health probes (`/health`, `/ready`) are never version-prefixed.
+3. **Reserved Route Exemption**: Internal framework health probes (`/health`, `/ready`) are never API- or version-prefixed and remain available at those exact paths.
 
 #### Path Resolution Examples:
 
 | Version | Prefix | Endpoint Path | Resolved Full Path |
 |---|---|---|---|
-| `1` | `"/items"` | `""` | `/v1/items` |
-| `1` | `"/items"` | `"/:id"` | `/v1/items/:id` |
-| `2` | `"orders"` | `"summary"` | `/v2/orders/summary` |
-| `1` | `"/v1/billing"` | `"/invoices"` | `/v1/billing/invoices` |
-| `0` | `"/webhooks"` | `"/stripe"` | `/webhooks/stripe` |
-| `0` | `""` | `"/ping"` | `/ping` |
+| `1` | `"/items"` | `""` | `/api/v1/items` |
+| `1` | `"/items"` | `"/:id"` | `/api/v1/items/:id` |
+| `2` | `"orders"` | `"summary"` | `/api/v2/orders/summary` |
+| `1` | `"/v1/billing"` | `"/invoices"` | `/api/v1/billing/invoices` |
+| `0` | `"/webhooks"` | `"/stripe"` | `/api/webhooks/stripe` |
+| `0` | `""` | `"/ping"` | `/api/ping` |
 
 ### CORS & Blueprint Metadata
 
@@ -417,7 +492,7 @@ Every route handler and middleware receives a `rest.Context` interface, which wr
 | Method | Return Type | Description |
 |---|---|---|
 | `c.Param(key string)` | `string` | Retrieves a named URL path parameter (e.g. `/:id` -> `c.Param("id")`) |
-| `c.FullPath()` | `string` | Returns the matched route pattern template (e.g. `"/v1/users/:id"`) |
+| `c.FullPath()` | `string` | Returns the matched route pattern template (e.g. `"/api/v1/users/:id"`) |
 | `c.ClientIP()` | `string` | Resolves the client IP address considering proxy headers |
 | `c.ContentType()` | `string` | Returns the `Content-Type` header of the incoming request |
 
@@ -651,7 +726,7 @@ Content-Type: application/problem+json
   "status": 400,
   "code": "VALIDATION_FAILED",
   "detail": "The submitted registration payload contains invalid fields",
-  "instance": "/v1/users/register",
+  "instance": "/api/v1/users/register",
   "details": {
     "email": "must be a valid corporate email address",
     "password": "must be at least 12 characters long"
@@ -764,13 +839,19 @@ The package defines strongly typed log severity levels extending standard `log/s
 The package provides case-insensitive level parsers that support standard string representations as well as common aliases:
 
 ```go
-// Parse into strongly typed logging.Level (supports aliases: warn/warning, fatal/critical/crit/panic)
+// Parse case-insensitive string into strongly typed logging.Level (supports aliases: warn/warning, fatal/critical/crit/panic)
 lvl, err := logging.ParseLevel("debug")     // returns logging.LevelDebug
 lvl, err := logging.ParseLevel("warning")   // returns logging.LevelWarn
 lvl, err := logging.ParseLevel("critical")  // returns logging.LevelFatal
 
 // Parse directly into standard slog.Level
-slogLvl, err := logging.ParseSlogLevel("trace") // returns slog.Level(-8)
+slogLvl, err := logging.ParseSlogLevel("trace") // returns logging.SlogLevelTrace (-8)
+
+// Convert standard slog.Level to canonical logging.Level
+lvl = logging.LevelFromSlog(slog.LevelWarn) // returns logging.LevelWarn
+
+// Convert logging.Level to standard slog.Level
+slogLvl, err = logging.LevelFatal.SlogLevel() // returns logging.SlogLevelFatal (12)
 ```
 
 ### Output Formats
@@ -829,14 +910,18 @@ logging.Fatal("Fatal startup error: unable to bind network port", "port", 8080)
 `pkg/logging` includes a native `slog.Handler` wrapper (`logging.TraceHandler`) that automatically extracts distributed tracing metadata from the active `context.Context` and appends them to every log record:
 
 - **Active OTel Span Context**: Extracts `trace_id` and `span_id` from `trace.SpanFromContext(ctx)` when a valid OpenTelemetry span exists.
-- **Context Fallback Keys**: If no active span is found, checks for context values stored under `"trace_id"`, `"TraceID"`, `"span_id"`, or `"SpanID"`.
+- **Context Fallback Keys**: If no active span is found, checks for typed context keys (`logging.ContextKeyTraceID`, `logging.ContextKeySpanID`) and common string fallback keys (`"trace_id"`, `"TraceID"`, `"traceId"`, `"span_id"`, `"SpanID"`, `"spanId"`).
 - **Automatic Enablement**: Enabled by default in `logging.New()` unless explicitly disabled with `DisableTraceCorrelation: true`.
+- **Attribute Normalization**: Automatically converts numeric `slog.Level` keys into canonical string names (`"TRACE"`, `"DEBUG"`, `"INFO"`, `"WARN"`, `"ERROR"`, `"FATAL"`) while preserving custom `ReplaceAttr` transformations.
 
 ```go
 // Manually wrap any custom slog.Handler with OpenTelemetry trace correlation
 baseHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 traceHandler := logging.NewTraceHandler(baseHandler)
 logger := logging.NewWithHandler(traceHandler)
+
+// Log with context to automatically correlate OTel trace_id & span_id
+logger.InfoContext(ctx, "Processed transaction", "amount", 100.0)
 ```
 
 ### HTTP Access Logging Middleware (`pkg/logger`)
@@ -906,7 +991,7 @@ Incoming HTTP Request
        ▼ (Extract W3C traceparent / baggage)
 ┌─────────────────────────────────────────────────────────┐
 │  otelmw.Middleware                                      │
-│  - Starts OpenTelemetry Span: "GET /v1/users/:id"       │
+│  - Starts OpenTelemetry Span: "GET /api/v1/users/:id"   │
 │  - Sets HTTP semantic attributes & Client IP            │
 │  - Injects trace_id / span_id into context & response   │
 └────────────────────────────┬────────────────────────────┘
@@ -935,13 +1020,15 @@ During server bootstrap (`rest.StartREST`), the runtime initializes the global `
 
 ### Exporter Protocols & Transports
 
-The telemetry exporter sends traces to an OpenTelemetry Collector or compatible backend (Jaeger, Grafana Tempo, Datadog) via `OHM9996_OTEL_EXPORTER_OTLP_PROTOCOL`:
+The telemetry exporter sends traces to an OpenTelemetry Collector or compatible backend (Jaeger, Grafana Tempo, Datadog) via `OHM9996_OTEL_EXPORTER_OTLP_ENDPOINT` (defaults to `localhost:4317`) and `OHM9996_OTEL_EXPORTER_OTLP_PROTOCOL`:
 
-| Protocol Key | Transport | Default Endpoint | Description |
+| Protocol Key | Transport | Typical OTLP Port | Description |
 |---|---|---|---|
-| `grpc` | OTLP / gRPC | `localhost:4317` | High-performance binary transport over gRPC (supports `host:port` or `grpc://`) |
-| `http` or `http/protobuf` | OTLP / HTTP (Protobuf) | `localhost:4318` | Standard OTLP over HTTP with Protobuf binary payload |
-| `http/json` | OTLP / HTTP (JSON) | `localhost:4318` | OTLP over HTTP with JSON payload |
+| `grpc` | OTLP / gRPC | `4317` | High-performance binary transport over gRPC (supports `host:port` or `grpc://`) |
+| `http` or `http/protobuf` | OTLP / HTTP (Protobuf) | `4318` | Standard OTLP over HTTP with Protobuf binary payload |
+| `http/json` | OTLP / HTTP (JSON) | `4318` | OTLP over HTTP with JSON payload |
+
+*Note: The environment variable `OHM9996_OTEL_EXPORTER_OTLP_ENDPOINT` defaults to `localhost:4317` regardless of the selected protocol.*
 
 TLS security is configured via `OHM9996_OTEL_INSECURE` (defaults to `true` for local development and Kubernetes in-cluster mesh networks).
 
@@ -976,10 +1063,10 @@ The HTTP tracing middleware extracts incoming W3C headers on request entry and a
 
 The framework engine installs `otelmw.Middleware(cfg)` on the Gin pipeline to record execution telemetry:
 
-- **Span Naming**: Automatically names spans after HTTP method and matched route template (e.g. `GET /v1/users/:id`).
+- **Span Naming**: Automatically names spans after HTTP method and matched route template (e.g. `GET /api/v1/users/:id`).
 - **Semantic Attributes**:
   - `http.method`: HTTP method (`GET`, `POST`, `PUT`, `DELETE`, etc.)
-  - `http.target`: Full request URI path with query string (e.g. `/v1/items?category=books`)
+  - `http.target`: Full request URI path with query string (e.g. `/api/v1/items?category=books`)
   - `client.address`: Client IP address
   - `http.route`: Matched parameterized route pattern
   - `http.status_code`: Response HTTP status code integer
@@ -1069,7 +1156,7 @@ The `pkg/mongodb` package encapsulates MongoDB connection establishment, connect
 
 ### Connecting & Lifecycle
 
-Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9996_MONGODB_*` environment variables, attempts an unencrypted connection first, automatically negotiates TLS fallback if the server requires a secure transport, and verifies connectivity via an initial ping:
+Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9996_MONGODB_*` environment variables, executes a two-phase connection flow, verifies connectivity via an initial ping (when enabled), and manages the underlying connection pool:
 
 ```go
 package database
@@ -1100,9 +1187,30 @@ func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
 }
 ```
 
+### Two-Phase Automatic TLS Fallback
+
+To provide seamless connectivity across unencrypted local Docker instances, secured staging clusters, and cloud deployments (such as MongoDB Atlas), `mongodb.Connect(ctx)` implements an automated two-phase connection strategy:
+
+1. **Unencrypted Connection Attempt**: First attempts connection without TLS (`tls=false`). If `OHM9996_MONGODB_ENABLE_PING=true` (the default), an immediate connectivity ping is performed.
+2. **Automatic TLS Fallback**: If the server rejects the unencrypted connection with an error indicating TLS/SSL is required (such as `"server requires tls"`, `"server requires ssl"`, `"ssl handshake"`, `"tls handshake"`, or `"connection closed"`), the client transparently re-attempts connection with TLS enabled (`tls=true`).
+3. **Graceful Failure Handling**: If connection fails after fallback or due to fatal configuration errors, the client outputs diagnostic details to `os.Stderr`, invokes the process exit hook (`exitFunc(0)`), and returns the underlying error.
+
+### Startup Ping Verification
+
+By default, `mongodb.Connect(ctx)` performs an active ping check during initialization to ensure that the remote MongoDB deployment is reachable before application routes begin serving traffic. If ping verification fails, the connection pool is immediately closed and a wrapped error is returned.
+
+In serverless architectures, lazy initialization flows, or environments where MongoDB may boot concurrently after the microservice starts, startup ping verification can be toggled via environment variable:
+
+```bash
+# Disable startup ping check for lazy or deferred initialization
+export OHM9996_MONGODB_ENABLE_PING=false
+```
+
+When startup ping verification is disabled, `mongodb.Connect(ctx)` initializes the client pool without blocking on network roundtrips. Applications can subsequently invoke `client.Ping(ctx)` on demand (e.g., inside readiness probes or background pollers).
+
 ### Database & Collection Handles
 
-Once connected, access collections and databases directly:
+The managed client resolves default database names and exposes direct access to official MongoDB Go Driver v2 handles (`*mongo.Database` and `*mongo.Collection`):
 
 ```go
 package repository
@@ -1129,8 +1237,8 @@ func NewUserRepository(client *mongodb.Client) *UserRepository {
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
-	// Access collection in the specified database (or default database if dbName is omitted)
-	coll := r.client.Collection("users", "my_database")
+	// Access collection using configured default database (OHM9996_MONGODB_DATABASE)
+	coll := r.client.Collection("users")
 
 	var user User
 	err := coll.FindOne(ctx, bson.M{"email": email}).Decode(&user)
@@ -1141,17 +1249,28 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, 
 }
 
 func (r *UserRepository) RecordAudit(ctx context.Context, entry bson.M) error {
-	// Explicitly target a specific database and collection
+	// Explicitly target a specific database override ("audit_db")
 	coll := r.client.Collection("audit_logs", "audit_db")
 
 	_, err := coll.InsertOne(ctx, entry)
 	return err
 }
+
+func (r *UserRepository) CustomDatabase(ctx context.Context) error {
+	// Obtain a direct *mongo.Database handle (uses default database if omitted)
+	db := r.client.Database("reporting_db")
+	_ = db
+	return nil
+}
 ```
+
+- **Default Database Fallback**: Calling `client.Database()` or `client.Collection("users")` without specifying a database name automatically targets the default database configured via `OHM9996_MONGODB_DATABASE`.
+- **Database Overrides**: Passing a database name parameter (`client.Database("custom_db")` or `client.Collection("users", "custom_db")`) explicitly targets the specified database.
+- **Nil Safety**: Operations invoked on an uninitialized client return `nil` collections/databases without panicking.
 
 ### Readiness & Health Verification
 
-Use `Ping(ctx)` to verify active cluster connectivity (useful in custom readiness checks or background health pollers):
+Use `client.Ping(ctx)` to verify cluster connectivity with primary read preference (`readpref.Primary()`), ideal for Kubernetes readiness probes (`/ready`) and health checks:
 
 ```go
 // Sends a primary read-preference ping command to the MongoDB cluster
@@ -1162,7 +1281,7 @@ if err := client.Ping(ctx); err != nil {
 
 ### Raw Driver Access
 
-When advanced MongoDB features are needed—such as multi-document transactions, client sessions, or change streams—use `RawClient()` to access the underlying official `*mongo.Client`:
+When advanced MongoDB features are needed—such as multi-document transactions, client sessions, change streams, or GridFS—use `client.RawClient()` to obtain the underlying official `*mongo.Client`:
 
 ```go
 rawClient := client.RawClient()
@@ -1175,19 +1294,260 @@ defer session.EndSession(ctx)
 
 ### Termination Hooks & Sentinel Errors
 
-When MongoDB configuration is invalid or connection fails during initialization, `mongodb.Connect` logs diagnostic information and invokes a configurable exit hook (`os.Exit(0)` by default). This hook can be overridden in testing environments:
+When required MongoDB configuration (such as `OHM9996_MONGODB_HOST`) is missing or connection fails during initialization, `mongodb.Connect` outputs diagnostic information and triggers a configurable exit hook (`os.Exit(0)` by default). In unit and integration test suites, this hook can be intercepted:
 
 ```go
-// Override the process termination hook (returns previous hook)
+// Override the process termination hook during tests (returns previous hook)
 prevExit := mongodb.SetExitFunc(func(code int) {
 	// Custom exit logic or test assertion
 })
 defer mongodb.SetExitFunc(prevExit)
 ```
 
-The package also exports sentinel errors:
-- `mongodb.ErrNilClient`: Returned when attempting operations on an uninitialized client instance.
-- `mongodb.ErrNilConfig`: Returned when internal configuration resolving is nil.
+The package exports standard sentinel errors:
+- `mongodb.ErrNilClient`: Returned when attempting operations on an uninitialized client instance (`"mongodb client is not initialized"`).
+- `mongodb.ErrNilConfig`: Returned when internal configuration resolving is nil (`"mongodb config cannot be nil"`).
+
+---
+
+## MongoDB Testcontainers (`pkg/testcontainers/mongodb`)
+
+The `pkg/testcontainers/mongodb` package provides lightweight, isolated MongoDB container management for integration testing using [Testcontainers for Go](https://golang.testcontainers.org/). It spins up ephemeral MongoDB instances with zero host dependencies, automatically exposes connection details, and provides ready-to-use managed client instances.
+
+### Container Lifecycle & Startup
+
+Start an ephemeral MongoDB container using `mongodb.Run(ctx, opts...)`. The function provisions a container, assigns dynamic host port mappings, waits until MongoDB is ready to accept connections, and returns a `*mongodb.Container` handle:
+
+```go
+package repository_test
+
+import (
+	"context"
+	"testing"
+
+	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+)
+
+func TestContainerStartup(t *testing.T) {
+	ctx := context.Background()
+
+	// Spin up disposable MongoDB container
+	container, err := tcmongo.Run(ctx)
+	if err != nil {
+		t.Fatalf("Failed to start MongoDB container: %v", err)
+	}
+	defer func() {
+		// Clean up and terminate container at test completion
+		if err := container.Terminate(ctx); err != nil {
+			t.Fatalf("Failed to terminate container: %v", err)
+		}
+	}()
+
+	// Introspect connection endpoints
+	connStr, err := container.ConnectionString(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get connection string: %v", err)
+	}
+	t.Logf("MongoDB container running at: %s", connStr)
+}
+```
+
+### Functional Options & Customization
+
+`mongodb.Run(ctx, opts...)` accepts functional options (`Option`) to customize container image, credentials, database initialization, replica sets, and environment variables:
+
+| Option | Signature | Description | Default |
+|---|---|---|---|
+| `WithImage` | `WithImage(image string) Option` | Specifies the Docker image tag for the MongoDB container | `mongodb.DefaultImage` (`"mongo:6"`) |
+| `WithUsername` | `WithUsername(username string) Option` | Sets root username for container authentication | `""` (no authentication) |
+| `WithPassword` | `WithPassword(password string) Option` | Sets root password for container authentication | `""` (no authentication) |
+| `WithDatabase` | `WithDatabase(database string) Option` | Configures default database created on startup (`MONGO_INITDB_DATABASE`) | `""` |
+| `WithReplicaSet` | `WithReplicaSet(replicaSet string) Option` | Initializes a single-node replica set, required for transaction testing | `""` (standalone) |
+| `WithEnv` | `WithEnv(key, value string) Option` | Sets custom environment variables inside the container | `nil` |
+| `WithContainerOptions` | `WithContainerOptions(opts ...testcontainers.ContainerCustomizer) Option` | Appends raw `testcontainers-go` container customizers | `nil` |
+
+Helper functions `mongodb.DefaultOptions()` and `mongodb.NewOptions(opts...)` are also exported for programmatic options inspection.
+
+### Connection Getters & Managed Client
+
+The `*mongodb.Container` instance provides helpers to retrieve dynamic connection details or immediately connect a managed `*pkg/mongodb.Client`:
+
+| Method | Return Type | Description |
+|---|---|---|
+| `container.Client(ctx, opts...)` | `(*mongodb.Client, error)` | Returns a connected, ping-verified managed client prewired to container host, port, database, and auth |
+| `container.ConnectionString(ctx)` | `(string, error)` | Returns the full connection URI (e.g., `mongodb://localhost:32768`) |
+| `container.Host(ctx)` | `(string, error)` | Returns the host IP or hostname where the container is accessible |
+| `container.Port(ctx)` | `(int, error)` | Returns the mapped external TCP port as an `int` |
+| `container.Config(ctx)` | `(*config.Config, error)` | Returns a populated `Config` struct initialized with container connection details |
+| `container.Database()` | `string` | Returns the configured default database name |
+| `container.Username()` | `string` | Returns the configured root username |
+| `container.Password()` | `string` | Returns the configured root password |
+| `container.ReplicaSet()` | `string` | Returns the configured replica set name |
+| `container.RawContainer()` | `*tcmongodb.MongoDBContainer` | Returns the underlying raw Testcontainers MongoDBContainer handle |
+| `container.Terminate(ctx)` | `error` | Stops and deletes the running container |
+
+### Integration Testing Patterns
+
+#### 1. Repository Integration Test with Managed Client
+
+Connect a managed client directly to an ephemeral container to test database operations against a real MongoDB engine:
+
+```go
+package repository_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/nawaphonOHM/whatever/pkg/mongodb"
+	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+type Product struct {
+	ID    string  `bson:"_id,omitempty"`
+	SKU   string  `bson:"sku"`
+	Price float64 `bson:"price"`
+}
+
+func TestProductRepository_Integration(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// 1. Start MongoDB testcontainer with custom database
+	container, err := tcmongo.Run(ctx,
+		tcmongo.WithImage("mongo:7"),
+		tcmongo.WithDatabase("test_store"),
+	)
+	if err != nil {
+		t.Fatalf("Failed to start MongoDB container: %v", err)
+	}
+	defer func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Errorf("Failed to terminate container: %v", err)
+		}
+	}()
+
+	// 2. Obtain preconfigured managed client
+	client, err := container.Client(ctx)
+	if err != nil {
+		t.Fatalf("Failed to connect client: %v", err)
+	}
+	defer client.Disconnect(ctx)
+
+	// 3. Execute database operations against default database
+	coll := client.Collection("products")
+
+	item := Product{SKU: "PROD-100", Price: 29.99}
+	insertRes, err := coll.InsertOne(ctx, item)
+	if err != nil {
+		t.Fatalf("Failed to insert product: %v", err)
+	}
+
+	var found Product
+	err = coll.FindOne(ctx, bson.M{"sku": "PROD-100"}).Decode(&found)
+	if err != nil {
+		t.Fatalf("Failed to query product: %v", err)
+	}
+
+	if found.Price != 29.99 {
+		t.Errorf("Expected price 29.99, got %f", found.Price)
+	}
+	_ = insertRes
+}
+```
+
+#### 2. Authenticated Container Setup
+
+Configure username and password credentials for testing authenticated access and permission boundaries:
+
+```go
+func TestAuthenticatedMongoDB(t *testing.T) {
+	ctx := context.Background()
+
+	container, err := tcmongo.Run(ctx,
+		tcmongo.WithImage("mongo:6"),
+		tcmongo.WithUsername("admin"),
+		tcmongo.WithPassword("supersecret"),
+		tcmongo.WithDatabase("secure_db"),
+	)
+	if err != nil {
+		t.Fatalf("Failed to start authenticated container: %v", err)
+	}
+	defer container.Terminate(ctx)
+
+	// Client automatically connects using admin authSource and credentials
+	client, err := container.Client(ctx)
+	if err != nil {
+		t.Fatalf("Failed to connect with credentials: %v", err)
+	}
+	defer client.Disconnect(ctx)
+
+	// Verify health check succeeds under authenticated session
+	if err := client.Ping(ctx); err != nil {
+		t.Fatalf("Ping failed: %v", err)
+	}
+}
+```
+
+#### 3. Multi-Document Transactions with Replica Sets
+
+MongoDB multi-document ACID transactions require a replica set topology. Use `WithReplicaSet` to spin up a single-node replica set for transaction testing:
+
+```go
+func TestMultiDocumentTransaction(t *testing.T) {
+	ctx := context.Background()
+
+	container, err := tcmongo.Run(ctx,
+		tcmongo.WithReplicaSet("rs0"),
+		tcmongo.WithDatabase("bank_db"),
+	)
+	if err != nil {
+		t.Fatalf("Failed to start replica set container: %v", err)
+	}
+	defer container.Terminate(ctx)
+
+	client, err := container.Client(ctx)
+	if err != nil {
+		t.Fatalf("Failed to connect client: %v", err)
+	}
+	defer client.Disconnect(ctx)
+
+	// Access raw mongo driver client to initiate session & transaction
+	rawClient := client.RawClient()
+	session, err := rawClient.StartSession()
+	if err != nil {
+		t.Fatalf("Failed to start session: %v", err)
+	}
+	defer session.EndSession(ctx)
+
+	accounts := client.Collection("accounts")
+
+	// Execute transactional multi-document balance transfer
+	_, err = session.WithTransaction(ctx, func(sessCtx context.Context) (interface{}, error) {
+		if _, err := accounts.InsertOne(sessCtx, bson.M{"account": "A", "balance": 100}); err != nil {
+			return nil, err
+		}
+		if _, err := accounts.InsertOne(sessCtx, bson.M{"account": "B", "balance": 50}); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatalf("Transaction failed: %v", err)
+	}
+}
+```
+
+### Constants & Sentinel Errors
+
+`pkg/testcontainers/mongodb` exports the following default constants and error sentinels:
+
+- `mongodb.DefaultImage`: `"mongo:6"`
+- `mongodb.DefaultPort`: `"27017/tcp"`
+- `mongodb.ErrNilContainer`: Returned when calling methods on a nil container instance (`"mongodb container is nil"`).
+- `mongodb.ErrContainerNotRunning`: Returned when calling methods on a container whose underlying Docker process is not running (`"mongodb container is not running"`).
 
 ---
 
@@ -1200,7 +1560,7 @@ Configuration values are resolved using the following order of precedence:
 2. **Local `.env` File**: If a `.env` file exists in the working directory, it is automatically parsed using `godotenv`. An absent `.env` file is silently ignored.
 3. **Library Defaults**: If a variable is unset across environment sources, built-in defaults defined on the configuration structs are applied.
 
-### REST Server Configuration
+### Server General Settings
 
 | Variable | Type | Default | Description |
 |---|---|---|---|
@@ -1209,26 +1569,59 @@ Configuration values are resolved using the following order of precedence:
 | `OHM9996_GIN_MODE` | `string` | `release` | Gin engine mode (`debug`, `release`, `test`) |
 | `OHM9996_APP_VERSION` | `string` | `""` | Application version reported in `/health` and `/ready` response metadata |
 | `OHM9996_SERVER_DISPLAY_NAME` | `string` | `application` | Service display name used for startup banners and logging |
-| `OHM9996_SERVER_READ_TIMEOUT` | `duration` | `10s` | Maximum duration for reading the entire request (including body) |
-| `OHM9996_SERVER_WRITE_TIMEOUT` | `duration` | `10s` | Maximum duration before timing out writes of the response |
-| `OHM9996_SERVER_IDLE_TIMEOUT` | `duration` | `60s` | Maximum duration to wait for the next request on keep-alive connections |
-| `OHM9996_SERVER_SHUTDOWN_TIMEOUT` | `duration` | `10s` | Graceful shutdown deadline before forcefully terminating active connections |
-| `OHM9996_SERVER_READ_HEADER_TIMEOUT` | `duration` | `5s` | Maximum duration allowed to read HTTP request headers |
-| `OHM9996_SERVER_MAX_HEADER_BYTES` | `int` | `1048576` (1MB) | Maximum allowed HTTP request header size in bytes |
-| `OHM9996_SERVER_MAX_BODY_SIZE` | `int64` | `33554432` (32MB) | Maximum allowed multipart memory and request body payload in bytes |
 | `OHM9996_SERVER_ENABLE_ACCESS_LOG` | `bool` | `true` | Enables HTTP request access logging middleware |
 | `OHM9996_SERVER_ENABLE_METRICS` | `bool` | `false` | Enables Prometheus `/metrics` scraping endpoint |
 | `OHM9996_SERVER_ENABLE_PROFILING` | `bool` | `false` | Enables runtime pprof profiling endpoints |
 | `OHM9996_SERVER_PROFILE_PATH` | `string` | `/debug/pprof` | Base URL path prefix for runtime pprof profiling endpoints |
-| `OHM9996_SERVER_TRUSTED_PROXIES` | `string` | `""` (none) | Comma-separated list of trusted upstream proxy IP addresses or CIDR blocks |
-| `OHM9996_SERVER_REMOTE_IP_HEADERS` | `string` | `X-Forwarded-For, X-Real-IP` | Comma-separated list of proxy headers inspected to determine real client IP |
-| `OHM9996_SERVER_FORWARDED_BY_CLIENT_IP` | `bool` | `true` | Resolves client IP using closest proxy in header chain when trusted |
+
+### Server Timeouts
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `OHM9996_SERVER_READ_TIMEOUT` | `duration` | `10s` | Maximum duration for reading the entire request (including body) |
+| `OHM9996_SERVER_WRITE_TIMEOUT` | `duration` | `10s` | Maximum duration before timing out writes of the response |
+| `OHM9996_SERVER_IDLE_TIMEOUT` | `duration` | `60s` | Maximum duration to wait for the next request on keep-alive connections |
+| `OHM9996_SERVER_SHUTDOWN_TIMEOUT` | `duration` | `10s` | Graceful shutdown deadline before forcefully terminating active connections |
+
+### Server Resource Limits
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `OHM9996_SERVER_READ_HEADER_TIMEOUT` | `duration` | `5s` | Maximum duration allowed to read HTTP request headers |
+| `OHM9996_SERVER_MAX_HEADER_BYTES` | `int` | `1048576` (1MB) | Maximum allowed HTTP request header size in bytes |
+| `OHM9996_SERVER_MAX_BODY_SIZE` | `int64` | `33554432` (32MB) | Maximum allowed multipart memory and request body payload in bytes |
+
+### HTTP Path & Routing Handling
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
 | `OHM9996_SERVER_REDIRECT_TRAILING_SLASH` | `bool` | `true` | Automatically redirects requests with or without trailing slashes |
 | `OHM9996_SERVER_REDIRECT_FIXED_PATH` | `bool` | `false` | Automatically corrects URL casing and cleans redundant segments |
 | `OHM9996_SERVER_HANDLE_METHOD_NOT_ALLOWED` | `bool` | `true` | Returns RFC 9457 405 Method Not Allowed when route exists for other methods |
 | `OHM9996_SERVER_USE_RAW_PATH` | `bool` | `false` | Uses raw `req.URL.RawPath` instead of unescaped `req.URL.Path` for route matching |
 | `OHM9996_SERVER_UNESCAPE_PATH_VALUES` | `bool` | `true` | Unescapes URI path parameters before passing to endpoint handlers |
 | `OHM9996_SERVER_REMOVE_EXTRA_SLASH` | `bool` | `false` | Removes redundant consecutive slashes from URL path prior to matching |
+
+### Upstream Proxy & Forwarded Headers
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `OHM9996_SERVER_TRUSTED_PROXIES` | `[]string` | `""` (none) | Comma-separated list of trusted upstream proxy IP addresses or CIDR blocks |
+| `OHM9996_SERVER_REMOTE_IP_HEADERS` | `[]string` | `X-Forwarded-For, X-Real-IP` | Comma-separated list of proxy headers inspected to determine real client IP |
+| `OHM9996_SERVER_FORWARDED_BY_CLIENT_IP` | `bool` | `true` | Resolves client IP using closest proxy in header chain when trusted |
+
+### CORS Policy Configuration
+
+CORS policies are configured programmatically via blueprint metadata (`rest.NewCorsSetting()` and `meta.WithCors(cors)`). When CORS is enabled without overrides, the server applies the following built-in defaults:
+
+| Setting / Property | Type | Default Value | Description |
+|---|---|---|---|
+| `AllowOrigins` | `[]string` | `["*"]` | List of allowed CORS origin URL patterns (supports wildcard `*`) |
+| `AllowMethods` | `[]string` | `["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]` | Allowed HTTP methods |
+| `AllowHeaders` | `[]string` | `["Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"]` | Allowed request headers in CORS requests |
+| `ExposeHeaders` | `[]string` | `["Content-Length", "X-Request-ID"]` | Response headers accessible to browser JavaScript |
+| `AllowCredentials` | `bool` | `false` | Allows cookies and HTTP authentication credentials |
+| `MaxAge` | `string` | `"86400"` (24 hours) | Preflight response cache time in seconds |
 
 ### OpenTelemetry Tracing Configuration
 
@@ -1255,6 +1648,7 @@ Configuration values are resolved using the following order of precedence:
 | `OHM9996_MONGODB_AUTH_SOURCE` | `string` | `""` (empty) | Authentication database name (e.g., `admin`) |
 | `OHM9996_MONGODB_APP_NAME` | `string` | `""` (empty) | Application name for connection metadata and diagnostics |
 | `OHM9996_MONGODB_UUID_REPRESENTATION` | `string` | `unspecified` | UUID binary representation (`unspecified`, `standard`, `csharpLegacy`, `javaLegacy`, `pythonLegacy`) |
+| `OHM9996_MONGODB_ENABLE_PING` | `bool` | `true` | Enables startup connectivity ping verification |
 | `OHM9996_MONGODB_CONNECT_TIMEOUT` | `duration` | `10s` | Maximum duration for initial TCP connection establishment |
 | `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | `duration` | `5s` | Timeout for cluster server discovery and primary election |
 | `OHM9996_MONGODB_SOCKET_TIMEOUT` | `duration` | `10s` | Socket read and write operation timeout |
@@ -1323,8 +1717,8 @@ func main() {
 	_ = itemsColl
 
 	itemAPI := &rest.RRestAPIRegistration{
-		Version: 1,       // Mounts under /v1 prefix
-		Prefix:  "/items", // Route prefix: /v1/items
+		Version: 1,       // Mounts under /api/v1 prefix
+		Prefix:  "/items", // Route prefix: /api/v1/items
 		Apis: []*rest.ExportableAPI{
 			{
 				Path:   "",
@@ -1374,28 +1768,34 @@ func main() {
 
 ## Development Workflows
 
-The project includes a comprehensive `Makefile` providing standard development, testing, linting, formatting, and dependency verification targets for contributors and CI pipelines:
+The project provides standard local development, testing, linting, formatting, and dependency verification targets for contributors and CI pipelines.
 
 ### Makefile Targets
 
+The repository includes a dedicated `Makefile` defining verification, test, and maintenance targets:
+
 | Target | Command | Description |
 |---|---|---|
-| `make` / `make help` | `make help` | Displays list of available make targets with descriptions |
+| `make` / `make help` | `make help` | Displays list of available Makefile targets with descriptions |
 | `make build` | `go build -v ./...` | Verifies compilation of all library packages |
 | `make test` | `go test -race -v ./...` | Runs all unit and integration test suites with the race detector enabled |
 | `make test-coverage` | `go test -race -coverprofile=coverage.out ./...` | Executes tests and generates an HTML code coverage report (`coverage.html`) |
-| `make vet` | `go vet ./...` | Runs standard Go static analysis and vetting |
-| `make lint` | `golangci-lint run` | Executes `golangci-lint` (falls back to `go vet ./...` if not installed) |
+| `make vet` | `go vet ./...` | Runs standard Go static analysis (`go vet`) across all packages |
+| `make lint` | `golangci-lint run` | Executes `golangci-lint` (falls back to `go vet ./...` if `golangci-lint` is not installed) |
 | `make tidy` | `go mod tidy && go mod verify` | Tidies and verifies Go module dependencies in `go.mod` and `go.sum` |
 | `make all` | `make test vet build` | Runs the full verification pipeline (`test`, `vet`, and `build`) |
 | `make clean` | `rm -rf bin tmp coverage.out coverage.html profile.out` | Cleans temporary test coverage, profiling, and build artifact files |
 
 ### Testing & Code Coverage
 
-Execute the full unit and integration test suite with Go's race detector enabled:
+#### Full Test Suite (Makefile)
+
+Execute the complete unit and integration test suite with Go's race detector enabled:
 ```bash
 make test
 ```
+
+#### Coverage Profiling & Visualization (Makefile)
 
 Generate a code coverage profile and export an interactive HTML visualization:
 ```bash
@@ -1406,7 +1806,28 @@ make test-coverage
 xdg-open coverage.html 2>/dev/null || open coverage.html 2>/dev/null || echo "Report generated: coverage.html"
 ```
 
+#### Targeted & Direct Test Execution (Go Toolchain)
+
+To execute specific packages or subsets of tests directly without running the entire suite (note: these are direct `go test` toolchain commands, not Makefile targets):
+
+```bash
+# Run unit tests only for public packages
+go test -v ./pkg/...
+
+# Run unit tests only for internal implementation packages
+go test -v ./internal/...
+
+# Run targeted package tests (e.g., REST routing or MongoDB client)
+go test -v ./pkg/rest/...
+go test -v ./pkg/mongodb/...
+
+# Run MongoDB Testcontainers integration tests
+go test -v ./pkg/testcontainers/mongodb/...
+```
+
 ### Static Analysis & Linting
+
+#### Linting & Vetting (Makefile)
 
 Run automated linters and static analyzers to catch issues early:
 ```bash
@@ -1417,25 +1838,34 @@ make lint
 make vet
 ```
 
+#### Linter Auto-Fixing (Direct Tooling)
+
+To automatically fix supported linter issues (direct CLI command, not a Makefile target):
+```bash
+golangci-lint run --fix
+```
+
 ### Code Formatting
 
-Ensure all Go source files adhere to standard formatting conventions:
+Ensure all Go source files adhere to standard formatting conventions. The Makefile does not define a `format` target; format code directly using the Go toolchain:
+
 ```bash
-# Format all packages and simplify code
+# Format and simplify Go source files
 gofmt -s -w .
 
-# Or run go fmt
+# Or format all packages via standard go fmt
 go fmt ./...
 ```
 
 ### Dependency Management & Verification
 
 Maintain clean `go.mod` and `go.sum` files and verify cryptographic checksums of dependencies:
+
 ```bash
-# Tidy unused requirements and verify module checksums
+# Tidy unused requirements and verify module checksums via Makefile
 make tidy
 
-# Or run individual commands
+# Or run individual Go toolchain commands directly (non-Makefile)
 go mod tidy
 go mod verify
 ```
@@ -1452,7 +1882,7 @@ make all
 ## Continuous Integration
 
 The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) configured to:
-- Enforce Go module integrity (`go mod verify`).
-- Execute static analysis with `golangci-lint`.
-- Run the full test suite across all packages with `-race` and coverage collection.
+- Enforce Go module integrity (`go mod verify` and dirty check on `go.mod`/`go.sum`).
+- Execute static analysis with `golangci-lint` (`--timeout=5m`).
+- Run the full test suite across all packages with race detection and coverage collection (`go test -race -v -coverprofile=coverage.out ./...`).
 - Verify compilation of all library packages with `go build -v ./...`.
