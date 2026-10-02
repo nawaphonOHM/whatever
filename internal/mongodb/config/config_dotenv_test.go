@@ -29,6 +29,7 @@ OHM9996_MONGODB_AUTH_SOURCE=admin
 OHM9996_MONGODB_APP_NAME=dotenv-app
 OHM9996_MONGODB_PROTOCOL=mongodb
 OHM9996_MONGODB_UUID_REPRESENTATION=standard
+OHM9996_MONGODB_ENABLE_PING=false
 OHM9996_MONGODB_MAX_POOL_SIZE=150
 `)
 	err := os.WriteFile(envPath, content, testFilePerm)
@@ -36,18 +37,29 @@ OHM9996_MONGODB_MAX_POOL_SIZE=150
 	return envPath
 }
 
-// verifyDotEnvLoadedConfig asserts loaded configuration fields match dotenv contents.
-func verifyDotEnvLoadedConfig(t *testing.T, cfg *Config) {
+// verifyDotEnvIdentityFields asserts identity-related configuration fields.
+func verifyDotEnvIdentityFields(t *testing.T, cfg *Config) {
 	assert.Equal(t, "dotenv-host", cfg.Host)
 	assert.Equal(t, testDotEnvPort, cfg.Port)
 	assert.Equal(t, "dotenv_db", cfg.Database)
 	assert.Equal(t, "dotenv_user", cfg.Username)
 	assert.Equal(t, "dotenv_pass", cfg.Password)
 	assert.Equal(t, "admin", cfg.AuthSource)
+}
+
+// verifyDotEnvOptionFields asserts options and operational settings fields.
+func verifyDotEnvOptionFields(t *testing.T, cfg *Config) {
 	assert.Equal(t, "dotenv-app", cfg.AppName)
 	assert.Equal(t, "mongodb", cfg.Protocol)
 	assert.Equal(t, "standard", cfg.UUIDRepresentation)
+	assert.False(t, cfg.EnablePing)
 	assert.Equal(t, uint64(testDotEnvMaxPool), cfg.MaxPoolSize)
+}
+
+// verifyDotEnvLoadedConfig asserts loaded configuration fields match dotenv contents.
+func verifyDotEnvLoadedConfig(t *testing.T, cfg *Config) {
+	verifyDotEnvIdentityFields(t, cfg)
+	verifyDotEnvOptionFields(t, cfg)
 }
 
 // TestConfig_Load_DotEnvFile tests loading configuration from a dotenv file.

@@ -47,7 +47,19 @@ func resolveDatabaseName(cfg *config.Config) string {
 	return cfg.Database
 }
 
-// attemptConnection establishes a driver client with specified TLS and verifies ping.
+// verifyPingIfEnabled verifies ping connectivity if pinging is enabled in configuration.
+func verifyPingIfEnabled(
+	ctx context.Context,
+	cfg *config.Config,
+	rawClient *mongo.Client,
+) error {
+	if cfg == nil || !cfg.EnablePing {
+		return nil
+	}
+	return verifyPingAndDisconnect(ctx, rawClient)
+}
+
+// attemptConnection establishes a driver client with specified TLS and optionally verifies ping.
 func attemptConnection(
 	ctx context.Context,
 	cfg *config.Config,
@@ -62,23 +74,10 @@ func attemptConnection(
 		return nil, fmt.Errorf(errCreateClientFormat, err)
 	}
 
-	if err := verifyPingAndDisconnect(ctx, rawClient); err != nil {
+	if err := verifyPingIfEnabled(ctx, cfg, rawClient); err != nil {
 		return nil, err
 	}
 	return NewClient(rawClient, resolveDatabaseName(cfg)), nil
-}
-
-// fallbackTLSAttempt attempts connection with TLS enabled upon TLS requirement error.
-func fallbackTLSAttempt(
-	ctx context.Context,
-	cfg *config.Config,
-	opts ...Option,
-) (*Client, error) {
-	tlsClient, tlsErr := attemptConnection(ctx, cfg, true, opts...)
-	if tlsErr != nil {
-		return nil, handleConnectionError(tlsErr)
-	}
-	return tlsClient, nil
 }
 
 // initAndPingClient performs two-phase connection: attempts unencrypted connection first,
@@ -101,8 +100,8 @@ func initAndPingClient(
 }
 
 // Connect loads MongoDB configuration from environment variables
-// (OHM9996_MONGODB_*), establishes a connection, verifies ping connectivity,
-// and returns a managed Client.
+// (OHM9996_MONGODB_*), establishes a connection, optionally verifies ping connectivity
+// if enabled, and returns a managed Client.
 func Connect(ctx context.Context, opts ...Option) (*Client, error) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -112,7 +111,7 @@ func Connect(ctx context.Context, opts ...Option) (*Client, error) {
 }
 
 // ConnectWithConfig connects to MongoDB using the provided Config and Options.
-// It verifies connectivity via Ping using the provided context.
+// It verifies connectivity via Ping using the provided context if EnablePing is true.
 func ConnectWithConfig(
 	ctx context.Context,
 	cfg *config.Config,

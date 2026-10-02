@@ -75,3 +75,20 @@ func TestConnect_CanceledContext(t *testing.T) {
 	assert.Nil(t, client)
 	assert.True(t, *exitCalled)
 }
+
+// TestConnect_DisabledPing_Success tests connection without ping verification when
+// OHM9996_MONGODB_ENABLE_PING=false targeting an unreachable host.
+func TestConnect_DisabledPing_Success(t *testing.T) {
+	setupConnectPingEnv(t)
+	t.Setenv("OHM9996_MONGODB_ENABLE_PING", "false")
+
+	exitCalled, cleanup := setupExitCapture()
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextDur)
+	defer cancel()
+
+	client, err := Connect(ctx)
+	require.NoError(t, err)
+	verifyDisabledPingClient(t, ctx, client, exitCalled)
+}
