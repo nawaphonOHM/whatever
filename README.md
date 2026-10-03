@@ -42,11 +42,10 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Success Responses](#success-responses)
   - [RFC 9457 Problem Details](#rfc-9457-problem-details)
 - [Structured Logging (`pkg/logging` & `pkg/logger`)](#structured-logging-pkglogging--pkglogger)
-  - [Core Logger (`pkg/logging`)](#core-logger-pkglogging)
+  - [Package-Level Logging API (`pkg/logging`)](#package-level-logging-api-pkglogging)
   - [Log Severity Levels](#log-severity-levels)
-  - [Output Formats](#output-formats)
-  - [Global Logger & Package Helpers](#global-logger--package-helpers)
-  - [OpenTelemetry Trace Correlation (`TraceHandler`)](#opentelemetry-trace-correlation-tracehandler)
+  - [Output Formats & Serialization](#output-formats--serialization)
+  - [OpenTelemetry Trace Correlation](#opentelemetry-trace-correlation)
   - [HTTP Access Logging Middleware (`pkg/logger`)](#http-access-logging-middleware-pkglogger)
 - [Distributed Tracing & Observability](#distributed-tracing--observability)
   - [OpenTelemetry Architecture](#opentelemetry-architecture)
@@ -127,6 +126,9 @@ This repository is structured as a modular library. Consuming microservices impo
 ```
 .
 ├── internal/
+│   ├── logging/
+│   │   ├── config/            # Logging environment configuration loader, level parsing, and validation
+│   │   └── core/              # Core logger engine, slog handler pipeline, OTel trace correlation, and test hooks
 │   ├── mongodb/
 │   │   ├── client/            # Managed MongoDB v2 client wrapper, pooling, and TLS fallback
 │   │   └── config/            # MongoDB environment configuration loader and validation
@@ -147,7 +149,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │       └── mongodb/           # Test client engine, options builder, fixture management, and testing.TB hooks
 ├── pkg/
 │   ├── logger/                # Gin HTTP access logging middleware with OTel trace correlation
-│   ├── logging/               # Structured slog-based logging utilities with TRACE/FATAL levels
+│   ├── logging/               # Package-level structured logging facade and severity levels
 │   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
 │   ├── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
 │   ├── testcontainers/
@@ -172,7 +174,7 @@ The toolkit is divided into focused public packages under `pkg/`:
 | Package | Primary Role | Key Types & Functions | Underlying Technology |
 |---|---|---|---|
 | [`pkg/rest`](#pkgrest) | Declarative REST API framework, context, response envelopes, & server lifecycle | `rest.NewBluePrint()`, `rest.ExportableAPI`, `rest.StartREST()`, `rest.OK()`, `rest.BadRequest()` | `gin-gonic/gin`, RFC 9457 |
-| [`pkg/logging`](#pkglogging) | Structured slog logging with extended levels & OTel trace injection | `logging.New()`, `logging.TraceContext()`, `logging.FatalContext()`, `logging.NewTraceHandler()` | `log/slog`, `go.opentelemetry.io/otel` |
+| [`pkg/logging`](#pkglogging) | Environment-driven structured logging facade with extended levels & OTel trace injection | `logging.Info()`, `logging.InfoContext()`, `logging.ErrorContext()`, `logging.FatalContext()`, `logging.LogAttrs()` | `log/slog`, `go.opentelemetry.io/otel` |
 | [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
 | [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb) | Ephemeral MongoDB containers with automated lifecycle and connection wiring for integration tests | `mongodb.Run()`, `container.Client()`, `container.ConnectionString()`, `container.Terminate()` | `testcontainers-go`, Docker |
@@ -192,13 +194,13 @@ The primary REST framework package provides declarative route registration contr
 
 ### `pkg/logging`
 
-Structured logging built on Go standard library `log/slog` with extended severity levels, flexible formatters, and native OpenTelemetry correlation:
+Structured logging built on Go standard library `log/slog` with extended severity levels, automated environment configuration, and native OpenTelemetry correlation:
 
+- **Zero-Boilerplate Package API**: Call package-level functions directly (`logging.Info`, `logging.InfoContext`, `logging.Error`, `logging.FatalContext`) without manual instantiation.
+- **Environment-Driven Configuration**: Configured seamlessly via `OHM9996_LOGGING_*` environment variables with safe production defaults (`stdout`, `info`, `text`).
 - **Extended Severity Levels**: Native support for `TRACE` (level -8) and `FATAL` (level 12) in addition to standard `DEBUG`, `INFO`, `WARN`, `ERROR`.
-- **Custom Output Formatters**: Easy configuration for JSON (`FormatJSON`, `NewJSON`) and Text (`FormatText`, `NewText`) outputs.
-- **Global & Instance Support**: Use package-level convenience functions (`logging.InfoContext`, `logging.ErrorContext`, `logging.FatalContext`) or isolated `*logging.Logger` instances.
-- **OpenTelemetry Correlation**: Automatic `trace_id` and `span_id` attribute injection from active context spans via `TraceHandler`.
-- **Injectable Process Control**: Configurable exit hook for fatal logging (`SetExitFunc`), ideal for testing.
+- **Flexible Formats & Destinations**: Output to `stdout`, `stderr`, `discard`, or file paths in `text` or `json` format.
+- **Native OpenTelemetry Correlation**: Automatic `trace_id` and `span_id` attribute injection from active context spans into every log record.
 
 ### `pkg/logger`
 
@@ -247,8 +249,6 @@ Get a high-performance HTTP REST microservice running with declarative routing, 
 package main
 
 import (
-	"os"
-
 	"github.com/nawaphonOHM/whatever/pkg/logging"
 	"github.com/nawaphonOHM/whatever/pkg/rest"
 )
@@ -259,15 +259,7 @@ type Item struct {
 }
 
 func main() {
-	// 1. Initialize structured JSON logging
-	logger := logging.New(logging.Config{
-		Output: os.Stdout,
-		Level:  logging.LevelInfo,
-		Format: logging.FormatJSON,
-	})
-	logging.SetDefault(logger)
-
-	// 2. Declare API route endpoints and versioned group
+	// 1. Declare API route endpoints and versioned group
 	itemRoutes := &rest.RRestAPIRegistration{
 		Version: 1,       // Generates /api/v1 prefix (/api/v1/items)
 		Prefix:  "/items",
@@ -760,86 +752,45 @@ Content-Type: application/problem+json
 
 ## Structured Logging (`pkg/logging` & `pkg/logger`)
 
-The library provides a two-layer logging architecture: `pkg/logging` provides core general-purpose structured logging on top of standard library `log/slog` with extended severity levels (`TRACE`, `FATAL`) and automatic OpenTelemetry trace correlation, while `pkg/logger` provides pre-configured Gin HTTP access logging middleware with latency tracking, client IP resolution, and status-based log level escalation.
+The library provides a two-layer logging architecture: `pkg/logging` provides package-level structured logging on top of standard library `log/slog` driven by `OHM9996_LOGGING_*` environment variables with extended severity levels (`TRACE`, `FATAL`) and automatic OpenTelemetry trace correlation, while `pkg/logger` provides pre-configured Gin HTTP access logging middleware with latency tracking, client IP resolution, and status-based log level escalation.
 
-### Core Logger (`pkg/logging`)
+### Package-Level Logging API (`pkg/logging`)
 
-The `pkg/logging` package encapsulates `*slog.Logger` and enhances it with custom handlers, pipeline formatting, and fatal termination hooks.
+`pkg/logging` exposes a clean, minimal package-level facade. Consuming packages invoke logging helpers directly without requiring manual instantiation or configuration wiring:
 
-#### Configuration Options (`logging.Config`)
-
-```go
-type Config struct {
-	// Output is the destination for log writes. Defaults to os.Stdout if nil.
-	Output io.Writer
-
-	// Level specifies the minimum severity level to log (TRACE, DEBUG, INFO, WARN, ERROR, FATAL).
-	Level Level
-
-	// Format specifies the output format (json or text). Defaults to FormatJSON.
-	Format Format
-
-	// AddSource attaches caller file and line numbers to records when true.
-	AddSource bool
-
-	// DisableTraceCorrelation disables automatic OpenTelemetry trace_id and span_id enrichment.
-	DisableTraceCorrelation bool
-
-	// ExitFunc is the function invoked on Fatal/FatalContext. Defaults to os.Exit.
-	ExitFunc func(int)
-
-	// ReplaceAttr allows customizing log attributes before writing.
-	ReplaceAttr ReplaceAttrFunc
-
-	// Handler allows supplying a pre-configured slog.Handler directly.
-	Handler slog.Handler
-}
-```
-
-#### Constructors & Factory Functions
-
-| Constructor | Description |
-|---|---|
-| `logging.New(cfgs ...Config) *Logger` | Initializes a configured `*logging.Logger` instance (merges optional config) |
-| `logging.NewJSON(w io.Writer, level Level) *Logger` | Convenience constructor for JSON-formatted logging to destination `w` |
-| `logging.NewText(w io.Writer, level Level) *Logger` | Convenience constructor for human-readable text logging to destination `w` |
-| `logging.NewWithHandler(h slog.Handler) *Logger` | Wraps a pre-existing `slog.Handler` directly |
-| `logging.DefaultConfig() Config` | Returns recommended production defaults (`os.Stdout`, `LevelInfo`, `FormatJSON`) |
-
-#### Instance Methods
-
-An instance of `*logging.Logger` provides:
-- **Context Logging**: `l.TraceContext(ctx, msg, args...)`, `l.DebugContext(ctx, msg, args...)`, `l.InfoContext(ctx, msg, args...)`, `l.WarnContext(ctx, msg, args...)`, `l.ErrorContext(ctx, msg, args...)`, `l.FatalContext(ctx, msg, args...)`
-- **Context-Free Logging**: `l.Trace(msg, args...)`, `l.Debug(msg, args...)`, `l.Info(msg, args...)`, `l.Warn(msg, args...)`, `l.Error(msg, args...)`, `l.Fatal(msg, args...)`
-- **Scoped Sub-Loggers**: `l.With(args ...any) *Logger` attaches persistent structured key-value pairs; `l.WithGroup(name string) *Logger` nests subsequent attributes within a named group.
-- **Underlying Driver**: `l.Slog() *slog.Logger` returns the underlying standard library `*slog.Logger`.
-- **Exit Hooks**: `l.ExitFunc()` and `l.SetExitFunc(fn func(int))` manage the exit handler invoked on fatal events.
+- **Context-Aware Logging**: `logging.TraceContext`, `logging.DebugContext`, `logging.InfoContext`, `logging.WarnContext`, `logging.ErrorContext`, `logging.FatalContext`
+- **Context-Free Logging**: `logging.Trace`, `logging.Debug`, `logging.Info`, `logging.Warn`, `logging.Error`, `logging.Fatal`
+- **Dynamic & Attr Logging**: `logging.Log(ctx, level, msg, args...)` and `logging.LogAttrs(ctx, level, msg, attrs...)`
 
 ```go
 package main
 
 import (
 	"context"
-	"os"
+	"log/slog"
 
 	"github.com/nawaphonOHM/whatever/pkg/logging"
 )
 
 func main() {
-	// Initialize a structured JSON logger writing to stdout
-	log := logging.New(logging.Config{
-		Output:    os.Stdout,
-		Level:     logging.LevelDebug,
-		Format:    logging.FormatJSON,
-		AddSource: true,
-	})
+	// Standard structured logging with key-value pairs
+	logging.Info("Application initialized", "version", "1.0.0", "env", "production")
+	logging.Warn("Rate limit threshold approached", "client_ip", "192.168.1.50")
+	logging.Error("Database query failed", "error", "connection refused")
 
-	// Log with structured key-value arguments
-	log.Info("Service started", "port", 8080, "environment", "production")
+	// Context-aware logging (automatically injects active OpenTelemetry trace_id and span_id)
+	ctx := context.Background()
+	logging.InfoContext(ctx, "User authenticated successfully", "user_id", "usr_123")
+	logging.ErrorContext(ctx, "Payment transaction declined", "transaction_id", "txn_554")
 
-	// Create a sub-logger with scoped attributes
-	userLogger := log.With("component", "user_service", "version", "1.0.0")
-	userLogger.DebugContext(context.Background(), "Processing user request", "user_id", "usr_123")
+	// Fine-grained attribute logging
+	logging.LogAttrs(ctx, logging.LevelInfo, "Order placed",
+		slog.String("order_id", "ord_9981"),
+		slog.Float64("amount", 49.99),
+	)
+
+	// Fatal logging (logs at FATAL level and exits process)
+	// logging.Fatal("Fatal configuration error encountered")
 }
 ```
 
@@ -849,102 +800,43 @@ The package defines strongly typed log severity levels extending standard `log/s
 
 | Level Constant | String Value | Underlying `slog.Level` Value | Description |
 |---|---|---|---|
-| `logging.LevelTrace` | `"TRACE"` | `-8` (`logging.SlogLevelTrace`) | High-volume granular diagnostic information |
-| `logging.LevelDebug` | `"DEBUG"` | `-4` (`logging.SlogLevelDebug`) | Detailed debugging and troubleshooting messages |
-| `logging.LevelInfo` | `"INFO"` | `0` (`logging.SlogLevelInfo`) | General informational operational events |
-| `logging.LevelWarn` | `"WARN"` | `4` (`logging.SlogLevelWarn`) | Non-critical warnings and recovered conditions |
-| `logging.LevelError` | `"ERROR"` | `8` (`logging.SlogLevelError`) | Actionable runtime failures and operational errors |
-| `logging.LevelFatal` | `"FATAL"` | `12` (`logging.SlogLevelFatal`) | Critical unrecoverable failures; invokes configured `ExitFunc` |
+| `logging.LevelTrace` | `"TRACE"` | `-8` | High-volume granular diagnostic information |
+| `logging.LevelDebug` | `"DEBUG"` | `-4` | Detailed debugging and troubleshooting messages |
+| `logging.LevelInfo` | `"INFO"` | `0` | General informational operational events |
+| `logging.LevelWarn` | `"WARN"` | `4` | Non-critical warnings and recovered conditions |
+| `logging.LevelError` | `"ERROR"` | `8` | Actionable runtime failures and operational errors |
+| `logging.LevelFatal` | `"FATAL"` | `12` | Critical unrecoverable failures; invokes exit handler |
 
-#### Parsing Level Strings
+### Output Formats & Serialization
 
-The package provides case-insensitive level parsers that support standard string representations as well as common aliases:
+Logging format is controlled by the `OHM9996_LOGGING_FORMAT` environment variable (`text` or `json`):
 
-```go
-// Parse case-insensitive string into strongly typed logging.Level (supports aliases: warn/warning, fatal/critical/crit/panic)
-lvl, err := logging.ParseLevel("debug")     // returns logging.LevelDebug
-lvl, err := logging.ParseLevel("warning")   // returns logging.LevelWarn
-lvl, err := logging.ParseLevel("critical")  // returns logging.LevelFatal
+- **Text Format (`OHM9996_LOGGING_FORMAT=text`, default)**: Human-readable key-value pairs formatted for local development and console output:
+  ```text
+  time=2026-10-04T00:00:00.123456Z level=INFO msg="Order payment processed" trace_id=4bf92f3577b34da6a3ce929d0e0e4736 span_id=00f067aa0ba902b7 order_id=ord_9981 amount=49.99 currency=USD
+  ```
 
-// Parse directly into standard slog.Level
-slogLvl, err := logging.ParseSlogLevel("trace") // returns logging.SlogLevelTrace (-8)
+- **JSON Format (`OHM9996_LOGGING_FORMAT=json`)**: Machine-readable single-line JSON records formatted for log ingestion systems (Datadog, Elasticsearch, Grafana Loki, CloudWatch):
+  ```json
+  {
+    "time": "2026-10-04T00:00:00.123456Z",
+    "level": "INFO",
+    "msg": "Order payment processed",
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "00f067aa0ba902b7",
+    "order_id": "ord_9981",
+    "amount": 49.99,
+    "currency": "USD"
+  }
+  ```
 
-// Convert standard slog.Level to canonical logging.Level
-lvl = logging.LevelFromSlog(slog.LevelWarn) // returns logging.LevelWarn
+### OpenTelemetry Trace Correlation
 
-// Convert logging.Level to standard slog.Level
-slogLvl, err = logging.LevelFatal.SlogLevel() // returns logging.SlogLevelFatal (12)
-```
-
-### Output Formats
-
-The package supports two primary output encodings controlled by `logging.Format`:
-
-- **`logging.FormatJSON` (`"json"`)**: Renders machine-readable single-line JSON records formatted for log ingestion systems (Datadog, Elasticsearch, Grafana Loki, CloudWatch).
-- **`logging.FormatText` (`"text"`)**: Renders human-readable key-value pairs formatted for local terminal development.
-
-#### JSON Output Record Example:
-```json
-{
-  "time": "2026-09-28T12:00:00.123456Z",
-  "level": "INFO",
-  "msg": "Order payment processed",
-  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "span_id": "00f067aa0ba902b7",
-  "order_id": "ord_9981",
-  "amount": 49.99,
-  "currency": "USD"
-}
-```
-
-#### Text Output Record Example:
-```text
-time=2026-09-28T12:00:00.123456Z level=INFO msg="Order payment processed" trace_id=4bf92f3577b34da6a3ce929d0e0e4736 span_id=00f067aa0ba902b7 order_id=ord_9981 amount=49.99 currency=USD
-```
-
-### Global Logger & Package Helpers
-
-`pkg/logging` maintains a thread-safe package-level default logger synchronized with standard library `slog.SetDefault`:
-
-```go
-// Retrieve the package-level default logger
-defaultLogger := logging.Default()
-
-// Replace the global default logger instance
-customLogger := logging.NewJSON(os.Stdout, logging.LevelDebug)
-logging.SetDefault(customLogger)
-
-// Package-level logging helpers (use global default logger)
-logging.Info("Application initialized", "version", "1.0.0")
-logging.Warn("Rate limit threshold approached", "client_ip", "192.168.1.50")
-logging.Error("Database query failed", "error", err)
-
-// Context-aware package-level helpers (extracts active OTel trace_id & span_id)
-logging.InfoContext(ctx, "User authenticated successfully", "user_id", "usr_123")
-logging.ErrorContext(ctx, "Payment transaction declined", "transaction_id", "txn_554")
-
-// Fatal logging: writes log record at FATAL level and triggers exitFunc (os.Exit(1))
-logging.Fatal("Fatal startup error: unable to bind network port", "port", 8080)
-```
-
-### OpenTelemetry Trace Correlation (`TraceHandler`)
-
-`pkg/logging` includes a native `slog.Handler` wrapper (`logging.TraceHandler`) that automatically extracts distributed tracing metadata from the active `context.Context` and appends them to every log record:
+When using any `*Context` logging function (`logging.InfoContext`, `logging.ErrorContext`, etc.), trace metadata is extracted and appended automatically:
 
 - **Active OTel Span Context**: Extracts `trace_id` and `span_id` from `trace.SpanFromContext(ctx)` when a valid OpenTelemetry span exists.
-- **Context Fallback Keys**: If no active span is found, checks for typed context keys (`logging.ContextKeyTraceID`, `logging.ContextKeySpanID`) and common string fallback keys (`"trace_id"`, `"TraceID"`, `"traceId"`, `"span_id"`, `"SpanID"`, `"spanId"`).
-- **Automatic Enablement**: Enabled by default in `logging.New()` unless explicitly disabled with `DisableTraceCorrelation: true`.
-- **Attribute Normalization**: Automatically converts numeric `slog.Level` keys into canonical string names (`"TRACE"`, `"DEBUG"`, `"INFO"`, `"WARN"`, `"ERROR"`, `"FATAL"`) while preserving custom `ReplaceAttr` transformations.
-
-```go
-// Manually wrap any custom slog.Handler with OpenTelemetry trace correlation
-baseHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
-traceHandler := logging.NewTraceHandler(baseHandler)
-logger := logging.NewWithHandler(traceHandler)
-
-// Log with context to automatically correlate OTel trace_id & span_id
-logger.InfoContext(ctx, "Processed transaction", "amount", 100.0)
-```
+- **Context Fallback Keys**: If no active span is found, checks for typed context keys (`trace_id`, `span_id`) in context values.
+- **Automatic Enablement**: Enabled by default; can be disabled across the application by setting `OHM9996_LOGGING_DISABLE_TRACE_CORRELATION=true`.
 
 ### HTTP Access Logging Middleware (`pkg/logger`)
 
@@ -952,20 +844,21 @@ The `pkg/logger` package provides pre-built Gin middleware for HTTP access loggi
 
 ```go
 import (
+	"log/slog"
+
 	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/pkg/logger"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
 )
 
-// Attach default request logging middleware
+// Attach default request logging middleware (uses slog.Default())
 engine.Use(logger.Logger())
 
 // Or attach with a specific slog.Logger instance
-engine.Use(logger.WithLogger(logging.Default().Slog()))
+engine.Use(logger.WithLogger(slog.Default()))
 
 // Or attach with custom configuration (e.g. skipping noisy health checks)
 engine.Use(logger.WithConfig(logger.Config{
-	Logger:    logging.Default().Slog(),
+	Logger:    slog.Default(),
 	SkipPaths: []string{"/health", "/ready", "/metrics"},
 }))
 
@@ -1884,18 +1777,16 @@ If mandatory configuration (`HOST`) is missing, or if connection fails after TLS
 
 ### Structured Logger Configuration
 
-Structured logging via `pkg/logging` is configured programmatically via `logging.Config` or `logging.DefaultConfig()`. In addition, framework-level HTTP access logging in the REST server is toggled via the `OHM9996_SERVER_ENABLE_ACCESS_LOG` environment variable.
+Structured logging via `pkg/logging` is configured entirely through `OHM9996_LOGGING_*` environment variables with zero code changes required. In addition, framework-level HTTP access logging in the REST server is toggled via the `OHM9996_SERVER_ENABLE_ACCESS_LOG` environment variable.
 
-| Field / Option | Type | Default | Description |
+| Environment Variable | Type | Default | Description |
 |---|---|---|---|
-| `Level` | `logging.Level` | `LevelInfo` (`"INFO"`) | Minimum log level threshold (`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`) |
-| `Format` | `logging.Format` | `FormatJSON` (`"json"`) | Log output formatting scheme (`json` or `text`) |
-| `AddSource` | `bool` | `false` | When true, includes caller file path and line number in record attributes |
-| `DisableTraceCorrelation` | `bool` | `false` | When false, automatically correlates OpenTelemetry `trace_id` and `span_id` |
-| `Output` | `io.Writer` | `os.Stdout` | Target output stream for serialized log records |
-| `ReplaceAttr` | `ReplaceAttrFunc` | `nil` | Custom attribute transformation and filtering callback |
-| `ExitFunc` | `func(int)` | `os.Exit` | Custom termination function executed on `Fatal` and `FatalContext` calls |
-| `OHM9996_SERVER_ENABLE_ACCESS_LOG` | `bool` | `true` | Environment variable controlling Gin HTTP access logging middleware |
+| `OHM9996_LOGGING_OUTPUT` | `string` | `"stdout"` | Output destination (`stdout`, `stderr`, `discard`, or file path) |
+| `OHM9996_LOGGING_LEVEL` | `string` | `"info"` | Minimum log level threshold (`trace`, `debug`, `info`, `warn`/`warning`, `error`, `fatal`/`critical`/`crit`/`panic`) |
+| `OHM9996_LOGGING_FORMAT` | `string` | `"text"` | Log record serialization scheme (`text` or `json`) |
+| `OHM9996_LOGGING_ADD_SOURCE` | `bool` | `false` | When true, includes caller file path and line number in record attributes |
+| `OHM9996_LOGGING_DISABLE_TRACE_CORRELATION` | `bool` | `false` | When true, disables automatic OpenTelemetry `trace_id` and `span_id` extraction |
+| `OHM9996_SERVER_ENABLE_ACCESS_LOG` | `bool` | `true` | Environment variable controlling Gin HTTP access logging middleware in REST server |
 
 ---
 

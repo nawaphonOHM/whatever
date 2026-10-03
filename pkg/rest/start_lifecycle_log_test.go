@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/internal/logging/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,11 +28,8 @@ func parseJSONLogEntries(data []byte) []map[string]any {
 func setupTestLogger(t *testing.T) (*bytes.Buffer, func()) {
 	t.Helper()
 	buf := new(bytes.Buffer)
-	prev := logging.Default()
-	logging.SetDefault(logging.NewJSON(buf, logging.LevelDebug))
-	return buf, func() {
-		logging.SetDefault(prev)
-	}
+	reset := core.CaptureLogs(buf)
+	return buf, reset
 }
 
 func findLogByMsg(entries []map[string]any, msg string) map[string]any {
