@@ -39,11 +39,12 @@ func gracefulShutdown(ctx context.Context, s *Server) error {
 	return nil
 }
 
-// mapServeErr wraps a non-nil serve error.
-func mapServeErr(err error) error {
+// handleServeErr logs serve failure and wraps the non-nil error.
+func handleServeErr(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
+	logging.ErrorContext(ctx, "REST server failed to start", "error", err.Error())
 	return fmt.Errorf("http server failed to start: %w", err)
 }
 
@@ -55,12 +56,13 @@ func waitForServerExit(
 ) error {
 	select {
 	case err := <-errChan:
-		if err != nil {
-			logging.ErrorContext(ctx, "REST server failed to start", "error", err.Error())
-		}
-		return mapServeErr(err)
+		return handleServeErr(ctx, err)
 	case <-ctx.Done():
-		logging.InfoContext(ctx, "shutting down REST server gracefully", "shutdown_timeout", s.Config.ShutdownTimeout.String())
+		logging.InfoContext(
+			ctx,
+			"shutting down REST server gracefully",
+			"shutdown_timeout", s.Config.ShutdownTimeout.String(),
+		)
 		return nil
 	}
 }

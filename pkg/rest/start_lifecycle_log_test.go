@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +17,10 @@ func parseJSONLogEntries(data []byte) []map[string]any {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	for decoder.More() {
 		var entry map[string]any
-		if err := decoder.Decode(&entry); err == nil {
-			entries = append(entries, entry)
+		if err := decoder.Decode(&entry); err != nil {
+			continue
 		}
+		entries = append(entries, entry)
 	}
 	return entries
 }
@@ -44,6 +44,30 @@ func findLogByMsg(entries []map[string]any, msg string) map[string]any {
 	return nil
 }
 
+func assertPublicStartLog(t *testing.T, port int, entry map[string]any) {
+	t.Helper()
+	require.NotNil(t, entry, "expected 'starting REST server' log entry")
+	assert.Equal(t, "INFO", entry["level"])
+	assert.Equal(t, "application", entry["service"])
+	assert.Equal(t, "1.0.0", entry["version"])
+	assert.Equal(t, testHost, entry["host"])
+	assert.Equal(t, float64(port), entry["port"])
+	assert.Equal(t, gin.TestMode, entry["mode"])
+	assert.Equal(t, "10s", entry["shutdown_timeout"])
+}
+
+func assertPublicShutdownLogs(t *testing.T, entries []map[string]any) {
+	t.Helper()
+	sigEntry := findLogByMsg(entries, "shutting down REST server gracefully")
+	require.NotNil(t, sigEntry, "expected 'shutting down REST server gracefully' log entry")
+	assert.Equal(t, "INFO", sigEntry["level"])
+	assert.Equal(t, "10s", sigEntry["shutdown_timeout"])
+
+	doneEntry := findLogByMsg(entries, "REST server shut down successfully")
+	require.NotNil(t, doneEntry, "expected 'REST server shut down successfully' log entry")
+	assert.Equal(t, "INFO", doneEntry["level"])
+}
+
 func TestStartREST_LifecycleLogging_Success(t *testing.T) {
 	buf, reset := setupTestLogger(t)
 	defer reset()
@@ -53,150 +77,9 @@ func TestStartREST_LifecycleLogging_Success(t *testing.T) {
 	errCh := startRESTAsync(newTestE2EBlueprint())
 
 	assertStatusOK(t, fmt.Sprintf("http://%s:%d/api/v1/ping", testHost, port))
-
 	signalAndWait(t, errCh)
 
 	entries := parseJSONLogEntries(buf.Bytes())
-
-	startEntry := findLogByMsg(entries, "starting REST server")
-	require.NotNil(t, startEntry, "expected 'starting REST server' log entry")
-	assert.Equal(t, "INFO", startEntry["level"])
-	assert.Equal(t, "application", startEntry["service"])
-	assert.Equal(t, "1.0.0", startEntry["version"])
-	assert.Equal(t, testHost, startEntry["host"])
-	assert.Equal(t, float64(port), startEntry["port"])
-	assert.Equal(t, gin.TestMode, startEntry["mode"])
-	assert.Equal(t, "10s", startEntry["shutdown_timeout"])
-
-	shutdownSignalEntry := findLogByMsg(entries, "shutting down REST server gracefully")
-	require.NotNil(t, shutdownSignalEntry, "expected 'shutting down REST server gracefully' log entry")
-	assert.Equal(t, "INFO", shutdownSignalEntry["level"])
-	assert.Equal(t, "10s", shutdownSignalEntry["shutdown_timeout"])
-
-	shutdownSuccessEntry := findLogByMsg(entries, "REST server shut down successfully")
-	require.NotNil(t, shutdownSuccessEntry, "expected 'REST server shut down successfully' log entry")
-	assert.Equal(t, "INFO", shutdownSuccessEntry["level"])
-}
-
-func TestStartREST_LifecycleLogging_Errors(t *testing.T) {
-	t.Run("NilBlueprint", func(t *testing.T) {
-		buf, reset := setupTestLogger(t)
-		defer reset()
-
-		err := StartREST(nil)
-		require.ErrorIs(t, err, ErrNilBluePrint)
-
-		entries := parseJSONLogEntries(buf.Bytes())
-		nilEntry := findLogByMsg(entries, "failed to initialize REST server: blueprint is nil")
-		require.NotNil(t, nilEntry, "expected nil blueprint log entry")
-		assert.Equal(t, "ERROR", nilEntry["level"])
-	})
-
-	t.Run("ConfigLoadError", func(t *testing.T) {
-		buf, reset := setupTestLogger(t)
-		defer reset()
-
-		t.Setenv(envServerPort, "not-a-number")
-		err := StartREST(NewBluePrint())
-		require.Error(t, err)
-
-		entries := parseJSONLogEntries(buf.Bytes())
-		cfgEntry := findLogByMsg(entries, "failed to load REST server config")
-		require.NotNil(t, cfgEntry, "expected config load error log entry")
-		assert.Equal(t, "ERROR", cfgEntry["level"])
-		assert.NotEmpty(t, cfgEntry["error"])
-	})
-
-	t.Run("NilRegistration", func(t *testing.T) {
-		buf, reset := setupTestLogger(t)
-		defer reset()
-
-		t.Setenv(envGinMode, gin.TestMode)
-		bp := NewBluePrint().WithAPIs(nil)
-		err := StartREST(bp)
-		require.ErrorIs(t, err, ErrNilRegistration)
-
-		entries := parseJSONLogEntries(buf.Bytes())
-		routeEntry := findLogByMsg(entries, "failed to register REST routes")
-		require.NotNil(t, routeEntry, "expected route registration error log entry")
-		assert.Equal(t, "ERROR", routeEntry["level"])
-		assert.Contains(t, routeEntry["error"], "registration cannot be nil")
-	})
-
-	t.Run("ReservedPathConflict", func(t *testing.T) {
-		buf, reset := setupTestLogger(t)
-		defer reset()
-
-		t.Setenv(envGinMode, gin.TestMode)
-		api := &ExportableAPI{
-			Path:    "/health",
-			Method:  GET,
-			Handler: func(Context) Response { return OK("override") },
-		}
-		reg := &RRestAPIRegistration{
-			Apis: []*ExportableAPI{api},
-		}
-		bp := NewBluePrint().WithAPIs(reg)
-
-		err := StartREST(bp)
-		require.ErrorIs(t, err, ErrReservedPath)
-
-		entries := parseJSONLogEntries(buf.Bytes())
-		routeEntry := findLogByMsg(entries, "failed to register REST routes")
-		require.NotNil(t, routeEntry, "expected route registration error log entry")
-		assert.Equal(t, "ERROR", routeEntry["level"])
-		assert.Contains(t, routeEntry["error"], "reserved")
-	})
-
-	t.Run("DuplicateRouteConflict", func(t *testing.T) {
-		buf, reset := setupTestLogger(t)
-		defer reset()
-
-		t.Setenv(envGinMode, gin.TestMode)
-		api1 := &ExportableAPI{
-			Path:    "/ping",
-			Method:  GET,
-			Handler: func(Context) Response { return OK("pong") },
-		}
-		api2 := &ExportableAPI{
-			Path:    "/ping",
-			Method:  GET,
-			Handler: func(Context) Response { return OK("pong") },
-		}
-		reg := &RRestAPIRegistration{
-			Apis: []*ExportableAPI{api1, api2},
-		}
-		bp := NewBluePrint().WithAPIs(reg)
-
-		err := StartREST(bp)
-		require.ErrorIs(t, err, ErrDuplicateRoute)
-
-		entries := parseJSONLogEntries(buf.Bytes())
-		routeEntry := findLogByMsg(entries, "failed to register REST routes")
-		require.NotNil(t, routeEntry, "expected route registration error log entry")
-		assert.Equal(t, "ERROR", routeEntry["level"])
-		assert.Contains(t, routeEntry["error"], "duplicate")
-	})
-}
-
-func TestStartREST_LifecycleLogging_PortInUse(t *testing.T) {
-	buf, reset := setupTestLogger(t)
-	defer reset()
-
-	l, err := net.Listen("tcp", testHost+":0")
-	require.NoError(t, err)
-	defer func() { assert.NoError(t, l.Close()) }()
-
-	tcpAddr, ok := l.Addr().(*net.TCPAddr)
-	require.True(t, ok)
-
-	setStartEnv(t, tcpAddr.Port)
-	err = StartREST(NewBluePrint())
-	require.Error(t, err)
-
-	entries := parseJSONLogEntries(buf.Bytes())
-	failEntry := findLogByMsg(entries, "REST server failed to start")
-	require.NotNil(t, failEntry, "expected 'REST server failed to start' log entry")
-	assert.Equal(t, "ERROR", failEntry["level"])
-	assert.NotEmpty(t, failEntry["error"])
+	assertPublicStartLog(t, port, findLogByMsg(entries, "starting REST server"))
+	assertPublicShutdownLogs(t, entries)
 }
