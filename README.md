@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever)
 
-A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, zero-boilerplate managed MongoDB client connectivity, and isolated Testcontainers-based MongoDB integration testing.
+A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, zero-boilerplate managed MongoDB client connectivity, isolated Testcontainers-based MongoDB integration testing, and ergonomic programmatic MongoDB test harnesses with automated fixture cleanup.
 
 ---
 
@@ -19,6 +19,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [`pkg/logger`](#pkglogger)
   - [`pkg/mongodb`](#pkgmongodb)
   - [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb)
+  - [`pkg/testing/mongodb`](#pkgtestingmongodb)
 - [Quick Start](#quick-start)
 - [REST Routing & Blueprint API](#rest-routing--blueprint-api)
   - [Blueprint & Server Middleware Pipeline](#blueprint--server-middleware-pipeline)
@@ -74,6 +75,13 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Connection Getters & Managed Client](#connection-getters--managed-client)
   - [Integration Testing Patterns](#integration-testing-patterns)
   - [Constants & Sentinel Errors](#constants--sentinel-errors)
+- [MongoDB Testing Toolkit (`pkg/testing/mongodb`)](#mongodb-testing-toolkit-pkgtestingmongodb)
+  - [Architectural Separation & Test State Isolation](#architectural-separation--test-state-isolation)
+  - [URI Connection & Functional Options](#uri-connection--functional-options)
+  - [Automated testing.TB Lifecycle Integration](#automated-testingtb-lifecycle-integration)
+  - [Database & Collection Fixtures](#database--collection-fixtures)
+  - [Parallel Subtest Isolation](#parallel-subtest-isolation)
+  - [Constants & Sentinel Errors](#constants--sentinel-errors-1)
 - [Configuration](#configuration)
   - [Server General Settings](#server-general-settings)
   - [Server Timeouts](#server-timeouts)
@@ -133,15 +141,19 @@ This repository is structured as a modular library. Consuming microservices impo
 │   │   ├── middleware/        # CORS, Panic Recovery, Request ID, and Access Log middlewares
 │   │   ├── problem/           # RFC 9457 Problem Details error response implementation
 │   │   └── server/            # Gin engine bootstrap, preflight route validation, and server lifecycle
-│   └── testcontainers/
-│       └── mongodb/           # Testcontainers MongoDB module integration, lifecycle, and client wiring
+│   ├── testcontainers/
+│   │   └── mongodb/           # Testcontainers MongoDB module integration, lifecycle, and client wiring
+│   └── testing/
+│       └── mongodb/           # Test client engine, options builder, fixture management, and testing.TB hooks
 ├── pkg/
 │   ├── logger/                # Gin HTTP access logging middleware with OTel trace correlation
 │   ├── logging/               # Structured slog-based logging utilities with TRACE/FATAL levels
 │   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
 │   ├── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
-│   └── testcontainers/
-│       └── mongodb/           # Public Testcontainers MongoDB testing runner, options, and container handle
+│   ├── testcontainers/
+│   │   └── mongodb/           # Public Testcontainers MongoDB testing runner, options, and container handle
+│   └── testing/
+│       └── mongodb/           # Public MongoDB test client, functional options, fixture helpers, and testing.TB helpers
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             # Continuous integration pipeline
@@ -164,6 +176,7 @@ The toolkit is divided into focused public packages under `pkg/`:
 | [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
 | [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb) | Ephemeral MongoDB containers with automated lifecycle and connection wiring for integration tests | `mongodb.Run()`, `container.Client()`, `container.ConnectionString()`, `container.Terminate()` | `testcontainers-go`, Docker |
+| [`pkg/testing/mongodb`](#pkgtestingmongodb) | Test MongoDB client with URI/options connectivity, automated `testing.TB` teardown, & fixture cleanup | `mongodb.NewTestClientURI()`, `mongodb.NewTestClient()`, `mongodb.ConnectURI()`, `client.TruncateCollections()` | `go.mongodb.org/mongo-driver/v2` |
 
 ### `pkg/rest`
 
@@ -214,6 +227,15 @@ Dedicated Testcontainers integration for spin-up and teardown of ephemeral Mongo
 - **Preconfigured Managed Client**: Directly obtain a ready-to-use, ping-verified `*pkg/mongodb.Client` prewired with mapped host and port via `container.Client(ctx)`.
 - **Dynamic Connection Introspection**: Resolve mapped external ports, host addresses, and full connection strings via `container.Port(ctx)`, `container.Host(ctx)`, and `container.ConnectionString(ctx)`.
 - **Declarative Container Customization**: Configure custom Docker images (`WithImage`), replica set names (`WithReplicaSet`), default database initialization (`WithDatabase`), credentials (`WithUsername`, `WithPassword`), environment variables (`WithEnv`), and raw container customizers (`WithContainerOptions`).
+
+### `pkg/testing/mongodb`
+
+Ergonomic MongoDB testing client with programmatic options, connection string parsing, automated test teardown, and rich fixture management:
+
+- **Dual Connection Modes**: Connect directly from URI strings (`ConnectURI`, `NewTestClientURI`) or programmatic functional options (`Connect`, `NewTestClient`) without mutating global environment variables.
+- **Zero Process Termination**: Pure Go error returns with zero `os.Exit` hooks, ensuring clean test failure reporting.
+- **Automated `testing.TB` Lifecycle**: `NewTestClient` and `NewTestClientURI` bind `client.Close` to `tb.Cleanup` for leak-free test teardown and fail fast with `tb.Fatalf`.
+- **Database & Collection Fixtures**: High-utility helpers for test state isolation including `TruncateCollections`, `DropDatabase`, `DropCollection`, and `ListCollectionNames`.
 
 ---
 
@@ -1551,6 +1573,208 @@ func TestMultiDocumentTransaction(t *testing.T) {
 
 ---
 
+## MongoDB Testing Toolkit (`pkg/testing/mongodb`)
+
+The `pkg/testing/mongodb` package provides a dedicated, highly ergonomic MongoDB client and fixture management toolkit tailored specifically for automated test suites, integration tests, and test fixture isolation.
+
+### Architectural Separation & Test State Isolation
+
+In production (`pkg/mongodb`), configuration is intentionally strict: it is loaded exclusively from `OHM9996_MONGODB_*` environment variables, and any fatal connection failure initiates peaceful process termination (`os.Exit(0)`). In contrast, automated testing workflows require maximum flexibility, zero environment side-effects, explicit error propagation without process termination, and deterministic test state isolation:
+
+| Feature / Behavior | Production (`pkg/mongodb`) | Container Lifecycle (`pkg/testcontainers/mongodb`) | Test Harness (`pkg/testing/mongodb`) |
+|---|---|---|---|
+| **Primary Scope** | Application runtime | Ephemeral Docker container | Test client & fixture lifecycle |
+| **Configuration** | `OHM9996_MONGODB_*` env vars | Functional container options | Connection strings (URI) or functional options |
+| **Failure Handling** | Peaceful exit (`os.Exit(0)`) | Returns Go `error` | Returns Go `error` / `tb.Fatalf` |
+| **Lifecycle Hooks** | Manual `client.Disconnect` | Manual `container.Terminate` | Automated `tb.Cleanup` registration |
+| **Fixture Helpers** | None (read/write only) | None (container only) | `TruncateCollections`, `DropDatabase`, etc. |
+
+### URI Connection & Functional Options
+
+Connect to any MongoDB instance programmatically using either direct connection strings or granular functional options:
+
+```go
+package repository_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	testmongo "github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+)
+
+func TestClientConnectionModes(t *testing.T) {
+	ctx := context.Background()
+
+	// Mode 1: Connect via URI string (e.g. from Testcontainers or external test DB)
+	clientURI, err := testmongo.ConnectURI(ctx, "mongodb://localhost:27017/test_db",
+		testmongo.WithPing(true),
+	)
+	if err != nil {
+		t.Fatalf("URI connection failed: %v", err)
+	}
+	defer clientURI.Close(ctx)
+
+	// Mode 2: Connect via programmatic functional options without environment variables
+	clientOpts, err := testmongo.Connect(ctx,
+		testmongo.WithHost("127.0.0.1"),
+		testmongo.WithPort(27017),
+		testmongo.WithDatabase("test_db"),
+		testmongo.WithUsername("testuser"),
+		testmongo.WithPassword("secret"),
+		testmongo.WithConnectTimeout(5*time.Second),
+		testmongo.WithPoolLimits(5, 50),
+	)
+	if err != nil {
+		t.Fatalf("Options connection failed: %v", err)
+	}
+	defer clientOpts.Close(ctx)
+}
+```
+
+### Automated testing.TB Lifecycle Integration
+
+`NewTestClient` and `NewTestClientURI` accept `testing.TB` (`*testing.T` or `*testing.B`), verify connectivity, fail immediately on connection errors via `tb.Fatalf`, and automatically register graceful client disconnection with `tb.Cleanup`:
+
+```go
+package repository_test
+
+import (
+	"context"
+	"testing"
+
+	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	testmongo "github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+type Account struct {
+	ID    string  `bson:"_id,omitempty"`
+	Owner string  `bson:"owner"`
+	Total float64 `bson:"total"`
+}
+
+func TestAccountRepository(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. Spin up ephemeral container
+	container, err := tcmongo.Run(ctx, tcmongo.WithDatabase("banking"))
+	if err != nil {
+		t.Fatalf("Failed to start container: %v", err)
+	}
+	t.Cleanup(func() { _ = container.Terminate(ctx) })
+
+	connURI, err := container.ConnectionString(ctx)
+	if err != nil {
+		t.Fatalf("Failed to obtain connection URI: %v", err)
+	}
+
+	// 2. Initialize test client — automatically handles connection failure assertions and cleanup teardown
+	client := testmongo.NewTestClientURI(t, connURI, testmongo.WithDatabase("banking"))
+
+	// 3. Clear collections before running assertions
+	if err := client.TruncateCollections(ctx); err != nil {
+		t.Fatalf("Failed to truncate collections: %v", err)
+	}
+
+	// 4. Execute repository queries
+	accounts := client.Collection("accounts")
+	_, err = accounts.InsertOne(ctx, Account{Owner: "Alice", Total: 250.00})
+	if err != nil {
+		t.Fatalf("Failed to insert account: %v", err)
+	}
+
+	var found Account
+	err = accounts.FindOne(ctx, bson.M{"owner": "Alice"}).Decode(&found)
+	if err != nil {
+		t.Fatalf("Failed to find account: %v", err)
+	}
+	if found.Total != 250.00 {
+		t.Errorf("Expected total 250.00, got %f", found.Total)
+	}
+}
+```
+
+### Database & Collection Fixtures
+
+`*testmongo.TestClient` provides dedicated state-isolation helpers:
+
+- **`TruncateCollections(ctx, collections...)`**: Deletes all documents from specific collections, or truncates all non-system collections when called with no arguments.
+- **`DropDatabase(ctx, name...)`**: Drops the specified database or the configured default database.
+- **`DropCollection(ctx, collection, dbName...)`**: Drops a specific collection from the target database.
+- **`ListCollectionNames(ctx, dbName...)`**: Returns all non-system collection names in the specified database.
+
+```go
+func TestFixtureIsolation(t *testing.T) {
+	ctx := context.Background()
+	client := testmongo.NewTestClientURI(t, "mongodb://localhost:27017/test_fixtures")
+
+	// Reset state between tests
+	_ = client.TruncateCollections(ctx, "users", "sessions") // Truncate specified collections
+	_ = client.TruncateCollections(ctx)                      // Truncate all non-system collections
+	_ = client.DropCollection(ctx, "temp_cache")             // Drop a single collection
+	_ = client.DropDatabase(ctx)                             // Drop default database
+}
+```
+
+### Parallel Subtest Isolation
+
+Execute parallel subtests safely by allocating unique databases per subtest:
+
+```go
+func TestParallelSubtests(t *testing.T) {
+	connURI := "mongodb://localhost:27017"
+
+	scenarios := []struct {
+		name string
+		db   string
+	}{
+		{name: "Subtest_1", db: "test_db_1"},
+		{name: "Subtest_2", db: "test_db_2"},
+	}
+
+	for _, s := range scenarios {
+		s := s
+		t.Run(s.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+
+			client := testmongo.NewTestClientURI(t, connURI, testmongo.WithDatabase(s.db))
+			defer func() { _ = client.DropDatabase(ctx, s.db) }()
+
+			coll := client.Collection("data")
+			_, err := coll.InsertOne(ctx, bson.M{"scenario": s.name})
+			if err != nil {
+				t.Fatalf("Insert failed: %v", err)
+			}
+		})
+	}
+}
+```
+
+### Constants & Sentinel Errors
+
+`pkg/testing/mongodb` exports the following default constants and sentinel errors:
+
+- `mongodb.DefaultHost`: `"localhost"`
+- `mongodb.DefaultPort`: `27017`
+- `mongodb.DefaultProtocol`: `"mongodb"`
+- `mongodb.DefaultConnectTimeout`: `10s`
+- `mongodb.DefaultServerSelectionTimeout`: `5s`
+- `mongodb.DefaultSocketTimeout`: `10s`
+- `mongodb.DefaultMaxConnIdleTime`: `10m`
+- `mongodb.DefaultMaxPoolSize`: `100`
+- `mongodb.DefaultMinPoolSize`: `5`
+- `mongodb.DefaultUUIDRepresentation`: `"unspecified"`
+- `mongodb.ErrNilClient`: `"mongodb test client is nil"`
+- `mongodb.ErrNilConfig`: `"mongodb config cannot be nil"`
+- `mongodb.ErrEmptyURI`: `"mongodb uri cannot be empty"`
+- `mongodb.ErrInvalidPort`: `"mongodb port must be between 1 and 65535"`
+- `mongodb.ErrNilTestingTB`: `"testing.TB cannot be nil"`
+
+---
+
 ## Configuration
 
 All environment variables read by the library use the **`OHM9996_`** prefix.
@@ -1820,6 +2044,7 @@ go test -v ./internal/...
 # Run targeted package tests (e.g., REST routing or MongoDB client)
 go test -v ./pkg/rest/...
 go test -v ./pkg/mongodb/...
+go test -v ./pkg/testing/mongodb/...
 
 # Run MongoDB Testcontainers integration tests
 go test -v ./pkg/testcontainers/mongodb/...
