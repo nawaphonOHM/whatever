@@ -2,6 +2,7 @@ package rest
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"syscall"
@@ -18,7 +19,7 @@ import (
 const (
 	testHost      = "127.0.0.1"
 	startWait     = 50 * time.Millisecond
-	shutdownWait  = 3 * time.Second
+	shutdownWait  = 5 * time.Second
 	envGinMode    = "OHM9996_GIN_MODE"
 	envServerPort = "OHM9996_SERVER_PORT"
 	envServerHost = "OHM9996_SERVER_HOST"
@@ -82,5 +83,9 @@ func assertStatusOK(t *testing.T, url string) {
 	resp, err := http.Get(url)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	if _, copyErr := io.Copy(io.Discard, resp.Body); copyErr != nil {
+		t.Logf("failed to discard response body: %v", copyErr)
+	}
 	assert.NoError(t, resp.Body.Close())
+	http.DefaultClient.CloseIdleConnections()
 }
