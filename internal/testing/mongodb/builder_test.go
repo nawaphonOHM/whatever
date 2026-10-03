@@ -1,0 +1,76 @@
+package mongodb
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+)
+
+const (
+	testMaxPoolLimit  = uint64(200)
+	testConfigMaxPool = uint64(50)
+	testConfigMinPool = uint64(10)
+)
+
+func TestBuildURI_Defaults(t *testing.T) {
+	opts := DefaultOptions()
+	uri := BuildURI(opts, false)
+	assert.Equal(t, "mongodb://localhost:27017/?uuidRepresentation=unspecified&tls=false", uri)
+}
+
+func TestBuildURI_FullOptions(t *testing.T) {
+	opts := NewOptions(
+		WithProtocol("mongodb+srv"),
+		WithHost("cluster0.example.com"),
+		WithPort(0),
+		WithDatabase("analytics"),
+		WithUsername("admin"),
+		WithPassword("secret"),
+		WithAuthSource("admin"),
+		WithAppName("my-test-suite"),
+		WithDirectConnection(true),
+		WithUUIDRepresentation("csharpLegacy"),
+	)
+	uri := BuildURI(opts, true)
+	expected := "mongodb+srv://admin:secret@cluster0.example.com/analytics" +
+		"?uuidRepresentation=csharpLegacy&tls=true&authSource=admin&appName=my-test-suite&directConnection=true"
+	assert.Equal(t, expected, uri)
+}
+
+func TestBuildURI_NilOptions(t *testing.T) {
+	uri := BuildURI(nil, false)
+	assert.Equal(t, "mongodb://localhost:27017/?uuidRepresentation=unspecified&tls=false", uri)
+}
+
+func TestBuildClientOptions_Configuration(t *testing.T) {
+	extra := options.Client().SetMaxPoolSize(testMaxPoolLimit)
+	opts := NewOptions(
+		WithHost("127.0.0.1"),
+		WithPort(testCustomPort),
+		WithDatabase("test_db"),
+		WithConnectTimeout(3*time.Second),
+		WithServerSelectionTimeout(2*time.Second),
+		WithSocketTimeout(4*time.Second),
+		WithAppName("app-test"),
+		WithPoolLimits(testConfigMaxPool, testConfigMinPool),
+		WithDirectConnection(true),
+	)
+
+	driverOpts := BuildClientOptions(opts, extra)
+	require.NotNil(t, driverOpts)
+	assert.Equal(t, 3*time.Second, *driverOpts.ConnectTimeout)
+	assert.Equal(t, 2*time.Second, *driverOpts.ServerSelectionTimeout)
+	assert.Equal(t, 4*time.Second, *driverOpts.Timeout)
+	assert.Equal(t, "app-test", *driverOpts.AppName)
+	assert.True(t, *driverOpts.Direct)
+	assert.Equal(t, testMaxPoolLimit, *driverOpts.MaxPoolSize)
+}
+
+func TestBuildClientOptionsWithTLS_Override(t *testing.T) {
+	opts := NewOptions(WithHost("127.0.0.1"), WithTLS(false))
+	driverOpts := BuildClientOptionsWithTLS(opts, true)
+	require.NotNil(t, driverOpts)
+}
