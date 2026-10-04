@@ -13,11 +13,13 @@ func resolveURI(o *Options) string {
 }
 
 func resolveURIFromOptions(o *Options) string {
-	uri := o.URI
-	if o != nil && o.EnableTLS {
-		return injectTLSQueryParam(uri)
+	if o == nil {
+		return ""
 	}
-	return uri
+	if o.EnableTLS {
+		return injectTLSQueryParam(o.URI)
+	}
+	return o.URI
 }
 
 func resolveEnableTLS(o *Options) bool {
