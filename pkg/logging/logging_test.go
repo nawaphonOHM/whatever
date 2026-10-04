@@ -83,3 +83,17 @@ func TestLogging_SeverityFunctions(t *testing.T) {
 	emitSeverityLogs()
 	verifySeverityEntries(t, parseJSONLogs(t, buf.Bytes()))
 }
+
+func TestLogging_Flush(t *testing.T) {
+	buf := new(bytes.Buffer)
+	cleanup := core.CaptureLogs(buf, logging.LevelInfo)
+	defer cleanup()
+
+	logging.Info("test flush message", "key_f", "val_f")
+	logging.Flush()
+
+	entries := parseJSONLogs(t, buf.Bytes())
+	require.Len(t, entries, 1)
+	assert.Equal(t, "test flush message", entries[0]["msg"])
+	assert.Equal(t, "val_f", entries[0]["key_f"])
+}

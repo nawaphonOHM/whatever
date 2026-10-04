@@ -15,10 +15,11 @@ func (w *Worker) handleExitEvent(ctx context.Context, event *LogEvent, logger *s
 }
 
 func (w *Worker) dispatchExit(ctx context.Context, event *LogEvent, logger *slog.Logger) {
-	switch event.ExitFlag {
-	case ExitAbnormal:
+	if event.ExitFlag == ExitAbnormal {
 		w.handleAbnormalExit(ctx, event, logger)
-	case ExitGraceful:
+		return
+	}
+	if event.ExitFlag == ExitGraceful {
 		w.handleGracefulExit()
 	}
 }

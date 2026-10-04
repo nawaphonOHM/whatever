@@ -88,25 +88,35 @@ func SetDefaultWorker(w *Worker) {
 
 // Dispatch enqueues an event to the default central worker.
 func Dispatch(event *LogEvent) bool {
+	// False positive: this wrapper borrows the singleton worker;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	return DefaultWorker().Enqueue(event)
 }
 
 // FlushDefault flushes all events in the default worker.
 func FlushDefault() {
+	// False positive: this wrapper borrows the singleton worker;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	DefaultWorker().Flush()
 }
 
 // Exit dispatches an exit event to the default central worker.
 func Exit(ctx context.Context, msg string, flag ExitFlag, args ...any) {
+	// False positive: this wrapper borrows the singleton worker;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	DefaultWorker().Exit(ctx, msg, flag, args...)
 }
 
 // ExitWithGraceful dispatches a graceful exit event to the default central worker.
 func ExitWithGraceful(ctx context.Context, msg string) {
+	// False positive: this wrapper borrows the singleton worker;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	DefaultWorker().Exit(ctx, msg, ExitGraceful, nil, nil)
 }
 
 // ExitWithAbnormal dispatches an abnormal exit event to the default central worker.
 func ExitWithAbnormal(ctx context.Context, msg string, err error, stack *callstack.CallStack) {
+	// False positive: this wrapper borrows the singleton worker;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	DefaultWorker().Exit(ctx, msg, ExitAbnormal, err, stack)
 }

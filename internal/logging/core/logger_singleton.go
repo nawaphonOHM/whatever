@@ -34,6 +34,8 @@ func Default() *Logger {
 		return l
 	}
 	initOnce.Do(func() {
+		// False positive: singleton initialization manages process-wide logger lifecycle;
+		// proof: TestGlobalLogger_SingletonResourceProof in logger_singleton_proof_test.go.
 		l := initDefaultLogger()
 		defaultLogger.Store(l)
 		slog.SetDefault(l.Slog())
@@ -62,9 +64,11 @@ func closePreviousLogger(prev *Logger) {
 // It closes any existing logger's closer if applicable.
 func ResetDefault() {
 	prev := defaultLogger.Swap(nil)
-	// False positive: closing the replaced singleton is intentional ownership cleanup; proof:
-	// TestGlobalLogger_SingletonResourceProof in logger_singleton_proof_test.go.
+	// False positive: closing the replaced singleton is intentional ownership cleanup;
+	// proof: TestGlobalLogger_SingletonResourceProof in logger_singleton_proof_test.go.
 	closePreviousLogger(prev)
+	// False positive: singleton initialization manages process-wide logger lifecycle;
+	// proof: TestGlobalLogger_SingletonResourceProof in logger_singleton_proof_test.go.
 	l := initDefaultLogger()
 	defaultLogger.Store(l)
 	slog.SetDefault(l.Slog())

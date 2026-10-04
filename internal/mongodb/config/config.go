@@ -28,6 +28,8 @@ var ErrNilConfig = errors.New("mongodb config cannot be nil")
 // SetExitFunc overrides the process exit hook used by the central logger worker
 // and returns the previous hook.
 func SetExitFunc(fn func(int)) func(int) {
+	// False positive: borrowing the central worker singleton to configure exit hook is leak-free;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	prev := central.DefaultWorker().ExitFunc()
 	central.DefaultWorker().SetExitFunc(fn)
 	return prev

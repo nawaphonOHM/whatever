@@ -8,8 +8,6 @@ import (
 const (
 	testSampleRateBelowZero = -0.01
 	testSampleRateAboveOne  = 1.0001
-	testSampleRateNegative  = -0.5
-	testSampleRateHighOut   = 1.5
 )
 
 // TestConfig_Validate_SampleRateValid tests valid boundary and interior sample rates.

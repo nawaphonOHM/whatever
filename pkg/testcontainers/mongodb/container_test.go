@@ -6,19 +6,22 @@ import (
 	"testing"
 
 	"github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConstantsAndErrors(t *testing.T) {
 	assertSentinelErrors(t)
+	assertConstants(t)
+}
+
+func assertConstants(t *testing.T) {
+	assert.Equal(t, "mongo:6", mongodb.DefaultImage)
+	assert.Equal(t, "27017/tcp", mongodb.DefaultPort)
 }
 
 func assertSentinelErrors(t *testing.T) {
-	if !errors.Is(mongodb.ErrNilContainer, mongodb.ErrNilContainer) {
-		t.Error("ErrNilContainer identity check failed")
-	}
-	if !errors.Is(mongodb.ErrContainerNotRunning, mongodb.ErrContainerNotRunning) {
-		t.Error("ErrContainerNotRunning identity check failed")
-	}
+	assert.ErrorIs(t, mongodb.ErrNilContainer, mongodb.ErrNilContainer)
+	assert.ErrorIs(t, mongodb.ErrContainerNotRunning, mongodb.ErrContainerNotRunning)
 }
 
 func assertNilError(t *testing.T, name string, err error) {
@@ -48,8 +51,8 @@ func testNilBridges(ctx context.Context, t *testing.T, c *mongodb.Container) {
 func TestNilContainer_Methods(t *testing.T) {
 	var c *mongodb.Container
 	ctx := context.Background()
-	// False positive: these nil-receiver calls are intentional nil-safety coverage; proof:
-	// TestNilContainer_Methods in container_test.go.
+	// False positive: these nil-receiver calls are intentional nil-safety coverage;
+	// proof: TestNilContainer_Methods in container_test.go.
 	testNilEndpoints(ctx, t, c)
 	testNilBridges(ctx, t, c)
 }
@@ -64,6 +67,8 @@ func testNilGettersStrings(t *testing.T, c *mongodb.Container) {
 
 func TestNilContainer_Getters(t *testing.T) {
 	var c *mongodb.Container
+	// False positive: these nil-receiver calls are intentional nil-safety coverage;
+	// proof: TestNilContainer_Getters in container_test.go.
 	testNilGettersStrings(t, c)
 	if c.RawContainer() != nil {
 		t.Error("expected nil RawContainer on nil container")

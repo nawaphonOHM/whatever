@@ -46,6 +46,7 @@ func TestPackageLevel_CentralWorker(t *testing.T) {
 func setupPackageWorker(t *testing.T, logger *slog.Logger) *atomic.Int32 {
 	t.Helper()
 	var exitCode atomic.Int32
+	exitCode.Store(-1)
 	w := newTestWorker(t, logger, func(code int) { exitCode.Store(int32(code)) })
 	previous := DefaultWorker()
 	SetDefaultWorker(w)
@@ -59,6 +60,30 @@ func assertPackageExits(t *testing.T, exitCode *atomic.Int32) {
 	assert.Equal(t, int32(0), exitCode.Load())
 	ExitWithAbnormal(context.Background(), "pkg abnormal", errors.New("err"), nil)
 	assert.Equal(t, int32(1), exitCode.Load())
+}
+
+func assertBufferContainsAll(t *testing.T, buf *bytes.Buffer, messages ...string) {
+	t.Helper()
+	out := buf.String()
+	for _, msg := range messages {
+		assert.Contains(t, out, msg)
+	}
+}
+
+func TestPackageLevel_Exit(t *testing.T) {
+	buf := &bytes.Buffer{}
+	exitCode := setupPackageWorker(t, newJSONLogger(buf))
+
+	Exit(context.Background(), "pkg exit none", ExitNone)
+	assert.Equal(t, int32(-1), exitCode.Load())
+
+	Exit(context.Background(), "pkg exit graceful", ExitGraceful)
+	assert.Equal(t, int32(0), exitCode.Load())
+
+	Exit(context.Background(), "pkg exit abnormal", ExitAbnormal, errors.New("err"))
+	assert.Equal(t, int32(1), exitCode.Load())
+
+	assertBufferContainsAll(t, buf, "pkg exit none", "pkg exit graceful", "pkg exit abnormal")
 }
 
 func TestWorker_EventSpecificLogger(t *testing.T) {

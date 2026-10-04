@@ -66,3 +66,19 @@ func TestDefaultConfig_Values(t *testing.T) {
 	assert.Equal(t, defaultIdleTimeoutSec*time.Second, cfg.IdleTimeout)
 	assert.Equal(t, defaultTimeoutSec*time.Second, cfg.ShutdownTimeout)
 }
+
+// TestNewFromRegistrations initializes server and mounts registered routes.
+func TestNewFromRegistrations(t *testing.T) {
+	t.Setenv(envGinMode, gin.TestMode)
+
+	regs := sampleRegs()
+	srv, err := NewFromRegistrations(regs)
+	require.NoError(t, err)
+	require.NotNil(t, srv)
+	require.NotNil(t, srv.Engine)
+	require.NotNil(t, srv.Config)
+
+	code, body := getJSON(t, srv.Engine, itemsPath)
+	assert.Equal(t, http.StatusOK, code)
+	assertItemsOK(t, body)
+}

@@ -51,3 +51,46 @@ func TestStartREST_DuplicateRouteConflict(t *testing.T) {
 	err := StartREST(bp)
 	assert.ErrorIs(t, err, ErrDuplicateRoute)
 }
+
+func TestStartREST_NilAPI(t *testing.T) {
+	reg := &RRestAPIRegistration{
+		Prefix: "/x",
+		Apis:   []*ExportableAPI{nil},
+	}
+	bp := NewBluePrint().WithAPIs(reg)
+
+	err := StartREST(bp)
+	assert.ErrorIs(t, err, ErrNilAPI)
+}
+
+func TestStartREST_NilHandler(t *testing.T) {
+	api := &ExportableAPI{
+		Path:    "/y",
+		Method:  GET,
+		Handler: nil,
+	}
+	reg := &RRestAPIRegistration{
+		Prefix: "/x",
+		Apis:   []*ExportableAPI{api},
+	}
+	bp := NewBluePrint().WithAPIs(reg)
+
+	err := StartREST(bp)
+	assert.ErrorIs(t, err, ErrNilHandler)
+}
+
+func TestStartREST_InvalidMethod(t *testing.T) {
+	api := &ExportableAPI{
+		Path:    "/y",
+		Method:  HTTPMethod(invalidMethod),
+		Handler: func(Context) Response { return OK("ok") },
+	}
+	reg := &RRestAPIRegistration{
+		Prefix: "/x",
+		Apis:   []*ExportableAPI{api},
+	}
+	bp := NewBluePrint().WithAPIs(reg)
+
+	err := StartREST(bp)
+	assert.ErrorIs(t, err, ErrInvalidMethod)
+}

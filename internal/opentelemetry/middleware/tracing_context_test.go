@@ -27,8 +27,8 @@ func buildTestSpanContext(t *testing.T) context.Context {
 }
 
 func TestContext_GetTraceID_GetSpanID_NilSafety(t *testing.T) {
-	// False positive: a nil Gin context is intentional nil-safety coverage; proof:
-	// TestContext_GetTraceID_GetSpanID_NilSafety in tracing_context_test.go.
+	// False positive: a nil Gin context is intentional nil-safety coverage;
+	// proof: TestContext_GetTraceID_GetSpanID_NilSafety in tracing_context_test.go.
 	assert.Empty(t, GetTraceID(nil))
 	assert.Empty(t, GetSpanID(nil))
 
@@ -59,8 +59,8 @@ func TestContext_GetTraceID_GetSpanID_FromSpanContext(t *testing.T) {
 }
 
 func TestContext_NilHelpers(t *testing.T) {
-	// False positive: nil contexts and requests are intentional defensive-path coverage; proof:
-	// TestContext_NilHelpers in tracing_context_test.go.
+	// False positive: nil contexts and requests are intentional defensive-path coverage;
+	// proof: TestContext_NilHelpers in tracing_context_test.go.
 	injectTraceContext(nil, nil)
 	enrichSpanAfterNext(nil, nil)
 	recordSpanErrors(nil, nil)
