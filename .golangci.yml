@@ -23,6 +23,7 @@ linters:
     - misspell
     - revive
     - depguard
+    - modernize
   # All available settings of specific linters.
   settings:
     errcheck:
