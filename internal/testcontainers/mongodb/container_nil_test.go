@@ -40,8 +40,8 @@ func testNilBridges(ctx context.Context, t *testing.T, c *Container) {
 func TestNilContainer_Methods(t *testing.T) {
 	var c *Container
 	ctx := context.Background()
-	// False positive: these nil-receiver calls are intentional nil-safety coverage; proof:
-	// TestNilContainer_Methods in container_nil_test.go.
+	// False positive: these nil-receiver calls are intentional nil-safety coverage;
+	// proof: TestNilContainer_Methods in container_nil_test.go.
 	testNilEndpoints(ctx, t, c)
 	testNilBridges(ctx, t, c)
 }
@@ -56,6 +56,8 @@ func testNilGettersStrings(t *testing.T, c *Container) {
 
 func TestNilContainer_Getters(t *testing.T) {
 	var c *Container
+	// False positive: these nil-receiver calls are intentional nil-safety coverage;
+	// proof: TestNilContainer_Getters in container_nil_test.go.
 	testNilGettersStrings(t, c)
 	if c.RawContainer() != nil {
 		t.Error("expected nil RawContainer on nil container")

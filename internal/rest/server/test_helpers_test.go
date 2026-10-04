@@ -22,8 +22,6 @@ const (
 	envServerHost     = "OHM9996_SERVER_HOST"
 	envAppVersion     = "OHM9996_APP_VERSION"
 	customPort        = 9090
-	customReadSec     = 5
-	customIdleSec     = 30
 	appVersionValue   = "2.0.0"
 	invalidMethodCode = 999
 )

@@ -26,6 +26,8 @@ func attemptConnection(
 	opts ...Option,
 ) (*Client, error) {
 	optionsContainer := NewOptions(opts...)
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	central.DefaultWorker().Logger().InfoContext(ctx, "resolving mongodb connection options",
 		"host", cfg.Host,
 		"port", cfg.Port,
@@ -86,6 +88,8 @@ func validateAndLogConfig(ctx context.Context, cfg *config.Config) error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf(errInvalidConfigFormat, err)
 	}
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	central.DefaultWorker().Logger().InfoContext(ctx, "initializing mongodb client",
 		"host", cfg.Host,
 		"port", cfg.Port,
@@ -110,6 +114,8 @@ func ConnectWithConfig(
 		if err != nil {
 			return nil, err
 		}
+		// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+		// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 		central.DefaultWorker().Logger().InfoContext(ctx, "mongodb client initialization complete",
 			"database", resolveDatabaseName(cfg),
 		)

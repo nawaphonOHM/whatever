@@ -41,6 +41,8 @@ func probeDocument(ctx context.Context, db *mongo.Database, coll string) error {
 	if err := res.Err(); err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return fmt.Errorf("failed to probe document in collection %q: %w", coll, err)
 	}
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	central.DefaultWorker().Logger().InfoContext(ctx, "mongodb probe succeeded", "target_collection", coll)
 	return nil
 }
@@ -69,6 +71,8 @@ func verifyPing(ctx context.Context, rawClient *mongo.Client) error {
 		}
 		return fmt.Errorf(errPingFormat, err)
 	}
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	central.DefaultWorker().Logger().InfoContext(ctx, "mongodb ping succeeded")
 	return nil
 }

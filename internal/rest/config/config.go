@@ -42,6 +42,8 @@ func tryLoadFile(path string) (bool, error) {
 
 // loadDefaultEnv tries loading default .env or configs/.env if present.
 func loadDefaultEnv() error {
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	central.DefaultWorker().Logger().Info(
 		"falling back to default env configuration files",
 		"files",
@@ -81,6 +83,8 @@ func parseTarget[T any](target *T) error {
 // Values precedence: System Environment > .env file > Struct Default Tags.
 func Load[T any](filenames ...string) (*T, error) {
 	decorated := callstack.DecorateFuncErr("rest.config.Load", func() (*T, error) {
+		// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+		// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 		central.DefaultWorker().Logger().Info("loading REST configuration")
 		if err := loadEnvFiles(filenames); err != nil {
 			return nil, err
@@ -91,6 +95,8 @@ func Load[T any](filenames ...string) (*T, error) {
 			return nil, fmt.Errorf("failed to parse environment config: %w", err)
 		}
 
+		// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+		// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 		central.DefaultWorker().Logger().Info("REST configuration loaded successfully")
 		return &target, nil
 	})

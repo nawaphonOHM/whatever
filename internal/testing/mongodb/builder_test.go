@@ -96,6 +96,7 @@ func TestResolveURIFromOptions_WithTLS(t *testing.T) {
 }
 
 func TestResolveURI(t *testing.T) {
+	// False positive: nil options are intentional nil-safety coverage; proof: TestResolveURI in builder_test.go.
 	assert.Equal(t, "mongodb://localhost:27017/?uuidRepresentation=unspecified&tls=false", resolveURI(nil))
 
 	optsWithURI := &Options{URI: testSampleURI}

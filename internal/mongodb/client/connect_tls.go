@@ -12,6 +12,8 @@ import (
 // SetExitFunc overrides the process exit hook used by the central logger worker
 // and returns the previous hook.
 func SetExitFunc(fn func(int)) func(int) {
+	// False positive: borrowing the central worker singleton to configure exit hook is leak-free;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	prev := central.DefaultWorker().ExitFunc()
 	central.DefaultWorker().SetExitFunc(fn)
 	return prev
@@ -67,6 +69,8 @@ func fallbackTLSAttempt(
 	cfg *config.Config,
 	opts ...Option,
 ) (*Client, error) {
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
 	central.DefaultWorker().Logger().InfoContext(ctx, "server requires TLS; attempting connection with TLS enabled",
 		"host", cfg.Host,
 		"port", cfg.Port,

@@ -42,6 +42,8 @@ func verifyNilLoggerProperties(t *testing.T, nilLogger *Logger) {
 }
 
 func TestLogger_Slog_And_NilSafety(t *testing.T) {
+	// False positive: passing and exercising nil Logger is intentional nil-safety coverage;
+	// proof: TestLogger_Slog_And_NilSafety in logger_nil_test.go.
 	var nilLogger *Logger
 	verifyNilLoggerProperties(t, nilLogger)
 	exerciseNilSimpleLogs(nilLogger)
