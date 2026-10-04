@@ -15,7 +15,7 @@ import (
 // assertProblemResponse verifies the unmarshaled problem details object.
 func assertProblemResponse(
 	t *testing.T,
-	prob intprob.ProblemDetails,
+	prob intprob.PProblemDetails,
 	tc problemTestCase,
 ) {
 	assert.Equal(t, tc.expectedStatus, prob.Status)
@@ -46,7 +46,7 @@ func runProblemTest(t *testing.T, tc problemTestCase) {
 	w := performProblemRequest(t, tc.endpoint, tc.handler)
 	assert.Equal(t, tc.expectedStatus, w.Code)
 	assert.Equal(t, MediaTypeProblemJSON, w.Header().Get("Content-Type"))
-	var prob intprob.ProblemDetails
+	var prob intprob.PProblemDetails
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &prob))
 	assertProblemResponse(t, prob, tc)
 }

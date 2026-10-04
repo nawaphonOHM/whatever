@@ -61,22 +61,22 @@ func TestNew_NoDetails(t *testing.T) {
 	assert.Nil(t, prob.Details)
 }
 
-func TestProblemDetails_StatusCode(t *testing.T) {
-	var nilProb *ProblemDetails
+func TestPProblemDetails_StatusCode(t *testing.T) {
+	var nilProb *PProblemDetails
 	assert.Equal(t, http.StatusInternalServerError, nilProb.StatusCode())
 
-	zeroProb := &ProblemDetails{}
+	zeroProb := &PProblemDetails{}
 	assert.Equal(t, http.StatusInternalServerError, zeroProb.StatusCode())
 
-	customProb := &ProblemDetails{Status: http.StatusTeapot}
+	customProb := &PProblemDetails{Status: http.StatusTeapot}
 	assert.Equal(t, http.StatusTeapot, customProb.StatusCode())
 }
 
-func TestProblemDetails_UnknownStatusTitle(t *testing.T) {
+func TestPProblemDetails_UnknownStatusTitle(t *testing.T) {
 	probCustom := New(testUnknownStatus, testCustomCode, "Unknown error status")
 	assert.Equal(t, "Error", probCustom.Title)
 
-	probZero := &ProblemDetails{}
+	probZero := &PProblemDetails{}
 	probZero.ensureTitle()
 	assert.Equal(t, "Internal Server Error", probZero.Title)
 }

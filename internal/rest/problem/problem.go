@@ -13,8 +13,8 @@ const MediaTypeProblemJSON = "application/problem+json"
 // DefaultProblemType is default URI reference identifying problem type.
 const DefaultProblemType = "about:blank"
 
-// ProblemDetails represents an RFC 9457 Problem Details object.
-type ProblemDetails struct {
+// PProblemDetails represents an RFC 9457 Problem Details object.
+type PProblemDetails struct {
 	Details  any    `json:"details,omitempty"`
 	Type     string `json:"type"`
 	Title    string `json:"title"`
@@ -24,16 +24,16 @@ type ProblemDetails struct {
 	Status   int    `json:"status"`
 }
 
-// StatusCode returns the HTTP status code for the ProblemDetails.
-func (p *ProblemDetails) StatusCode() int {
+// StatusCode returns the HTTP status code for the PProblemDetails.
+func (p *PProblemDetails) StatusCode() int {
 	if p == nil || p.Status == 0 {
 		return http.StatusInternalServerError
 	}
 	return p.Status
 }
 
-// Write serializes the ProblemDetails object to the Gin context.
-func (p *ProblemDetails) Write(c *gin.Context) {
+// Write serializes the PProblemDetails object to the Gin context.
+func (p *PProblemDetails) Write(c *gin.Context) {
 	if c == nil || p == nil {
 		return
 	}
@@ -42,7 +42,7 @@ func (p *ProblemDetails) Write(c *gin.Context) {
 	c.JSON(p.StatusCode(), p)
 }
 
-func (p *ProblemDetails) ensureDefaults(c *gin.Context) {
+func (p *PProblemDetails) ensureDefaults(c *gin.Context) {
 	if p.Type == "" {
 		p.Type = DefaultProblemType
 	}
@@ -50,7 +50,7 @@ func (p *ProblemDetails) ensureDefaults(c *gin.Context) {
 	p.ensureInstance(c)
 }
 
-func (p *ProblemDetails) ensureTitle() {
+func (p *PProblemDetails) ensureTitle() {
 	if p.Title != "" {
 		return
 	}
@@ -60,20 +60,20 @@ func (p *ProblemDetails) ensureTitle() {
 	}
 }
 
-func (p *ProblemDetails) ensureInstance(c *gin.Context) {
+func (p *PProblemDetails) ensureInstance(c *gin.Context) {
 	if p.Instance != "" || c.Request == nil {
 		return
 	}
 	p.extractURLPath(c)
 }
 
-func (p *ProblemDetails) extractURLPath(c *gin.Context) {
+func (p *PProblemDetails) extractURLPath(c *gin.Context) {
 	if c.Request.URL != nil {
 		p.Instance = c.Request.URL.Path
 	}
 }
 
-func (p *ProblemDetails) setDetails(details ...any) {
+func (p *PProblemDetails) setDetails(details ...any) {
 	if len(details) == 1 {
 		p.Details = details[0]
 	} else if len(details) > 1 {
@@ -86,12 +86,12 @@ func New(
 	statusCode int,
 	code, detail string,
 	details ...any,
-) *ProblemDetails {
+) *PProblemDetails {
 	title := http.StatusText(statusCode)
 	if title == "" {
 		title = "Error"
 	}
-	prob := &ProblemDetails{
+	prob := &PProblemDetails{
 		Type:   DefaultProblemType,
 		Title:  title,
 		Status: statusCode,

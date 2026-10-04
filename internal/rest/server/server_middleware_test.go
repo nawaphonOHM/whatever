@@ -39,9 +39,9 @@ func newMiddlewareEngine(t *testing.T, enableAccessLog bool) *gin.Engine {
 func decodeProblem(
 	t *testing.T,
 	body []byte,
-) problem.ProblemDetails {
+) problem.PProblemDetails {
 	t.Helper()
-	var prob problem.ProblemDetails
+	var prob problem.PProblemDetails
 	require.NoError(t, json.Unmarshal(body, &prob))
 	return prob
 }
