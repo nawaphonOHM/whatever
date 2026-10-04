@@ -3,7 +3,7 @@ package client
 import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
 )
 
 // applyExtraOptions merges additional driver options if provided.

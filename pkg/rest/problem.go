@@ -3,7 +3,7 @@ package rest
 import (
 	"net/http"
 
-	intprob "github.com/nawaphonOHM/whatever/internal/rest/problem"
+	intprob "github.com/nawaphonOHM/whatever/v2/internal/rest/problem"
 )
 
 func newPProblemDetails(

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
 )
 
 func (w *Worker) handleExitEvent(ctx context.Context, event *LogEvent, logger *slog.Logger) {

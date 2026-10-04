@@ -5,8 +5,8 @@ package config
 import (
 	"fmt"
 
-	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	intcfg "github.com/nawaphonOHM/whatever/v2/internal/rest/config"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 // Default configuration constants.

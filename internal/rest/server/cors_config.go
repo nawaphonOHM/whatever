@@ -1,9 +1,9 @@
 package server
 
 import (
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
-	"github.com/nawaphonOHM/whatever/internal/rest/middleware"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/middleware"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 // mapHTTPMethods converts HTTP methods into uppercase strings.

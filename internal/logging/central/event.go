@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
 )
 
 // LogEvent represents an envelope dispatched to the Central Log worker.

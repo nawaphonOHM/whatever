@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/core"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/core"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"

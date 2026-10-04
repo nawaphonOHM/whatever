@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 )
 
 // buildTracerProvider constructs a new SDK TracerProvider with batch processor, resource, and sampler.

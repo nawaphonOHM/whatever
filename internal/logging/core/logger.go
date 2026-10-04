@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
 )
 
 // Logger wraps log/slog.Logger with OpenTelemetry trace correlation,

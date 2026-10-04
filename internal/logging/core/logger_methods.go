@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 )
 
 // Trace logs at TRACE level.

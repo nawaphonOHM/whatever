@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	loggingconfig "github.com/nawaphonOHM/whatever/internal/logging/config"
-	"github.com/nawaphonOHM/whatever/internal/logging/core"
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	loggingconfig "github.com/nawaphonOHM/whatever/v2/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/core"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 )
 
 func captureProviderLogs(t *testing.T, fn func()) string {

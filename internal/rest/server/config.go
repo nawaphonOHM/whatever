@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	otelcfg "github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	otelcfg "github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 )
 
 const (

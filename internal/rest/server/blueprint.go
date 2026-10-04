@@ -3,10 +3,10 @@ package server
 import (
 	"fmt"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
-	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	intcfg "github.com/nawaphonOHM/whatever/v2/internal/rest/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 func loadConfig() (*Config, error) {

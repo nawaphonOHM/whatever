@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
-	"github.com/nawaphonOHM/whatever/internal/rest/health"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/health"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

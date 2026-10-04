@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
-	"github.com/nawaphonOHM/whatever/internal/logging/core"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/core"
 )
 
 // Trace logs a message at TRACE level using the default logger.

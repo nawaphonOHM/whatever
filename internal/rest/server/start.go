@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 )
 
 // StartREST initializes and runs the HTTP server.

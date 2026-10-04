@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nawaphonOHM/whatever/pkg/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/pkg/mongodb"
 )
 
 // Constants for nil client test cases.

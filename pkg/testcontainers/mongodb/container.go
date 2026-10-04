@@ -3,7 +3,7 @@
 package mongodb
 
 import (
-	"github.com/nawaphonOHM/whatever/internal/testcontainers/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/internal/testcontainers/mongodb"
 )
 
 // Container wraps a running MongoDB Testcontainer and provides connection utilities.

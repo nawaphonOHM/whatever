@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
-	"github.com/nawaphonOHM/whatever/internal/rest/health"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/health"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 // wrapMiddleware adapts a framework Middleware to gin.HandlerFunc.

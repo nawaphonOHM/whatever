@@ -5,7 +5,7 @@ package mongodb
 import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"github.com/nawaphonOHM/whatever/internal/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
 )
 
 // TestClient wraps mongo client handles with testing and fixture utilities.

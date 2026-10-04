@@ -24,7 +24,7 @@ const (
 )
 
 // DefaultTracerName is the default tracer instrumentation name.
-const DefaultTracerName = "github.com/nawaphonOHM/whatever/internal/opentelemetry/middleware"
+const DefaultTracerName = "github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/middleware"
 
 // statusServerError is the minimum status code representing a server error.
 const statusServerError = 500

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 )
 
 // resolveExitFunc selects non-nil exit function or defaults to os.Exit.

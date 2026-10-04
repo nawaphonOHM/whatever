@@ -1,6 +1,6 @@
 package server
 
-import "github.com/nawaphonOHM/whatever/internal/rest/contracts"
+import "github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 
 // Set stores a key/value pair exclusively for this context.
 func (c *Context) Set(key string, value any) {

@@ -1,7 +1,7 @@
 package mongodb
 
 import (
-	"github.com/nawaphonOHM/whatever/internal/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
 )
 
 // DefaultOptions returns an Options struct populated with recommended test defaults.

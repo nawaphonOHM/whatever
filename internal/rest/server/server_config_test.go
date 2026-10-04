@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
+	intcfg "github.com/nawaphonOHM/whatever/v2/internal/rest/config"
 	"github.com/stretchr/testify/require"
 )
 

@@ -3,8 +3,8 @@ package mongodb
 import (
 	"context"
 
-	"github.com/nawaphonOHM/whatever/internal/mongodb/client"
-	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
 )
 
 // resolveHostPort retrieves both the mapped host and port from the container.

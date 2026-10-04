@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/rest/problem"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/problem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

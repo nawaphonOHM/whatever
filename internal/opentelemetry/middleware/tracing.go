@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 

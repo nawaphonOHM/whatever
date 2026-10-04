@@ -3,7 +3,7 @@
 package logging
 
 import (
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 )
 
 // Level represents supported logging severity levels.

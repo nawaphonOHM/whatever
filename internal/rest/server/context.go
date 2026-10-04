@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 )
 
 const serverContextKey = "_server_context"

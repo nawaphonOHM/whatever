@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
 )
 
 // TestBuildClientOptions_WithExtraDriverOptions tests merging extra options.

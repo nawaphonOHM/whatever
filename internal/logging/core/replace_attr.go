@@ -3,7 +3,7 @@ package core
 import (
 	"log/slog"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 )
 
 // ReplaceAttrFunc specifies a function to modify attributes before logging.

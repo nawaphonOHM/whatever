@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/pkg/testing/mongodb"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 	"github.com/stretchr/testify/assert"
 )
 
