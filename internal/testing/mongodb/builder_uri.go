@@ -112,7 +112,9 @@ func BuildURI(o *Options, enableTLS bool) string {
 		proto = o.Protocol
 	}
 	u := &url.URL{
-		Scheme:   proto,
+		Scheme: proto,
+		// False positive: nil User is intentional when credentials are absent; proof:
+		// TestBuildURI_URLStructNilUserProof in builder_nil_proof_test.go.
 		User:     buildUserInfo(o),
 		Host:     buildHost(o),
 		Path:     buildPath(o),

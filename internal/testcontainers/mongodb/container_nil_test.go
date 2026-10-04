@@ -40,6 +40,8 @@ func testNilBridges(ctx context.Context, t *testing.T, c *Container) {
 func TestNilContainer_Methods(t *testing.T) {
 	var c *Container
 	ctx := context.Background()
+	// False positive: these nil-receiver calls are intentional nil-safety coverage; proof:
+	// TestNilContainer_Methods in container_nil_test.go.
 	testNilEndpoints(ctx, t, c)
 	testNilBridges(ctx, t, c)
 }

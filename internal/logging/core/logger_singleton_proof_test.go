@@ -52,6 +52,7 @@ func assertCloserState(t *testing.T, tc *lifecycleTrackingCloser, closed bool, c
 func TestGlobalLogger_SingletonResourceProof(t *testing.T) {
 	defer ResetDefault()
 
+	// Global wrappers borrow the singleton; only ResetDefault should close it.
 	tc := &lifecycleTrackingCloser{}
 	l := NewJSON(tc, config.LevelTrace)
 	require.NotNil(t, l.closer)

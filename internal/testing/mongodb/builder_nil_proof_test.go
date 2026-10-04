@@ -34,6 +34,7 @@ func TestBuildURI_HelperNilProof(t *testing.T) {
 }
 
 func TestBuildURI_URLStructNilUserProof(t *testing.T) {
+	// This proves the nil User field flagged at BuildURI is valid url.URL state.
 	u := &url.URL{
 		Scheme:   DefaultProtocol,
 		User:     buildUserInfo(nil),

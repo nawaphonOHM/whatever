@@ -42,6 +42,8 @@ func TestBuildURI_FullOptions(t *testing.T) {
 }
 
 func TestBuildURI_NilOptions(t *testing.T) {
+	// False positive: nil options are intentional nil-safety coverage; proof:
+	// TestBuildURI_NilOptions in this file and TestBuildURI_NilOptionsProof in builder_nil_proof_test.go.
 	uri := BuildURI(nil, false)
 	assert.Equal(t, "mongodb://localhost:27017/?uuidRepresentation=unspecified&tls=false", uri)
 }
