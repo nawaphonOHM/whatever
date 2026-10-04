@@ -99,13 +99,13 @@ type traceCorrelationSetup struct {
 	server      *Server
 }
 
-func setupTraceCorrelation(t *testing.T) traceCorrelationSetup {
+func setupTraceCorrelation(t *testing.T) *traceCorrelationSetup {
 	t.Helper()
 	exporter, cleanup := setupTestTracer(t)
 	buf := new(bytes.Buffer)
 	resetLogger := setTestLogger(buf)
 	srv := buildTracedServer(t, DefaultConfig(), itemsBluePrint())
-	return traceCorrelationSetup{
+	return &traceCorrelationSetup{
 		exporter: exporter, cleanup: cleanup, resetLogger: resetLogger,
 		logBuffer: buf, server: srv,
 	}

@@ -58,14 +58,14 @@ func attachErrorHandlers(engine *gin.Engine) {
 
 // SetupMiddlewares attaches middlewares with custom CORS configuration.
 func (s *Server) SetupMiddlewares(
-	corsCfg middleware.CORSConfig,
+	corsCfg *middleware.CORSConfig,
 	loggerSkipPaths ...string,
 ) {
 	s.Engine.Use(otelmw.Middleware(s.resolveOTelConfig(loggerSkipPaths...)))
 	s.Engine.Use(middleware.RequestID())
 	if s.Config == nil || s.Config.EnableAccessLog {
 		skipPaths := defaultSkipPaths(loggerSkipPaths...)
-		s.Engine.Use(logger.WithConfig(logger.Config{SkipPaths: skipPaths}))
+		s.Engine.Use(logger.WithConfig(&logger.Config{SkipPaths: skipPaths}))
 	}
 	s.Engine.Use(middleware.Recovery(), middleware.CORS(corsCfg))
 	attachErrorHandlers(s.Engine)

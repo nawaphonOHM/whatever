@@ -38,8 +38,9 @@ func TestNewTestClient_NilTB(t *testing.T) {
 }
 
 func TestNewTestClient_SuccessAndCleanup(t *testing.T) {
+	setMockPingSuccess(t, nil)
 	mock := &mockTB{TB: t}
-	client := NewTestClient(mock, WithPing(false), WithDatabase("test_db"))
+	client := NewTestClient(mock, WithDatabase("test_db"))
 	require.NotNil(t, client)
 	assert.False(t, mock.fatalfCalled)
 	require.Len(t, mock.cleanups, 1)

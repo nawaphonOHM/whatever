@@ -16,11 +16,11 @@ func TestConfig_Validate_EndpointValid(t *testing.T) {
 		"[::1]:4317",
 	}
 
-	var cases []configValidateCase
+	var cases []*configValidateCase
 	for _, ep := range endpoints {
 		cfg := validTestConfig()
 		cfg.Endpoint = ep
-		cases = append(cases, configValidateCase{
+		cases = append(cases, &configValidateCase{
 			cfg:         cfg,
 			name:        ep,
 			expectedErr: "",
@@ -38,7 +38,7 @@ func createEndpointConfig(endpoint string) *Config {
 
 // TestConfig_Validate_EndpointInvalid tests invalid endpoint strings.
 func TestConfig_Validate_EndpointInvalid(t *testing.T) {
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{
 			cfg:         createEndpointConfig(""),
 			name:        "empty endpoint",

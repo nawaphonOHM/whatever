@@ -10,7 +10,7 @@ import (
 
 type dummyCustomizer struct{}
 
-func (dummyCustomizer) Customize(*testcontainers.GenericContainerRequest) error {
+func (*dummyCustomizer) Customize(*testcontainers.GenericContainerRequest) error {
 	return nil
 }
 
@@ -64,7 +64,7 @@ func TestWithEnv_NilEnv(t *testing.T) {
 }
 
 func TestWithContainerOptions(t *testing.T) {
-	c1 := dummyCustomizer{}
+	c1 := &dummyCustomizer{}
 	opts := NewOptions(WithContainerOptions(c1, nil))
 	require.Len(t, opts.ContainerOptions, 1)
 	assert.Equal(t, c1, opts.ContainerOptions[0])

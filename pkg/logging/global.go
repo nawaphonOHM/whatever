@@ -85,3 +85,8 @@ func LogAttrs(ctx context.Context, level Level, msg string, attrs ...slog.Attr) 
 	}
 	core.LogAttrs(ctx, slogLevel, msg, attrs...)
 }
+
+// Flush flushes any buffered log entries in the default central logger.
+func Flush() {
+	core.Flush()
+}

@@ -39,12 +39,12 @@ type Config struct {
 
 // Logger returns a structured logging middleware using the default logger.
 func Logger() gin.HandlerFunc {
-	return WithConfig(Config{Logger: slog.Default()})
+	return WithConfig(&Config{Logger: slog.Default()})
 }
 
 // WithLogger returns a logging middleware using a specific slog.Logger.
 func WithLogger(logger *slog.Logger) gin.HandlerFunc {
-	return WithConfig(Config{Logger: logger})
+	return WithConfig(&Config{Logger: logger})
 }
 
 // buildSkipMap creates a lookup map for skipped paths.
@@ -99,13 +99,20 @@ func logRequest(
 	logger.LogAttrs(ctx, level, httpRequestMsg, attrs...)
 }
 
-// WithConfig returns a structured logging middleware configured with options.
-func WithConfig(cfg Config) gin.HandlerFunc {
+func resolveLoggerConfig(cfg *Config) (*slog.Logger, map[string]bool) {
+	if cfg == nil {
+		return slog.Default(), make(map[string]bool)
+	}
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.Default()
 	}
-	skipMap := buildSkipMap(cfg.SkipPaths)
+	return logger, buildSkipMap(cfg.SkipPaths)
+}
+
+// WithConfig returns a structured logging middleware configured with options.
+func WithConfig(cfg *Config) gin.HandlerFunc {
+	logger, skipMap := resolveLoggerConfig(cfg)
 
 	return func(c *gin.Context) {
 		if skipMap[c.Request.URL.Path] {

@@ -18,8 +18,8 @@ type problemTestCase struct {
 }
 
 // buildProblemCases constructs problem test fixture cases.
-func buildProblemCases() []problemTestCase {
-	return []problemTestCase{
+func buildProblemCases() []*problemTestCase {
+	return []*problemTestCase{
 		{
 			handler: func(c *gin.Context) {
 				BadRequest("INVALID_INPUT", "Input error", "field").Write(c)

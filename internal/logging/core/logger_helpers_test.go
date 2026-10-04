@@ -48,8 +48,8 @@ type levelFilterCase struct {
 	expectLog     bool
 }
 
-func levelFilterCases() []levelFilterCase {
-	return []levelFilterCase{
+func levelFilterCases() []*levelFilterCase {
+	return []*levelFilterCase{
 		{
 			logAction: func(l *Logger) { l.Trace("trace") },
 			name:      "trace suppressed at info",

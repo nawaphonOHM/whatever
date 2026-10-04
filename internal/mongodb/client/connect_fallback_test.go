@@ -30,9 +30,14 @@ func createValidTestConfig() *config.Config {
 }
 
 func setupMockPing(fn func(context.Context, *mongo.Client) error) func() {
-	origPing := pingClient
-	pingClient = fn
-	return func() { pingClient = origPing }
+	cleanupPing := SetMockPing(fn)
+	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+		return nil
+	})
+	return func() {
+		cleanupPing()
+		cleanupProbe()
+	}
 }
 
 func setupExitCapture() (*bool, func()) {

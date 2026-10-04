@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 
+	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
 	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/pkg/logging"
@@ -49,21 +50,29 @@ func newServerFromConfig(
 func NewFromBluePrint(
 	bluePrint *contracts.BluePrint,
 ) (*Server, error) {
-	if bluePrint == nil {
-		logging.Error("failed to initialize REST server: blueprint is nil")
-		return nil, ErrNilBluePrint
-	}
-	cfg, err := loadConfig()
-	if err != nil {
-		return nil, err
-	}
-	return newServerFromConfig(cfg, bluePrint)
+	decorated := callstack.DecorateFuncErr("server.NewFromBluePrint", func() (*Server, error) {
+		if bluePrint == nil {
+			logging.Error("failed to initialize REST server: blueprint is nil")
+			return nil, ErrNilBluePrint
+		}
+		logging.Info("initializing REST server from blueprint")
+		cfg, err := loadConfig()
+		if err != nil {
+			return nil, err
+		}
+		return newServerFromConfig(cfg, bluePrint)
+	})
+	return decorated()
 }
 
 // NewFromRegistrations loads config and prepares a Server.
 func NewFromRegistrations(
 	registrations []*contracts.RRestAPIRegistration,
 ) (*Server, error) {
-	bp := contracts.NewBluePrint().WithAPIs(registrations...)
-	return NewFromBluePrint(bp)
+	decorated := callstack.DecorateFuncErr("server.NewFromRegistrations", func() (*Server, error) {
+		logging.Info("initializing REST server from registrations", "count", len(registrations))
+		bp := contracts.NewBluePrint().WithAPIs(registrations...)
+		return NewFromBluePrint(bp)
+	})
+	return decorated()
 }

@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-// attemptConnection establishes a driver client and optionally verifies ping.
+// attemptConnection establishes a driver client and verifies mandatory ping and probe.
 func attemptConnection(
 	ctx context.Context,
 	o *Options,
@@ -19,7 +20,7 @@ func attemptConnection(
 		return nil, fmt.Errorf(errCreateClientFormat, err)
 	}
 
-	if err := verifyClientPing(ctx, o, rawClient); err != nil {
+	if err := verifyClientPingAndProbe(ctx, o, rawClient); err != nil {
 		return nil, err
 	}
 	return NewClient(rawClient, o.Database), nil
@@ -54,19 +55,31 @@ func connectWithOptions(ctx context.Context, o *Options) (*TestClient, error) {
 
 // Connect creates a TestClient using functional options with two-phase TLS fallback.
 func Connect(ctx context.Context, opts ...Option) (*TestClient, error) {
-	o := NewOptions(opts...)
-	return connectWithOptions(ctx, o)
+	decorated := callstack.DecorateContextFunc(
+		"testing.mongodb.Connect",
+		func(ctx context.Context) (*TestClient, error) {
+			o := NewOptions(opts...)
+			return connectWithOptions(ctx, o)
+		},
+	)
+	return decorated(ctx)
 }
 
 // ConnectURI connects to MongoDB using a connection URI string and functional options.
 func ConnectURI(ctx context.Context, uri string, opts ...Option) (*TestClient, error) {
-	if strings.TrimSpace(uri) == "" {
-		return nil, ErrEmptyURI
-	}
-	allOpts := append([]Option{WithURI(uri)}, opts...)
-	o := NewOptions(allOpts...)
-	if o.Database == "" {
-		o.Database = extractDatabaseFromURI(uri)
-	}
-	return connectWithOptions(ctx, o)
+	decorated := callstack.DecorateContextFunc(
+		"testing.mongodb.ConnectURI",
+		func(ctx context.Context) (*TestClient, error) {
+			if strings.TrimSpace(uri) == "" {
+				return nil, ErrEmptyURI
+			}
+			allOpts := append([]Option{WithURI(uri)}, opts...)
+			o := NewOptions(allOpts...)
+			if o.Database == "" {
+				o.Database = extractDatabaseFromURI(uri)
+			}
+			return connectWithOptions(ctx, o)
+		},
+	)
+	return decorated(ctx)
 }

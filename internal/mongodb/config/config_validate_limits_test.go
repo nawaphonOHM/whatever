@@ -18,7 +18,7 @@ const (
 	errPortRangeMessage = "mongodb port must be between 1 and 65535"
 )
 
-func buildInvalidPortCases() []configValidateCase {
+func buildInvalidPortCases() []*configValidateCase {
 	c0 := validTestConfig()
 	c0.Port = testPortZero
 	cNeg := validTestConfig()
@@ -28,7 +28,7 @@ func buildInvalidPortCases() []configValidateCase {
 	cLarge := validTestConfig()
 	cLarge.Port = testPortLarge
 
-	return []configValidateCase{
+	return []*configValidateCase{
 		{cfg: c0, name: "port zero on standard scheme", expectedErr: errPortRangeMessage},
 		{cfg: cNeg, name: "negative port", expectedErr: errPortRangeMessage},
 		{cfg: cOver, name: "port overflow 65536", expectedErr: errPortRangeMessage},
@@ -36,7 +36,7 @@ func buildInvalidPortCases() []configValidateCase {
 	}
 }
 
-func buildValidPortCases() []configValidateCase {
+func buildValidPortCases() []*configValidateCase {
 	cMin := validTestConfig()
 	cMin.Port = testPortMin
 	cMax := validTestConfig()
@@ -48,7 +48,7 @@ func buildValidPortCases() []configValidateCase {
 	cSrvZero.Protocol = ProtocolMongoDBSrv
 	cSrvZero.Port = 0
 
-	return []configValidateCase{
+	return []*configValidateCase{
 		{cfg: cMin, name: "valid min boundary port 1", expectedErr: ""},
 		{cfg: cMax, name: "valid max boundary port 65535", expectedErr: ""},
 		{cfg: cStd, name: "valid standard port 27017", expectedErr: ""},
@@ -56,7 +56,7 @@ func buildValidPortCases() []configValidateCase {
 	}
 }
 
-func buildInvalidTimeoutCases() []configValidateCase {
+func buildInvalidTimeoutCases() []*configValidateCase {
 	cNegConn := validTestConfig()
 	cNegConn.ConnectTimeout = -1 * time.Second
 	cNegServer := validTestConfig()
@@ -66,7 +66,7 @@ func buildInvalidTimeoutCases() []configValidateCase {
 	cNegIdle := validTestConfig()
 	cNegIdle.MaxConnIdleTime = -1 * time.Second
 
-	return []configValidateCase{
+	return []*configValidateCase{
 		{cfg: cNegConn, name: "negative connect timeout", expectedErr: "mongodb connect timeout cannot be negative"},
 		{
 			cfg:         cNegServer,
@@ -82,7 +82,7 @@ func buildInvalidTimeoutCases() []configValidateCase {
 	}
 }
 
-func buildInvalidPoolCases() []configValidateCase {
+func buildInvalidPoolCases() []*configValidateCase {
 	cZeroMaxPool := validTestConfig()
 	cZeroMaxPool.MaxPoolSize = 0
 
@@ -90,7 +90,7 @@ func buildInvalidPoolCases() []configValidateCase {
 	cMinExceedsMax.MaxPoolSize = testLimitMaxPool
 	cMinExceedsMax.MinPoolSize = testLimitMinPool
 
-	return []configValidateCase{
+	return []*configValidateCase{
 		{
 			cfg:         cZeroMaxPool,
 			name:        "max pool size zero",

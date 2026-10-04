@@ -63,7 +63,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
 - [MongoDB Client (`pkg/mongodb`)](#mongodb-client-pkgmongodb)
   - [Connecting & Lifecycle](#connecting--lifecycle)
   - [Two-Phase Automatic TLS Fallback](#two-phase-automatic-tls-fallback)
-  - [Startup Ping Verification](#startup-ping-verification)
+  - [Startup Connectivity Verification](#startup-connectivity-verification)
   - [Database & Collection Handles](#database--collection-handles)
   - [Readiness & Health Verification](#readiness--health-verification)
   - [Raw Driver Access](#raw-driver-access)
@@ -1106,22 +1106,15 @@ func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
 
 To provide seamless connectivity across unencrypted local Docker instances, secured staging clusters, and cloud deployments (such as MongoDB Atlas), `mongodb.Connect(ctx)` implements an automated two-phase connection strategy:
 
-1. **Unencrypted Connection Attempt**: First attempts connection without TLS (`tls=false`). If `OHM9996_MONGODB_ENABLE_PING=true` (the default), an immediate connectivity ping is performed.
+1. **Unencrypted Connection Attempt**: First attempts connection without TLS (`tls=false`). A mandatory connectivity ping and collection/document probe verify the connection before initialization completes.
 2. **Automatic TLS Fallback**: If the server rejects the unencrypted connection with an error indicating TLS/SSL is required (such as `"server requires tls"`, `"server requires ssl"`, `"ssl handshake"`, `"tls handshake"`, or `"connection closed"`), the client transparently re-attempts connection with TLS enabled (`tls=true`).
-3. **Graceful Failure Handling**: If connection fails after fallback or due to fatal configuration errors, the client outputs diagnostic details to `os.Stderr`, invokes the process exit hook (`exitFunc(0)`), and returns the underlying error.
+3. **Failure Handling**: If connection fails after fallback or during the mandatory probes, the client routes structured diagnostics through Central Log and returns the underlying error.
 
-### Startup Ping Verification
+### Startup Connectivity Verification
 
-By default, `mongodb.Connect(ctx)` performs an active ping check during initialization to ensure that the remote MongoDB deployment is reachable before application routes begin serving traffic. If ping verification fails, the connection pool is immediately closed and a wrapped error is returned.
+`mongodb.Connect(ctx)` always performs an active ping check during initialization to ensure that the remote MongoDB deployment is reachable before application routes begin serving traffic. It then lists collections, selects a random collection when available, and probes a document with `FindOne`; an empty database is checked through the `__probe__` namespace. If either verification fails, the connection pool is immediately closed and a wrapped error is returned.
 
-In serverless architectures, lazy initialization flows, or environments where MongoDB may boot concurrently after the microservice starts, startup ping verification can be toggled via environment variable:
-
-```bash
-# Disable startup ping check for lazy or deferred initialization
-export OHM9996_MONGODB_ENABLE_PING=false
-```
-
-When startup ping verification is disabled, `mongodb.Connect(ctx)` initializes the client pool without blocking on network roundtrips. Applications can subsequently invoke `client.Ping(ctx)` on demand (e.g., inside readiness probes or background pollers).
+There is no configuration switch to bypass startup verification. Applications can additionally invoke `client.Ping(ctx)` on demand (for example, inside readiness probes or background pollers).
 
 ### Database & Collection Handles
 
@@ -1501,9 +1494,7 @@ func TestClientConnectionModes(t *testing.T) {
 	ctx := context.Background()
 
 	// Mode 1: Connect via URI string (e.g. from Testcontainers or external test DB)
-	clientURI, err := testmongo.ConnectURI(ctx, "mongodb://localhost:27017/test_db",
-		testmongo.WithPing(true),
-	)
+	clientURI, err := testmongo.ConnectURI(ctx, "mongodb://localhost:27017/test_db")
 	if err != nil {
 		t.Fatalf("URI connection failed: %v", err)
 	}
@@ -1765,7 +1756,6 @@ CORS policies are configured programmatically via blueprint metadata (`rest.NewC
 | `OHM9996_MONGODB_AUTH_SOURCE` | `string` | `""` (empty) | Authentication database name (e.g., `admin`) |
 | `OHM9996_MONGODB_APP_NAME` | `string` | `""` (empty) | Application name for connection metadata and diagnostics |
 | `OHM9996_MONGODB_UUID_REPRESENTATION` | `string` | `unspecified` | UUID binary representation (`unspecified`, `standard`, `csharpLegacy`, `javaLegacy`, `pythonLegacy`) |
-| `OHM9996_MONGODB_ENABLE_PING` | `bool` | `true` | Enables startup connectivity ping verification |
 | `OHM9996_MONGODB_CONNECT_TIMEOUT` | `duration` | `10s` | Maximum duration for initial TCP connection establishment |
 | `OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT` | `duration` | `5s` | Timeout for cluster server discovery and primary election |
 | `OHM9996_MONGODB_SOCKET_TIMEOUT` | `duration` | `10s` | Socket read and write operation timeout |

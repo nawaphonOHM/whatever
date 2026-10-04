@@ -29,7 +29,6 @@ structs or functional options, so importing applications use the standardized
 | `OHM9996_MONGODB_MAX_CONN_IDLE_TIME` | Maximum idle duration before an unused connection is closed | `10m` |
 | `OHM9996_MONGODB_MAX_POOL_SIZE` | Maximum number of concurrent connections in the pool | `100` |
 | `OHM9996_MONGODB_MIN_POOL_SIZE` | Minimum number of idle connections maintained in the pool | `5` |
-| `OHM9996_MONGODB_ENABLE_PING` | Enable startup connectivity ping verification | `true` |
 
 If mandatory configuration (`HOST`) is missing, or if connection fails after TLS fallback, the client logs a descriptive error and triggers peaceful termination (`exitFunc(0)`).
 
@@ -41,16 +40,14 @@ to importing projects.
 
 Calling `mongodb.Connect(ctx)` executes a two-phase connection flow:
 1. **Unencrypted Connection Attempt**: First attempts to connect to the MongoDB
-   server without TLS (`tls=false`). If `OHM9996_MONGODB_ENABLE_PING` is enabled
-   (default `true`), it also performs a ping check to verify connectivity.
+   server without TLS (`tls=false`), then performs a mandatory ping and
+   collection/document probe to verify connectivity.
 2. **Automatic TLS Fallback**: If the server rejects the unencrypted connection
    indicating TLS/SSL is required (e.g., MongoDB Atlas or secured clusters), the
    client automatically retries connection with TLS enabled (`tls=true`).
-3. **Graceful Termination on Failure**: If connectivity cannot be established
-   after retry or due to fatal configuration errors, the client logs the error,
-   triggers graceful program exit, and returns the underlying error.
-   If startup ping is disabled, this validation is skipped, allowing
-   initialization against temporarily unreachable hosts.
+3. **Failure Handling**: If connectivity cannot be established after retry or
+   either mandatory probe fails, the client routes the error through Central Log
+   and returns the underlying error.
 
 ## Usage
 
@@ -70,17 +67,13 @@ users := client.Collection("users")
 orders := client.Collection("orders", "custom_db")
 ```
 
-### Startup Ping Verification
+### Startup Connectivity Verification
 
-By default, `mongodb.Connect(ctx)` performs a connectivity ping check during initialization
-to verify the MongoDB server is reachable. This ensures configuration errors are caught
-immediately at startup.
-
-In restricted network environments, serverless deployments, or scenarios requiring lazy
-initialization, you can disable the startup ping by setting `OHM9996_MONGODB_ENABLE_PING=false`.
-When disabled, the client will initialize successfully even if the MongoDB server is
-temporarily unreachable. In this case, you should rely on explicit `client.Ping(ctx)` calls
-or readiness probes to verify connectivity before executing queries.
+`mongodb.Connect(ctx)` always performs a connectivity ping followed by a random
+collection/document probe during initialization. If the database has no collections,
+the probe uses the `__probe__` namespace and treats `mongo.ErrNoDocuments` as a
+successful access check. This ensures configuration and permission errors are caught
+immediately at startup; there is no option to bypass these checks.
 
 ### Public API
 

@@ -15,7 +15,6 @@ func TestDefaultOptions(t *testing.T) {
 	assert.Equal(t, DefaultProtocol, opts.Protocol)
 	assert.Equal(t, DefaultUUIDRepresentation, opts.UUIDRepresentation)
 	assert.Equal(t, DefaultConnectTimeout, opts.ConnectTimeout)
-	assert.True(t, opts.EnablePing)
 	assert.False(t, opts.EnableTLS)
 	assert.False(t, opts.DirectConnection)
 }

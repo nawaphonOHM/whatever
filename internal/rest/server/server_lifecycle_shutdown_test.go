@@ -69,8 +69,11 @@ type slowServerTest struct {
 	port    int
 }
 
-func runSlowShutdown(t *testing.T, sst slowServerTest) error {
+func runSlowShutdown(t *testing.T, sst *slowServerTest) error {
 	t.Helper()
+	if sst == nil {
+		return nil
+	}
 	go triggerSlowRequest(t, sst.port)
 	waitForStarted(t, sst.started)
 
@@ -100,7 +103,7 @@ func TestServer_LifecycleLogging_GracefulShutdownTimeout(t *testing.T) {
 	srv, port := createSlowServer(t, started, block)
 
 	cancel, errCh := startWithCancel(srv)
-	sst := slowServerTest{cancel: cancel, errCh: errCh, started: started, block: block, port: port}
+	sst := &slowServerTest{cancel: cancel, errCh: errCh, started: started, block: block, port: port}
 	err := runSlowShutdown(t, sst)
 
 	assertShutdownTimeoutLog(t, buf.Bytes(), err)

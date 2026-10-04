@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -30,7 +31,7 @@ func Test_isTLSError(t *testing.T) {
 
 // Test_handleConnectionError tests connection error logging and exit hook execution.
 func Test_handleConnectionError(t *testing.T) {
-	assert.Nil(t, handleConnectionError(nil))
+	assert.Nil(t, handleConnectionError(context.Background(), nil))
 
 	var exitCode int
 	restore := SetExitFunc(func(code int) {
@@ -39,9 +40,9 @@ func Test_handleConnectionError(t *testing.T) {
 	defer func() { SetExitFunc(restore) }()
 
 	err := errors.New("test connection error")
-	returnedErr := handleConnectionError(err)
+	returnedErr := handleConnectionError(context.Background(), err)
 	assert.Equal(t, err, returnedErr)
-	assert.Equal(t, 0, exitCode)
+	assert.Equal(t, 1, exitCode)
 }
 
 // Test_SetExitFunc tests swapping the package-level exitFunc.
@@ -52,8 +53,8 @@ func Test_SetExitFunc(t *testing.T) {
 	}
 
 	prev := SetExitFunc(customFunc)
-	exitFunc(0)
+	defer func() { SetExitFunc(prev) }()
+	err := handleConnectionError(context.Background(), errors.New("test exit err"))
+	assert.Error(t, err)
 	assert.True(t, customCalled)
-
-	SetExitFunc(prev)
 }

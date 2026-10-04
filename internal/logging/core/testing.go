@@ -12,6 +12,9 @@ func SetTestLogger(l *Logger) func() {
 	prev := Default()
 	SetDefault(l)
 	return func() {
+		if l != nil {
+			l.Flush()
+		}
 		SetDefault(prev)
 	}
 }
@@ -24,7 +27,11 @@ func CaptureLogs(w io.Writer, lvl ...config.Level) func() {
 		level = lvl[0]
 	}
 	testLogger := NewJSON(w, level)
-	return SetTestLogger(testLogger)
+	cleanup := SetTestLogger(testLogger)
+	return func() {
+		testLogger.Flush()
+		cleanup()
+	}
 }
 
 // CaptureTextLogs redirects default logging to the provided writer in Text format
@@ -35,5 +42,9 @@ func CaptureTextLogs(w io.Writer, lvl ...config.Level) func() {
 		level = lvl[0]
 	}
 	testLogger := NewText(w, level)
-	return SetTestLogger(testLogger)
+	cleanup := SetTestLogger(testLogger)
+	return func() {
+		testLogger.Flush()
+		cleanup()
+	}
 }
