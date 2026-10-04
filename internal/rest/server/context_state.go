@@ -57,7 +57,7 @@ func (c *Context) AbortWithResponse(resp contracts.Response) {
 	}
 }
 
-// AbortWithProblem aborts and serializes the provided ProblemDetails.
+// AbortWithProblem aborts and serializes the provided PProblemDetails.
 func (c *Context) AbortWithProblem(prob contracts.Response) {
 	c.AbortWithResponse(prob)
 }

@@ -6,7 +6,7 @@ import (
 	intprob "github.com/nawaphonOHM/whatever/internal/rest/problem"
 )
 
-func newProblemDetails(
+func newPProblemDetails(
 	statusCode int,
 	code, detail string,
 	details ...any,
@@ -16,7 +16,7 @@ func newProblemDetails(
 
 // Error creates an RFC 9457 Problem Details Response.
 func Error(statusCode int, code, detail string, details ...any) Response {
-	return newProblemDetails(statusCode, code, detail, details...)
+	return newPProblemDetails(statusCode, code, detail, details...)
 }
 
 // BadRequest creates a 400 Bad Request RFC 9457 Problem Details Response.

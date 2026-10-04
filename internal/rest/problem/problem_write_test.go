@@ -19,7 +19,7 @@ func newTestContext() (*gin.Context, *httptest.ResponseRecorder) {
 
 func assertDecodedFields(t *testing.T, body []byte) {
 	t.Helper()
-	var decoded ProblemDetails
+	var decoded PProblemDetails
 	require.NoError(t, json.Unmarshal(body, &decoded))
 	assert.Equal(t, http.StatusNotFound, decoded.Status)
 	assert.Equal(t, DefaultProblemType, decoded.Type)
@@ -28,11 +28,11 @@ func assertDecodedFields(t *testing.T, body []byte) {
 	assert.Equal(t, "/test/path", decoded.Instance)
 }
 
-func TestProblemDetails_WriteDefaults(t *testing.T) {
+func TestPProblemDetails_WriteDefaults(t *testing.T) {
 	gc, w := newTestContext()
 	gc.Request = httptest.NewRequest(http.MethodGet, "/test/path", nil)
 
-	prob := &ProblemDetails{
+	prob := &PProblemDetails{
 		Status: http.StatusNotFound,
 		Detail: "Resource was not located",
 	}
@@ -43,11 +43,11 @@ func TestProblemDetails_WriteDefaults(t *testing.T) {
 	assertDecodedFields(t, w.Body.Bytes())
 }
 
-func TestProblemDetails_WriteCustomFields(t *testing.T) {
+func TestPProblemDetails_WriteCustomFields(t *testing.T) {
 	gc, w := newTestContext()
 	gc.Request = httptest.NewRequest(http.MethodGet, "/orig", nil)
 
-	prob := &ProblemDetails{
+	prob := &PProblemDetails{
 		Type:     "https://example.com/err",
 		Title:    "Custom Title",
 		Status:   http.StatusUnprocessableEntity,
@@ -63,12 +63,12 @@ func TestProblemDetails_WriteCustomFields(t *testing.T) {
 	assert.Equal(t, "/custom/instance", prob.Instance)
 }
 
-func TestProblemDetails_WriteNilChecks(t *testing.T) {
+func TestPProblemDetails_WriteNilChecks(t *testing.T) {
 	gc, _ := newTestContext()
-	var nilProb *ProblemDetails
+	var nilProb *PProblemDetails
 	nilProb.Write(gc)
 
-	prob := &ProblemDetails{Status: http.StatusBadRequest}
+	prob := &PProblemDetails{Status: http.StatusBadRequest}
 	prob.Write(nil)
 
 	gcNilReq, _ := newTestContext()

@@ -16,7 +16,7 @@ func verifyMultipleDetailsResponse(
 	body []byte,
 ) {
 	t.Helper()
-	var prob intprob.ProblemDetails
+	var prob intprob.PProblemDetails
 	require.NoError(t, json.Unmarshal(body, &prob))
 	assert.Equal(t, http.StatusBadRequest, prob.Status)
 	assert.Equal(t, intprob.DefaultProblemType, prob.Type)
@@ -46,7 +46,7 @@ func TestError_MultipleDetails(t *testing.T) {
 
 func verifyWriteDefaultsFields(t *testing.T, body []byte) {
 	t.Helper()
-	var prob intprob.ProblemDetails
+	var prob intprob.PProblemDetails
 	require.NoError(t, json.Unmarshal(body, &prob))
 	assert.Equal(t, http.StatusNotFound, prob.Status)
 	assert.Equal(t, intprob.DefaultProblemType, prob.Type)
@@ -55,7 +55,7 @@ func verifyWriteDefaultsFields(t *testing.T, body []byte) {
 	assert.Equal(t, "Resource was not located", prob.Detail)
 }
 
-func TestProblemDetails_WriteDefaults(t *testing.T) {
+func TestPProblemDetails_WriteDefaults(t *testing.T) {
 	gc, w := newTestContext()
 	gc.Request = httptest.NewRequest(http.MethodGet, "/test/path", nil)
 
@@ -69,7 +69,7 @@ func TestProblemDetails_WriteDefaults(t *testing.T) {
 	verifyWriteDefaultsFields(t, w.Body.Bytes())
 }
 
-func TestProblemDetails_UnknownStatusTitle(t *testing.T) {
+func TestPProblemDetails_UnknownStatusTitle(t *testing.T) {
 	gc, w := newTestContext()
 	probCustom := Error(
 		testUnknownStatus, "CUSTOM_ERR", "custom",
@@ -77,12 +77,12 @@ func TestProblemDetails_UnknownStatusTitle(t *testing.T) {
 	assert.Equal(t, testUnknownStatus, probCustom.StatusCode())
 
 	probCustom.Write(gc)
-	var prob intprob.ProblemDetails
+	var prob intprob.PProblemDetails
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &prob))
 	assert.Equal(t, "Error", prob.Title)
 }
 
-func TestProblemDetails_NilContext(t *testing.T) {
+func TestPProblemDetails_NilContext(t *testing.T) {
 	resp := BadRequest("ERR", "detail")
 	assert.NotPanics(t, func() {
 		resp.Write(nil)
