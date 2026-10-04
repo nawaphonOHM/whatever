@@ -16,10 +16,10 @@ func createSlowServer(t *testing.T, started, block chan struct{}) (*Server, int)
 	t.Helper()
 	port := getFreePort(t)
 	srv, err := New(&Config{
-		Host:          testHost,
-		Port:          port,
-		Mode:          gin.TestMode,
-		TimeoutFields: TimeoutFields{ShutdownTimeout: 20 * time.Millisecond},
+		Host:            testHost,
+		Port:            port,
+		Mode:            gin.TestMode,
+		ShutdownTimeout: 20 * time.Millisecond,
 	})
 	require.NoError(t, err)
 
