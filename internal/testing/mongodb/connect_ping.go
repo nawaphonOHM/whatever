@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
@@ -26,35 +24,12 @@ func defaultPingClient(ctx context.Context, rawClient *mongo.Client) error {
 	return rawClient.Ping(ctx, readpref.Primary())
 }
 
-func resolveDBName(dbName string) string {
-	if dbName == "" {
-		return "admin"
+// resolveDatabaseName extracts the target database name from options.
+func resolveDatabaseName(o *Options) string {
+	if o == nil {
+		return ""
 	}
-	return dbName
-}
-
-func chooseTargetColl(colls []string) string {
-	if len(colls) > 0 {
-		return colls[rand.IntN(len(colls))]
-	}
-	return "__probe__"
-}
-
-func probeDocument(ctx context.Context, db *mongo.Database, coll string) error {
-	res := db.Collection(coll).FindOne(ctx, bson.D{})
-	if err := res.Err(); err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-		return fmt.Errorf("failed to probe document in collection %q: %w", coll, err)
-	}
-	return nil
-}
-
-func defaultProbeClient(ctx context.Context, rawClient *mongo.Client, dbName string) error {
-	db := rawClient.Database(resolveDBName(dbName))
-	colls, err := db.ListCollectionNames(ctx, bson.D{})
-	if err != nil {
-		return fmt.Errorf("failed to list collections for probe: %w", err)
-	}
-	return probeDocument(ctx, db, chooseTargetColl(colls))
+	return o.Database
 }
 
 // SetMockPing overrides pingClient for testing and returns a restore function.
@@ -109,5 +84,6 @@ func verifyClientPingAndProbe(ctx context.Context, o *Options, rawClient *mongo.
 	if err := verifyClientPing(ctx, rawClient); err != nil {
 		return err
 	}
-	return verifyClientProbe(ctx, rawClient, o.Database)
+	probeCtx := withProbeTimeout(ctx, resolveProbeTimeout(o))
+	return verifyClientProbe(probeCtx, rawClient, resolveDatabaseName(o))
 }

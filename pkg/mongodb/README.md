@@ -40,14 +40,14 @@ to importing projects.
 
 Calling `mongodb.Connect(ctx)` executes a two-phase connection flow:
 1. **Unencrypted Connection Attempt**: First attempts to connect to the MongoDB
-   server without TLS (`tls=false`), then performs a mandatory ping and
-   collection/document probe to verify connectivity.
+   server without TLS (`tls=false`), then performs a mandatory multi-step probe
+   sequence to verify connectivity and permissions.
 2. **Automatic TLS Fallback**: If the server rejects the unencrypted connection
    indicating TLS/SSL is required (e.g., MongoDB Atlas or secured clusters), the
    client automatically retries connection with TLS enabled (`tls=true`).
 3. **Failure Handling**: If connectivity cannot be established after retry or
-   either mandatory probe fails, the client routes the error through Central Log
-   and returns the underlying error.
+   any step in the mandatory probe sequence fails, the client routes the error through
+   Central Log and returns the underlying error.
 
 ## Usage
 
@@ -69,11 +69,14 @@ orders := client.Collection("orders", "custom_db")
 
 ### Startup Connectivity Verification
 
-`mongodb.Connect(ctx)` always performs a connectivity ping followed by a random
-collection/document probe during initialization. If the database has no collections,
-the probe uses the `__probe__` namespace and treats `mongo.ErrNoDocuments` as a
-successful access check. This ensures configuration and permission errors are caught
-immediately at startup; there is no option to bypass these checks.
+`mongodb.Connect(ctx)` executes a four-step connectivity and permission probe sequence during client initialization:
+
+1. **Ping Check**: Executes `rawClient.Ping(ctx, ...)` as the first connectivity check to verify basic transport reachability.
+2. **List Collections (Context Timeout)**: Executes `listCollections` bounded by `context.WithTimeout(ctx, socketTimeout)` without the `maxTimeMS` parameter on the command, ensuring proxy and cluster compatibility under Go context cancellation.
+3. **List Collections (with `maxTimeMS`)**: Executes `db.RunCommand(ctx, bson.D{{"listCollections", 1}, {"maxTimeMS", socketTimeoutMs}})` where `socketTimeoutMs` is derived from `SocketTimeout` (defaulting to 10s / 10000ms) to validate server-side execution timeout enforcement.
+4. **Collection Document Probe**: Selects a target collection from the database (or defaults to `__probe__` for empty databases) and performs a `FindOne` query to verify read access. `mongo.ErrNoDocuments` is treated as a successful probe.
+
+If any step in the probe sequence fails, the client is cleanly disconnected and returns `failed to probe mongodb: <cause>`. This ensures configuration, network, and permission errors are caught immediately at startup; there is no option to bypass these checks.
 
 ### Public API
 
