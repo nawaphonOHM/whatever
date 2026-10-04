@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
@@ -19,7 +18,6 @@ const (
 	testUnreachPort = 59999
 )
 
-// createUnreachableConfig returns a Config pointing to an unreachable port.
 func createUnreachableConfig() *config.Config {
 	cfg := config.DefaultConfig()
 	cfg.Host = "127.0.0.1"
@@ -31,7 +29,6 @@ func createUnreachableConfig() *config.Config {
 	return cfg
 }
 
-// TestConnectWithConfig_NilConfig tests rejection of nil config.
 func TestConnectWithConfig_NilConfig(t *testing.T) {
 	ctx := context.Background()
 	client, err := ConnectWithConfig(ctx, nil)
@@ -39,12 +36,9 @@ func TestConnectWithConfig_NilConfig(t *testing.T) {
 	assert.Nil(t, client)
 }
 
-// TestConnectWithConfig_InvalidConfig tests rejection of invalid config.
 func TestConnectWithConfig_InvalidConfig(t *testing.T) {
 	ctx := context.Background()
-	invalidCfg := &config.Config{
-		Host: "",
-	}
+	invalidCfg := &config.Config{Host: ""}
 	client, err := ConnectWithConfig(ctx, invalidCfg)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid mongodb config")
@@ -59,7 +53,6 @@ func interceptExitHook() (*bool, func()) {
 	return &exitCalled, func() { SetExitFunc(restore) }
 }
 
-// TestConnectWithConfig_PingFailure tests ping timeout against unreachable host.
 func TestConnectWithConfig_PingFailure(t *testing.T) {
 	exitCalled, restore := interceptExitHook()
 	defer restore()
@@ -74,7 +67,6 @@ func TestConnectWithConfig_PingFailure(t *testing.T) {
 	assert.True(t, *exitCalled)
 }
 
-// TestConnectWithConfig_WithOptions tests merging custom driver options.
 func TestConnectWithConfig_WithOptions(t *testing.T) {
 	exitCalled, restore := interceptExitHook()
 	defer restore()
@@ -90,20 +82,6 @@ func TestConnectWithConfig_WithOptions(t *testing.T) {
 	assert.True(t, *exitCalled)
 }
 
-func setupMockPingAndProbe(probeErr error) func() {
-	cleanupPing := SetMockPing(func(context.Context, *mongo.Client) error {
-		return nil
-	})
-	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
-		return probeErr
-	})
-	return func() {
-		cleanupProbe()
-		cleanupPing()
-	}
-}
-
-// TestConnectWithConfig_ProbeFailure tests connection failure when probe fails after ping succeeds.
 func TestConnectWithConfig_ProbeFailure(t *testing.T) {
 	exitCalled, restore := interceptExitHook()
 	defer restore()
