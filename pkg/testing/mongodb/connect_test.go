@@ -25,9 +25,10 @@ func TestConnect_InvalidPort(t *testing.T) {
 	assert.ErrorIs(t, err, mongodb.ErrInvalidPort)
 }
 
-func TestConnect_PingDisabled(t *testing.T) {
+func TestConnect_MandatoryPing(t *testing.T) {
+	setMockConnectionSuccess(t)
 	ctx := context.Background()
-	client, err := mongodb.Connect(ctx, mongodb.WithPing(false), mongodb.WithDatabase("test_db"))
+	client, err := mongodb.Connect(ctx, mongodb.WithDatabase("test_db"))
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	assert.NotNil(t, client.RawClient())
@@ -55,9 +56,10 @@ func TestConnectURI_Empty(t *testing.T) {
 	require.ErrorIs(t, err, mongodb.ErrEmptyURI)
 }
 
-func TestConnectURI_PingDisabled(t *testing.T) {
+func TestConnectURI_MandatoryPing(t *testing.T) {
+	setMockConnectionSuccess(t)
 	ctx := context.Background()
-	client, err := mongodb.ConnectURI(ctx, "mongodb://localhost:27017/custom_db", mongodb.WithPing(false))
+	client, err := mongodb.ConnectURI(ctx, "mongodb://localhost:27017/custom_db")
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	assert.NotNil(t, client.Database())

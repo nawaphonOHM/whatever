@@ -4,8 +4,20 @@ import (
 	"context"
 	"testing"
 
+	"go.mongodb.org/mongo-driver/v2/mongo"
+
 	"github.com/nawaphonOHM/whatever/internal/testing/mongodb"
 )
+
+// SetMockPing overrides the mock ping function for testing and returns a restore function.
+func SetMockPing(fn func(context.Context, *mongo.Client) error) func() {
+	return mongodb.SetMockPing(fn)
+}
+
+// SetMockProbe overrides the mock probe function for testing and returns a restore function.
+func SetMockProbe(fn func(context.Context, *mongo.Client, string) error) func() {
+	return mongodb.SetMockProbe(fn)
+}
 
 // Connect creates a TestClient using functional options without process exit behavior.
 func Connect(ctx context.Context, opts ...Option) (*TestClient, error) {

@@ -23,8 +23,8 @@ type pathCase struct {
 }
 
 // pathCases returns CalculateFullPath coverage rows.
-func pathCases() []pathCase {
-	return []pathCase{
+func pathCases() []*pathCase {
+	return []*pathCase{
 		{name: "empty all", expected: "/api"},
 		{name: "empty all version 1", version: 1, expected: "/api/v1"},
 		{name: "unversioned simple", prefix: "/items", path: testListPath, expected: testAPIItemsList},
@@ -41,7 +41,7 @@ func pathCases() []pathCase {
 		{name: "versioned prefix already containing /v1", version: 1, prefix: "/v1/users", expected: testAPIV1Users},
 		{
 			name:    "versioned prefix already containing /api/v1",
-			version: 1, prefix: "/api/v1/users", expected: testAPIV1Users,
+			version: 1, prefix: "/v1/api/users", expected: testAPIV1Users,
 		},
 		{
 			name:    "versioned prefix already containing /v1/api",

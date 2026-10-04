@@ -30,14 +30,12 @@ const (
 func TestWithOptions_PoolAndFlags(t *testing.T) {
 	opts := NewOptions(
 		WithPoolLimits(testMinPoolSize, testMaxPoolSize),
-		WithPing(false),
 		WithTLS(true),
 		WithDirectConnection(true),
 		WithUUIDRepresentation("standard"),
 	)
 	assert.Equal(t, uint64(testMinPoolSize), opts.MinPoolSize)
 	assert.Equal(t, uint64(testMaxPoolSize), opts.MaxPoolSize)
-	assert.False(t, opts.EnablePing)
 	assert.True(t, opts.EnableTLS)
 	assert.True(t, opts.DirectConnection)
 	assert.Equal(t, "standard", opts.UUIDRepresentation)

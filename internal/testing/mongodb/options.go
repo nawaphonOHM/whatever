@@ -28,7 +28,6 @@ type Options struct {
 	MaxPoolSize            uint64
 	MinPoolSize            uint64
 	Port                   int
-	EnablePing             bool
 	EnableTLS              bool
 	DirectConnection       bool
 }
@@ -46,7 +45,6 @@ func DefaultOptions() *Options {
 		MaxConnIdleTime:        DefaultMaxConnIdleTime,
 		MaxPoolSize:            DefaultMaxPoolSize,
 		MinPoolSize:            DefaultMinPoolSize,
-		EnablePing:             true,
 		EnableTLS:              false,
 		DirectConnection:       false,
 	}

@@ -1,9 +1,11 @@
 package core
 
 import (
+	"io"
 	"log/slog"
 	"os"
 
+	"github.com/nawaphonOHM/whatever/internal/logging/central"
 	"github.com/nawaphonOHM/whatever/internal/logging/config"
 )
 
@@ -26,21 +28,33 @@ func NewFromConfig(cfg *config.Config) (*Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := BuildHandler(targetCfg, out, nil)
+	return newConfiguredLogger(targetCfg, out), nil
+}
+
+func newConfiguredLogger(cfg *config.Config, out io.Writer) *Logger {
+	h := BuildHandler(cfg, out, nil)
+	slogL := slog.New(h)
+	w := central.New(slogL, central.DefaultBufferSize, os.Exit)
+	w.Start()
 	return &Logger{
-		Logger:   slog.New(h),
+		Logger:   slogL,
 		handler:  h,
 		exitFunc: os.Exit,
 		closer:   isCloserStream(out),
-	}, nil
+		worker:   w,
+	}
 }
 
 func newFallbackLogger() *Logger {
 	h := BuildHandler(config.DefaultConfig(), os.Stdout, nil)
+	slogL := slog.New(h)
+	w := central.New(slogL, central.DefaultBufferSize, os.Exit)
+	w.Start()
 	return &Logger{
-		Logger:   slog.New(h),
+		Logger:   slogL,
 		handler:  h,
 		exitFunc: os.Exit,
+		worker:   w,
 	}
 }
 

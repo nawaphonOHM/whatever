@@ -33,11 +33,6 @@ func WithPoolLimits(minPoolSize, maxPoolSize uint64) Option {
 	return mongodb.WithPoolLimits(minPoolSize, maxPoolSize)
 }
 
-// WithPing sets whether to verify connectivity with a ping on connect.
-func WithPing(enablePing bool) Option {
-	return mongodb.WithPing(enablePing)
-}
-
 // WithTLS sets whether TLS encryption is enabled.
 func WithTLS(enableTLS bool) Option {
 	return mongodb.WithTLS(enableTLS)

@@ -22,8 +22,8 @@ type statusTestCase struct {
 	expectedCode codes.Code
 }
 
-func statusTestCases() []statusTestCase {
-	return []statusTestCase{
+func statusTestCases() []*statusTestCase {
+	return []*statusTestCase{
 		{
 			name:         "200 OK",
 			statusCode:   http.StatusOK,
@@ -50,10 +50,8 @@ func statusTestCases() []statusTestCase {
 	}
 }
 
-func runSingleStatusTest(t *testing.T, tc statusTestCase) {
-	exporter, cleanup := setupTestTracer(t)
-	defer cleanup()
-
+func setupStatusRoute(t *testing.T, tc *statusTestCase) *gin.Engine {
+	t.Helper()
 	router := setupTestEngine(Middleware(&config.Config{Enabled: true}))
 	router.GET("/status", func(c *gin.Context) {
 		if tc.attachError != nil {
@@ -62,7 +60,17 @@ func runSingleStatusTest(t *testing.T, tc statusTestCase) {
 		}
 		c.Status(tc.statusCode)
 	})
+	return router
+}
 
+func runSingleStatusTest(t *testing.T, tc *statusTestCase) {
+	if tc == nil {
+		return
+	}
+	exporter, cleanup := setupTestTracer(t)
+	defer cleanup()
+
+	router := setupStatusRoute(t, tc)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/status", nil))
 
@@ -71,7 +79,10 @@ func runSingleStatusTest(t *testing.T, tc statusTestCase) {
 	verifySpanStatusCode(t, spans[0], tc)
 }
 
-func verifySpanStatusCode(t *testing.T, span sdktrace.ReadOnlySpan, tc statusTestCase) {
+func verifySpanStatusCode(t *testing.T, span sdktrace.ReadOnlySpan, tc *statusTestCase) {
+	if tc == nil {
+		return
+	}
 	assert.Equal(t, tc.expectedCode, span.Status().Code)
 	if tc.expectedDesc != "" {
 		assert.Contains(t, span.Status().Description, tc.expectedDesc)

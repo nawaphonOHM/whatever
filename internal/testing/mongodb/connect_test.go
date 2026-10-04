@@ -22,10 +22,34 @@ func setMockPingError(t *testing.T, expectedErr error) {
 
 func setMockPingSuccess(t *testing.T, pingCalled *bool) {
 	origPing := pingClient
-	t.Cleanup(func() { pingClient = origPing })
+	origProbe := probeClient
+	t.Cleanup(func() {
+		pingClient = origPing
+		probeClient = origProbe
+	})
 	pingClient = func(context.Context, *mongo.Client) error {
-		*pingCalled = true
+		if pingCalled != nil {
+			*pingCalled = true
+		}
 		return nil
+	}
+	probeClient = func(context.Context, *mongo.Client, string) error {
+		return nil
+	}
+}
+
+func setMockProbeError(t *testing.T, expectedErr error) {
+	origPing := pingClient
+	origProbe := probeClient
+	t.Cleanup(func() {
+		pingClient = origPing
+		probeClient = origProbe
+	})
+	pingClient = func(context.Context, *mongo.Client) error {
+		return nil
+	}
+	probeClient = func(context.Context, *mongo.Client, string) error {
+		return expectedErr
 	}
 }
 
@@ -36,12 +60,15 @@ func TestConnect_InvalidPort(t *testing.T) {
 	assert.Nil(t, client)
 }
 
-func TestConnect_NoPing_Success(t *testing.T) {
+func TestConnect_ProbeFailure(t *testing.T) {
+	expectedErr := errors.New("simulated probe error")
+	setMockProbeError(t, expectedErr)
+
 	ctx := context.Background()
-	client, err := Connect(ctx, WithPing(false), WithDatabase("test_db"))
-	require.NoError(t, err)
-	require.NotNil(t, client)
-	assert.Equal(t, "test_db", client.Database().Name())
+	client, err := Connect(ctx, WithDatabase("probe_test_db"))
+	require.Error(t, err)
+	assert.Nil(t, client)
+	assert.Contains(t, err.Error(), "simulated probe error")
 }
 
 func TestConnect_PingFailure(t *testing.T) {
@@ -49,7 +76,7 @@ func TestConnect_PingFailure(t *testing.T) {
 	setMockPingError(t, expectedErr)
 
 	ctx := context.Background()
-	client, err := Connect(ctx, WithPing(true))
+	client, err := Connect(ctx)
 	require.Error(t, err)
 	assert.Nil(t, client)
 	assert.Contains(t, err.Error(), "simulated ping error")
@@ -60,7 +87,7 @@ func TestConnect_PingSuccess(t *testing.T) {
 	setMockPingSuccess(t, &pingCalled)
 
 	ctx := context.Background()
-	client, err := Connect(ctx, WithPing(true), WithDatabase("ping_db"))
+	client, err := Connect(ctx, WithDatabase("ping_db"))
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	assert.True(t, pingCalled)

@@ -26,19 +26,26 @@ func validTestConfig() *Config {
 	return cfg
 }
 
+func runSingleValidateCase(t *testing.T, tt *configValidateCase) {
+	t.Helper()
+	t.Run(tt.name, func(t *testing.T) {
+		err := tt.cfg.Validate()
+		if tt.expectedErr != "" {
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedErr)
+			return
+		}
+		assert.NoError(t, err)
+	})
+}
+
 // runValidateCases executes table-driven validation test cases.
-func runValidateCases(t *testing.T, cases []configValidateCase) {
+func runValidateCases(t *testing.T, cases []*configValidateCase) {
 	t.Helper()
 	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cfg.Validate()
-			if tt.expectedErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedErr)
-				return
-			}
-			assert.NoError(t, err)
-		})
+		if tt != nil {
+			runSingleValidateCase(t, tt)
+		}
 	}
 }
 
@@ -48,7 +55,7 @@ func TestConfig_Validate_NilAndValid(t *testing.T) {
 		Enabled:    false,
 		SampleRate: DefaultSampleRate,
 	}
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: nil, name: "nil config", expectedErr: "opentelemetry config cannot be nil"},
 		{cfg: validTestConfig(), name: "valid default config", expectedErr: ""},
 		{cfg: disabledCfg, name: "valid disabled config with empty fields", expectedErr: ""},
@@ -63,7 +70,7 @@ func TestConfig_Validate_ServiceName(t *testing.T) {
 	whitespaceNameCfg := validTestConfig()
 	whitespaceNameCfg.ServiceName = "   "
 
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: emptyNameCfg, name: "empty service name", expectedErr: "service name cannot be empty"},
 		{cfg: whitespaceNameCfg, name: "whitespace service name", expectedErr: "service name cannot be empty"},
 	})
@@ -80,7 +87,7 @@ func TestConfig_Validate_Protocols(t *testing.T) {
 	invalidCfg := validTestConfig()
 	invalidCfg.Protocol = "invalid"
 
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: validTestConfig(), name: "valid grpc protocol", expectedErr: ""},
 		{cfg: protoCfg, name: "valid http/protobuf protocol", expectedErr: ""},
 		{cfg: jsonCfg, name: "valid http/json protocol", expectedErr: ""},

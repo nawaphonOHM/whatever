@@ -12,8 +12,8 @@ type methodCase struct {
 	method HTTPMethod
 }
 
-func validMethodCases() []methodCase {
-	return []methodCase{
+func validMethodCases() []*methodCase {
+	return []*methodCase{
 		{name: http.MethodGet, method: GET},
 		{name: http.MethodHead, method: HEAD},
 		{name: http.MethodPost, method: POST},

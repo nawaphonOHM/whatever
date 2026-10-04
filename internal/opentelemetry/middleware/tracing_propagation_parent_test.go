@@ -52,10 +52,11 @@ func verifyRecordedParentSpan(t *testing.T, span sdktrace.ReadOnlySpan) {
 
 func verifyParentTestResult(
 	t *testing.T,
-	res propagationResult,
+	res *propagationResult,
 	rec *httptest.ResponseRecorder,
 	exporter *tracetest.InMemoryExporter,
 ) {
+	require.NotNil(t, res)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.True(t, res.handlerHasSpan)
 	assert.Equal(t, expectedTraceID, res.traceID)
@@ -76,5 +77,5 @@ func TestMiddleware_TraceContextPropagation_WithParent(t *testing.T) {
 	router.GET("/users/:id", recordPropagationHandler(&res))
 
 	rec := sendParentPropagationRequest(router)
-	verifyParentTestResult(t, res, rec, exporter)
+	verifyParentTestResult(t, &res, rec, exporter)
 }

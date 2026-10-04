@@ -8,6 +8,8 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
+	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/internal/logging/central"
 )
 
 // isNotExistError checks if error represents a file non-existence error.
@@ -40,6 +42,11 @@ func tryLoadFile(path string) (bool, error) {
 
 // loadDefaultEnv tries loading default .env or configs/.env if present.
 func loadDefaultEnv() error {
+	central.DefaultWorker().Logger().Info(
+		"falling back to default env configuration files",
+		"files",
+		[]string{".env", "configs/.env"},
+	)
 	for _, p := range []string{".env", "configs/.env"} {
 		loaded, err := tryLoadFile(p)
 		if loaded {
@@ -73,14 +80,19 @@ func parseTarget[T any](target *T) error {
 // It searches for .env files in filenames, or default locations if none.
 // Values precedence: System Environment > .env file > Struct Default Tags.
 func Load[T any](filenames ...string) (*T, error) {
-	if err := loadEnvFiles(filenames); err != nil {
-		return nil, err
-	}
+	decorated := callstack.DecorateFuncErr("rest.config.Load", func() (*T, error) {
+		central.DefaultWorker().Logger().Info("loading REST configuration")
+		if err := loadEnvFiles(filenames); err != nil {
+			return nil, err
+		}
 
-	var target T
-	if err := parseTarget(&target); err != nil {
-		return nil, fmt.Errorf("failed to parse environment config: %w", err)
-	}
+		var target T
+		if err := parseTarget(&target); err != nil {
+			return nil, fmt.Errorf("failed to parse environment config: %w", err)
+		}
 
-	return &target, nil
+		central.DefaultWorker().Logger().Info("REST configuration loaded successfully")
+		return &target, nil
+	})
+	return decorated()
 }

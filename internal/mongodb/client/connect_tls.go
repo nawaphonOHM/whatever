@@ -3,21 +3,17 @@ package client
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/nawaphonOHM/whatever/internal/logging/central"
 	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
 )
 
-const connErrorLogFormat = "failed to connect to mongodb: %v; exiting peacefully\n"
-
-// exitFunc is a package-level hook for os.Exit, allowing tests to intercept process termination.
-var exitFunc = os.Exit
-
-// SetExitFunc overrides the package-level exitFunc hook for testing and returns the previous hook.
+// SetExitFunc overrides the process exit hook used by the central logger worker
+// and returns the previous hook.
 func SetExitFunc(fn func(int)) func(int) {
-	prev := exitFunc
-	exitFunc = fn
+	prev := central.DefaultWorker().ExitFunc()
+	central.DefaultWorker().SetExitFunc(fn)
 	return prev
 }
 
@@ -54,20 +50,14 @@ func isTLSError(err error) bool {
 	return matchTLSPattern(strings.ToLower(err.Error()))
 }
 
-// logConnectionError outputs diagnostic message for connection failures.
-func logConnectionError(err error) {
-	if _, printErr := fmt.Fprintf(os.Stderr, connErrorLogFormat, err); printErr != nil {
-		return
-	}
-}
-
-// handleConnectionError logs the connection failure, triggers graceful termination, and returns the error.
-func handleConnectionError(err error) error {
+// handleConnectionError logs the connection failure, triggers abnormal termination via Central Log,
+// and returns the error.
+func handleConnectionError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	logConnectionError(err)
-	exitFunc(0)
+	msg := fmt.Sprintf("failed to connect to mongodb: %v; exiting abnormally", err)
+	central.ExitWithAbnormal(ctx, msg, err, nil)
 	return err
 }
 
@@ -77,9 +67,13 @@ func fallbackTLSAttempt(
 	cfg *config.Config,
 	opts ...Option,
 ) (*Client, error) {
+	central.DefaultWorker().Logger().InfoContext(ctx, "server requires TLS; attempting connection with TLS enabled",
+		"host", cfg.Host,
+		"port", cfg.Port,
+	)
 	tlsClient, tlsErr := attemptConnection(ctx, cfg, true, opts...)
 	if tlsErr != nil {
-		return nil, handleConnectionError(tlsErr)
+		return nil, handleConnectionError(ctx, tlsErr)
 	}
 	return tlsClient, nil
 }

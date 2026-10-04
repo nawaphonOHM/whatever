@@ -37,7 +37,7 @@ func New(version string) *Handler {
 }
 
 func (h *Handler) writeStatus(c *gin.Context, status string) {
-	c.JSON(http.StatusOK, responseEnvelope{
+	c.JSON(http.StatusOK, &responseEnvelope{
 		Data: Status{
 			Status:    status,
 			Timestamp: time.Now().UTC(),

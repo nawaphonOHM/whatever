@@ -12,12 +12,19 @@ import (
 
 func setMockTLSPing(t *testing.T, attempts *int) {
 	origPing := pingClient
-	t.Cleanup(func() { pingClient = origPing })
+	origProbe := probeClient
+	t.Cleanup(func() {
+		pingClient = origPing
+		probeClient = origProbe
+	})
 	pingClient = func(context.Context, *mongo.Client) error {
 		*attempts++
 		if *attempts == 1 {
 			return errors.New("server requires TLS")
 		}
+		return nil
+	}
+	probeClient = func(context.Context, *mongo.Client, string) error {
 		return nil
 	}
 }
@@ -35,7 +42,7 @@ func TestConnect_TLSFallbackSuccess(t *testing.T) {
 	setMockTLSPing(t, &attempts)
 
 	ctx := context.Background()
-	client, err := Connect(ctx, WithPing(true), WithTLS(false))
+	client, err := Connect(ctx, WithTLS(false))
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	assert.Equal(t, 2, attempts)
@@ -47,7 +54,7 @@ func TestConnectURI_TLSFallbackSuccess(t *testing.T) {
 
 	ctx := context.Background()
 	uri := "mongodb://localhost:27017"
-	client, err := ConnectURI(ctx, uri, WithPing(true), WithTLS(false))
+	client, err := ConnectURI(ctx, uri, WithTLS(false))
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	assert.Equal(t, 2, attempts)

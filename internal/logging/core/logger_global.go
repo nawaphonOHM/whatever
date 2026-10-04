@@ -106,3 +106,8 @@ func LogAttrs(ctx context.Context, level slog.Level, msg string, attrs ...slog.A
 	// TestGlobalLogger_SingletonResourceProof in logger_singleton_proof_test.go.
 	Default().LogAttrs(ctx, level, msg, attrs...)
 }
+
+// Flush flushes all buffered events in the default logger's central worker.
+func Flush() {
+	Default().Flush()
+}

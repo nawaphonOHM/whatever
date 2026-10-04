@@ -23,7 +23,7 @@ func TestConfig_Validate_SampleRateValid(t *testing.T) {
 	oneRateCfg := validTestConfig()
 	oneRateCfg.SampleRate = MaxSampleRate
 
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: zeroRateCfg, name: "minimum rate 0.0", expectedErr: ""},
 		{cfg: halfRateCfg, name: "intermediate rate 0.5", expectedErr: ""},
 		{cfg: oneRateCfg, name: "maximum rate 1.0", expectedErr: ""},
@@ -44,7 +44,7 @@ func TestConfig_Validate_SampleRateInvalid(t *testing.T) {
 	infCfg := validTestConfig()
 	infCfg.SampleRate = math.Inf(1)
 
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: negCfg, name: "negative rate", expectedErr: "sample rate must be between 0.0 and 1.0"},
 		{cfg: highCfg, name: "rate above 1.0", expectedErr: "sample rate must be between 0.0 and 1.0"},
 		{cfg: nanCfg, name: "NaN rate", expectedErr: "sample rate must be between 0.0 and 1.0"},

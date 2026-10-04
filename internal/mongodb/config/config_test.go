@@ -18,7 +18,6 @@ const (
 	testEnvAuthSource             = "OHM9996_MONGODB_AUTH_SOURCE"
 	testEnvAppName                = "OHM9996_MONGODB_APP_NAME"
 	testEnvUUIDRepresentation     = "OHM9996_MONGODB_UUID_REPRESENTATION"
-	testEnvEnablePing             = "OHM9996_MONGODB_ENABLE_PING"
 	testEnvConnectTimeout         = "OHM9996_MONGODB_CONNECT_TIMEOUT"
 	testEnvServerSelectionTimeout = "OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT"
 	testEnvSocketTimeout          = "OHM9996_MONGODB_SOCKET_TIMEOUT"
@@ -40,7 +39,7 @@ func setupEmptyEnv(t *testing.T) {
 	for _, envVar := range []string{
 		testEnvHost, testEnvPort, testEnvProtocol, testEnvDatabase,
 		testEnvUsername, testEnvPassword, testEnvAuthSource, testEnvAppName,
-		testEnvUUIDRepresentation, testEnvEnablePing, testEnvConnectTimeout,
+		testEnvUUIDRepresentation, testEnvConnectTimeout,
 		testEnvServerSelectionTimeout,
 		testEnvSocketTimeout, testEnvMaxConnIdleTime, testEnvMaxPoolSize, testEnvMinPoolSize,
 	} {
@@ -59,7 +58,6 @@ func verifyDefaultBaseFields(t *testing.T, cfg *Config) {
 	assert.Empty(t, cfg.AuthSource)
 	assert.Empty(t, cfg.AppName)
 	assert.Equal(t, UUIDRepresentationUnspecified, cfg.UUIDRepresentation)
-	assert.True(t, cfg.EnablePing)
 }
 
 // verifyDefaultRuntimeFields asserts default timeout and pooling fields.

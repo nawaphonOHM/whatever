@@ -26,7 +26,6 @@ type BaseFields struct {
 	AppName            string `env:"OHM9996_MONGODB_APP_NAME" envDefault:""`
 	UUIDRepresentation string `env:"OHM9996_MONGODB_UUID_REPRESENTATION" envDefault:"unspecified"`
 	Port               int    `env:"OHM9996_MONGODB_PORT" envDefault:"27017"`
-	EnablePing         bool   `env:"OHM9996_MONGODB_ENABLE_PING" envDefault:"true"`
 }
 
 // Config defines configuration options for connecting to MongoDB.

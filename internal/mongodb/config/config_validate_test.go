@@ -28,17 +28,23 @@ type configValidateCase struct {
 	expectedErr string
 }
 
-func runValidateCases(t *testing.T, cases []configValidateCase) {
+func runSingleValidateCase(t *testing.T, tt *configValidateCase) {
+	t.Run(tt.name, func(t *testing.T) {
+		err := tt.cfg.Validate()
+		if tt.expectedErr != "" {
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedErr)
+			return
+		}
+		assert.NoError(t, err)
+	})
+}
+
+func runValidateCases(t *testing.T, cases []*configValidateCase) {
 	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cfg.Validate()
-			if tt.expectedErr != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedErr)
-				return
-			}
-			assert.NoError(t, err)
-		})
+		if tt != nil {
+			runSingleValidateCase(t, tt)
+		}
 	}
 }
 
@@ -57,7 +63,7 @@ func TestConfig_Validate_RequiredFields(t *testing.T) {
 	unauthenticatedCfg.Username = ""
 	unauthenticatedCfg.Password = ""
 
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: nil, name: "nil config", expectedErr: "mongodb config cannot be nil"},
 		{cfg: emptyHostCfg, name: "empty Host", expectedErr: "mongodb host cannot be empty"},
 		{
@@ -89,7 +95,7 @@ func TestConfig_Validate_Protocols(t *testing.T) {
 	emptyProtoCfg := validTestConfig()
 	emptyProtoCfg.Protocol = ""
 
-	runValidateCases(t, []configValidateCase{
+	runValidateCases(t, []*configValidateCase{
 		{cfg: mongodbCfg, name: "valid mongodb protocol", expectedErr: ""},
 		{cfg: srvCfg, name: "valid mongodb+srv protocol", expectedErr: ""},
 		{cfg: invalidProtoCfg, name: "invalid http protocol", expectedErr: "invalid mongodb protocol: http"},

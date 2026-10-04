@@ -32,8 +32,8 @@ type CORSConfig struct {
 }
 
 // DefaultCORSConfig returns a permissive CORS configuration suitable for APIs.
-func DefaultCORSConfig() CORSConfig {
-	return CORSConfig{
+func DefaultCORSConfig() *CORSConfig {
+	return &CORSConfig{
 		AllowOrigins: []string{wildcardOrigin},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS",
@@ -83,6 +83,13 @@ func setConfigHeaders(w http.ResponseWriter, cfg *CORSConfig) {
 	setHeaderIfNonEmpty(w, headerMaxAge, cfg.MaxAge)
 }
 
+func resolveCORSConfig(cfg *CORSConfig) *CORSConfig {
+	if cfg == nil {
+		return DefaultCORSConfig()
+	}
+	return cfg
+}
+
 // setCORSHeaders sets all CORS headers on response.
 func setCORSHeaders(c *gin.Context, cfg *CORSConfig) {
 	origin := c.Request.Header.Get("Origin")
@@ -94,9 +101,10 @@ func setCORSHeaders(c *gin.Context, cfg *CORSConfig) {
 }
 
 // CORS returns a Cross-Origin Resource Sharing middleware.
-func CORS(cfg CORSConfig) gin.HandlerFunc {
+func CORS(cfg *CORSConfig) gin.HandlerFunc {
+	resolved := resolveCORSConfig(cfg)
 	return func(c *gin.Context) {
-		setCORSHeaders(c, &cfg)
+		setCORSHeaders(c, resolved)
 
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(http.StatusNoContent)

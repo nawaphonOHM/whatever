@@ -33,7 +33,10 @@ func setupPanicRouter(logger *slog.Logger) *gin.Engine {
 }
 
 // verifyPProblemDetails checks RFC 9457 fields on unmarshaled response.
-func verifyPProblemDetails(t *testing.T, prob problem.PProblemDetails) {
+func verifyPProblemDetails(t *testing.T, prob *problem.PProblemDetails) {
+	if prob == nil {
+		return
+	}
 	assert.Equal(t, http.StatusInternalServerError, prob.Status)
 	assert.Equal(t, "about:blank", prob.Type)
 	assert.Equal(t, "Internal Server Error", prob.Title)
@@ -53,7 +56,7 @@ func verifyPanicResponse(t *testing.T, w *httptest.ResponseRecorder) {
 	err := json.Unmarshal(w.Body.Bytes(), &prob)
 	require.NoError(t, err)
 
-	verifyPProblemDetails(t, prob)
+	verifyPProblemDetails(t, &prob)
 }
 
 // verifyPanicLogs validates that the buffer contains required log entries.

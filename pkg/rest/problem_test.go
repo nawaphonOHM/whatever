@@ -15,9 +15,12 @@ import (
 // assertProblemResponse verifies the unmarshaled problem details object.
 func assertProblemResponse(
 	t *testing.T,
-	prob intprob.PProblemDetails,
-	tc problemTestCase,
+	prob *intprob.PProblemDetails,
+	tc *problemTestCase,
 ) {
+	if tc == nil || prob == nil {
+		return
+	}
 	assert.Equal(t, tc.expectedStatus, prob.Status)
 	assert.Equal(t, intprob.DefaultProblemType, prob.Type)
 	assert.Equal(t, tc.expectedTitle, prob.Title)
@@ -42,13 +45,16 @@ func performProblemRequest(
 }
 
 // runProblemTest executes a single problem test case against a test router.
-func runProblemTest(t *testing.T, tc problemTestCase) {
+func runProblemTest(t *testing.T, tc *problemTestCase) {
+	if tc == nil {
+		return
+	}
 	w := performProblemRequest(t, tc.endpoint, tc.handler)
 	assert.Equal(t, tc.expectedStatus, w.Code)
 	assert.Equal(t, MediaTypeProblemJSON, w.Header().Get("Content-Type"))
 	var prob intprob.PProblemDetails
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &prob))
-	assertProblemResponse(t, prob, tc)
+	assertProblemResponse(t, &prob, tc)
 }
 
 // TestErrorResponses tests helper functions generating problem responses.

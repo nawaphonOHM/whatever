@@ -42,13 +42,6 @@ func WithPoolLimits(minPoolSize, maxPoolSize uint64) Option {
 	}
 }
 
-// WithPing sets whether to verify connectivity with a ping on connect.
-func WithPing(enablePing bool) Option {
-	return func(o *Options) {
-		o.EnablePing = enablePing
-	}
-}
-
 // WithTLS sets whether TLS encryption is enabled.
 func WithTLS(enableTLS bool) Option {
 	return func(o *Options) {

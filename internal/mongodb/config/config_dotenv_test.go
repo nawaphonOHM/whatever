@@ -29,7 +29,6 @@ OHM9996_MONGODB_AUTH_SOURCE=admin
 OHM9996_MONGODB_APP_NAME=dotenv-app
 OHM9996_MONGODB_PROTOCOL=mongodb
 OHM9996_MONGODB_UUID_REPRESENTATION=standard
-OHM9996_MONGODB_ENABLE_PING=false
 OHM9996_MONGODB_MAX_POOL_SIZE=150
 `)
 	err := os.WriteFile(envPath, content, testFilePerm)
@@ -52,7 +51,6 @@ func verifyDotEnvOptionFields(t *testing.T, cfg *Config) {
 	assert.Equal(t, "dotenv-app", cfg.AppName)
 	assert.Equal(t, "mongodb", cfg.Protocol)
 	assert.Equal(t, "standard", cfg.UUIDRepresentation)
-	assert.False(t, cfg.EnablePing)
 	assert.Equal(t, uint64(testDotEnvMaxPool), cfg.MaxPoolSize)
 }
 

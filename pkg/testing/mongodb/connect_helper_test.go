@@ -1,11 +1,13 @@
 package mongodb_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
 )
@@ -30,6 +32,16 @@ func (*mockTB) Helper() {}
 
 func (*mockTB) Logf(string, ...any) {}
 
+func setMockConnectionSuccess(t *testing.T) {
+	t.Helper()
+	t.Cleanup(mongodb.SetMockPing(func(context.Context, *mongo.Client) error {
+		return nil
+	}))
+	t.Cleanup(mongodb.SetMockProbe(func(context.Context, *mongo.Client, string) error {
+		return nil
+	}))
+}
+
 func TestNewTestClient_NilTB(t *testing.T) {
 	assert.PanicsWithError(t, mongodb.ErrNilTestingTB.Error(), func() {
 		mongodb.NewTestClient(nil)
@@ -40,8 +52,9 @@ func TestNewTestClient_NilTB(t *testing.T) {
 }
 
 func TestNewTestClient_SuccessAndCleanup(t *testing.T) {
+	setMockConnectionSuccess(t)
 	mock := &mockTB{TB: t}
-	client := mongodb.NewTestClient(mock, mongodb.WithPing(false), mongodb.WithDatabase("test_db"))
+	client := mongodb.NewTestClient(mock, mongodb.WithDatabase("test_db"))
 	require.NotNil(t, client)
 	assert.False(t, mock.fatalfCalled)
 	require.Len(t, mock.cleanups, 1)
@@ -50,8 +63,9 @@ func TestNewTestClient_SuccessAndCleanup(t *testing.T) {
 }
 
 func TestNewTestClientURI_SuccessAndCleanup(t *testing.T) {
+	setMockConnectionSuccess(t)
 	mock := &mockTB{TB: t}
-	client := mongodb.NewTestClientURI(mock, "mongodb://localhost:27017/uri_db", mongodb.WithPing(false))
+	client := mongodb.NewTestClientURI(mock, "mongodb://localhost:27017/uri_db")
 	require.NotNil(t, client)
 	assert.False(t, mock.fatalfCalled)
 	require.Len(t, mock.cleanups, 1)

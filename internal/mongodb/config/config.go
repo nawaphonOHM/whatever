@@ -3,11 +3,12 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/nawaphonOHM/whatever/internal/logging/central"
 	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
 )
 
@@ -24,8 +25,13 @@ const (
 // ErrNilConfig is returned when operations receive a nil configuration.
 var ErrNilConfig = errors.New("mongodb config cannot be nil")
 
-// exitFunc is a package-level hook for os.Exit, allowing tests to intercept process termination.
-var exitFunc = os.Exit
+// SetExitFunc overrides the process exit hook used by the central logger worker
+// and returns the previous hook.
+func SetExitFunc(fn func(int)) func(int) {
+	prev := central.DefaultWorker().ExitFunc()
+	central.DefaultWorker().SetExitFunc(fn)
+	return prev
+}
 
 // SetDefaults populates the configuration with initial default values.
 func (c *Config) SetDefaults() {
@@ -38,7 +44,6 @@ func DefaultConfig() *Config {
 		Port:                   defaultPort,
 		Protocol:               ProtocolMongoDB,
 		UUIDRepresentation:     UUIDRepresentationUnspecified,
-		EnablePing:             true,
 		ConnectTimeout:         defaultConnectTimeoutSec * time.Second,
 		ServerSelectionTimeout: defaultServerSelectionTimeout * time.Second,
 		SocketTimeout:          defaultSocketTimeoutSec * time.Second,
@@ -71,22 +76,13 @@ func checkMissingRequiredKeys(cfg *Config) []string {
 	return missing
 }
 
-const missingKeysLogFormat = "missing required mongodb configuration keys: %v; exiting peacefully\n"
-
-// logMissingKeys outputs diagnostic message for missing environment keys.
-func logMissingKeys(missing []string) {
-	if _, err := fmt.Fprintf(os.Stderr, missingKeysLogFormat, missing); err != nil {
-		return
-	}
-}
-
-// handleMissingKeys inspects missing keys and initiates peaceful termination if any are missing.
+// handleMissingKeys inspects missing keys and initiates peaceful termination via Central Log if any are missing.
 func handleMissingKeys(missing []string) error {
 	if len(missing) == 0 {
 		return nil
 	}
-	logMissingKeys(missing)
-	exitFunc(0)
+	msg := fmt.Sprintf("missing required mongodb configuration keys: %v; exiting peacefully", missing)
+	central.ExitWithGraceful(context.Background(), msg)
 	return fmt.Errorf("missing required mongodb configuration keys: %v", missing)
 }
 

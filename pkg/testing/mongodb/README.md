@@ -114,7 +114,6 @@ For setup scripts, benchmark harnesses, or test suites managing custom teardown 
 func TestStandaloneConnection(ctx context.Context, uri string) error {
 	client, err := testmongo.ConnectURI(ctx, uri,
 		testmongo.WithDatabase("analytics"),
-		testmongo.WithPing(true),
 	)
 	if err != nil {
 		return err
@@ -231,7 +230,6 @@ func TestParallelOperations(t *testing.T) {
 | `WithSocketTimeout` | `WithSocketTimeout(timeout time.Duration) Option` | Socket read/write operation timeout | `10s` |
 | `WithMaxConnIdleTime` | `WithMaxConnIdleTime(idleTime time.Duration) Option` | Maximum idle duration for pooled connections | `10m` |
 | `WithPoolLimits` | `WithPoolLimits(min, max uint64) Option` | Minimum and maximum connection pool sizes | Min: `5`, Max: `100` |
-| `WithPing` | `WithPing(enablePing bool) Option` | Enable/disable connectivity verification on connect | `true` |
 | `WithTLS` | `WithTLS(enableTLS bool) Option` | Enable/disable TLS/SSL encryption | `false` |
 | `WithDirectConnection` | `WithDirectConnection(direct bool) Option` | Force direct connection to a single host instance | `false` |
 | `WithUUIDRepresentation` | `WithUUIDRepresentation(repr string) Option` | Binary UUID representation format | `"unspecified"` |

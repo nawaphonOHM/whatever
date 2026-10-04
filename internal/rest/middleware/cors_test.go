@@ -16,6 +16,7 @@ const (
 	testOriginEvil = "https://evil.com"
 	testAPIData    = "/api/data"
 	testOriginHdr  = "Origin"
+	testPath       = "/test"
 )
 
 // init initializes the gin test mode.
@@ -42,11 +43,11 @@ func executePreflightRequest(
 func TestCORS_DefaultPreflight(t *testing.T) {
 	r := gin.New()
 	r.Use(CORS(DefaultCORSConfig()))
-	r.GET("/test", func(c *gin.Context) {
+	r.GET(testPath, func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")
 	})
 
-	w := executePreflightRequest(t, r, "/test", "http://example.com")
+	w := executePreflightRequest(t, r, testPath, "http://example.com")
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	assert.Equal(t, "*", w.Header().Get(headerAllowOrg))
 	assert.Contains(t, w.Header().Get(headerAllowMth), "GET")
@@ -68,7 +69,7 @@ func executeTestRequest(
 
 // setupCustomCORSEngine creates a test engine with custom CORS configuration.
 func setupCustomCORSEngine() *gin.Engine {
-	cfg := CORSConfig{
+	cfg := &CORSConfig{
 		AllowOrigins:     []string{testOriginApp},
 		AllowMethods:     []string{"GET", "POST"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
@@ -83,6 +84,19 @@ func setupCustomCORSEngine() *gin.Engine {
 		c.String(http.StatusOK, "data")
 	})
 	return r
+}
+
+// TestCORS_NilConfig tests that passing nil config defaults gracefully.
+func TestCORS_NilConfig(t *testing.T) {
+	r := gin.New()
+	r.Use(CORS(nil))
+	r.GET(testPath, func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	w := executePreflightRequest(t, r, testPath, "http://example.com")
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, "*", w.Header().Get(headerAllowOrg))
 }
 
 // TestCORS_CustomConfig tests CORS middleware with customized origin policies.

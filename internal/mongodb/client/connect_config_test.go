@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
@@ -88,25 +90,30 @@ func TestConnectWithConfig_WithOptions(t *testing.T) {
 	assert.True(t, *exitCalled)
 }
 
-func verifyDisabledPingClient(t *testing.T, ctx context.Context, client *Client, exitCalled *bool) {
-	require.NotNil(t, client)
-	assert.False(t, *exitCalled)
-	assert.Error(t, client.Ping(ctx))
-	assert.NoError(t, client.Disconnect(context.Background()))
+func setupMockPingAndProbe(probeErr error) func() {
+	cleanupPing := SetMockPing(func(context.Context, *mongo.Client) error {
+		return nil
+	})
+	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+		return probeErr
+	})
+	return func() {
+		cleanupProbe()
+		cleanupPing()
+	}
 }
 
-// TestConnectWithConfig_DisabledPing_Success tests connection succeeds when EnablePing is false.
-func TestConnectWithConfig_DisabledPing_Success(t *testing.T) {
+// TestConnectWithConfig_ProbeFailure tests connection failure when probe fails after ping succeeds.
+func TestConnectWithConfig_ProbeFailure(t *testing.T) {
 	exitCalled, restore := interceptExitHook()
 	defer restore()
 
-	cfg := createUnreachableConfig()
-	cfg.EnablePing = false
+	cleanup := setupMockPingAndProbe(errors.New("simulated probe failure"))
+	defer cleanup()
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextDur)
-	defer cancel()
-
-	client, err := ConnectWithConfig(ctx, cfg)
-	require.NoError(t, err)
-	verifyDisabledPingClient(t, ctx, client, exitCalled)
+	client, err := ConnectWithConfig(context.Background(), createUnreachableConfig())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to probe mongodb")
+	assert.Nil(t, client)
+	assert.True(t, *exitCalled)
 }

@@ -10,7 +10,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
 	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/pkg/logging"
 )
 
 // ShutdownFunc defines the callback function to flush and terminate the TracerProvider.
@@ -26,57 +28,74 @@ func isTelemetryDisabled(cfg *config.Config) bool {
 	return cfg == nil || !cfg.Enabled
 }
 
-// buildTracerProvider constructs a new SDK TracerProvider with batch processor, resource, and sampler.
-func buildTracerProvider(
-	exporter sdktrace.SpanExporter,
-	res *resource.Resource,
-	rate float64,
-) *sdktrace.TracerProvider {
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
-	sampler := buildSampler(rate)
-	return sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(bsp),
-		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sampler),
+// validateConfig validates the OpenTelemetry configuration.
+func validateConfig(ctx context.Context, cfg *config.Config) error {
+	if err := cfg.Validate(); err != nil {
+		logging.ErrorContext(ctx, "OpenTelemetry provider configuration validation failed", "error", err)
+		return fmt.Errorf("invalid opentelemetry config: %w", err)
+	}
+	return nil
+}
+
+// logProviderConfig logs the provider configuration values.
+func logProviderConfig(ctx context.Context, cfg *config.Config) {
+	logging.InfoContext(ctx, "OpenTelemetry provider configuration choices",
+		"service_name", cfg.ServiceName,
+		"endpoint", cfg.Endpoint,
+		"protocol", cfg.Protocol,
+		"insecure", cfg.Insecure,
+		"sample_rate", cfg.SampleRate,
 	)
 }
 
-// createExporterAndResource initializes the configured exporter and resource.
-func createExporterAndResource(
+// initAndRegisterTracer registers the configured tracer provider globally.
+func initAndRegisterTracer(
 	ctx context.Context,
-	cfg *config.Config,
-) (sdktrace.SpanExporter, *resource.Resource, error) {
-	exporter, err := newExporter(ctx, cfg)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize exporter: %w", err)
-	}
-	res, err := newResource(ctx, cfg.ServiceName)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create resource: %w", err)
-	}
-	return exporter, res, nil
+	exporter sdktrace.SpanExporter,
+	res *resource.Resource,
+	sampleRate float64,
+) ShutdownFunc {
+	logging.InfoContext(ctx, "OpenTelemetry sampling rate selected", "sample_rate", sampleRate)
+	tp := buildTracerProvider(exporter, res, sampleRate)
+	otel.SetTracerProvider(tp)
+	logging.InfoContext(ctx, "OpenTelemetry provider initialization complete", "enabled", true)
+	return tp.Shutdown
 }
 
 // setupActiveProvider validates configuration, initializes resources/exporters, and configures global tracer.
 func setupActiveProvider(ctx context.Context, cfg *config.Config) (ShutdownFunc, error) {
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid opentelemetry config: %w", err)
-	}
-	exporter, res, err := createExporterAndResource(ctx, cfg)
-	if err != nil {
+	if err := validateConfig(ctx, cfg); err != nil {
 		return nil, err
 	}
-	tp := buildTracerProvider(exporter, res, cfg.SampleRate)
-	otel.SetTracerProvider(tp)
-	return tp.Shutdown, nil
+	logProviderConfig(ctx, cfg)
+	exporter, res, err := createExporterAndResource(ctx, cfg)
+	if err != nil {
+		logging.ErrorContext(ctx, "OpenTelemetry provider initialization failed", "error", err)
+		return nil, err
+	}
+	return initAndRegisterTracer(ctx, exporter, res, cfg.SampleRate), nil
 }
 
 // InitTracerProvider initializes the OpenTelemetry TracerProvider, registers global propagators,
 // and returns a graceful shutdown function.
 func InitTracerProvider(ctx context.Context, cfg *config.Config) (ShutdownFunc, error) {
-	RegisterPropagators()
-	if isTelemetryDisabled(cfg) {
-		return noopShutdown, nil
-	}
-	return setupActiveProvider(ctx, cfg)
+	decorated := callstack.DecorateContextFunc(
+		"opentelemetry.provider.InitTracerProvider",
+		func(ctx context.Context) (ShutdownFunc, error) {
+			logging.InfoContext(ctx, "entering OpenTelemetry provider initialization state")
+			RegisterPropagators()
+			if isTelemetryDisabled(cfg) {
+				logging.InfoContext(
+					ctx,
+					"OpenTelemetry disabled; falling back to noop tracer provider",
+					"enabled",
+					false,
+				)
+				logging.InfoContext(ctx, "OpenTelemetry provider initialization complete", "enabled", false)
+				return noopShutdown, nil
+			}
+			return setupActiveProvider(ctx, cfg)
+		},
+	)
+	return decorated(ctx)
 }

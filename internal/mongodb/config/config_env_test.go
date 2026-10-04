@@ -20,7 +20,6 @@ func setupCustomEnv(t *testing.T) {
 		testEnvAuthSource:             "admin",
 		testEnvAppName:                "order-service",
 		testEnvUUIDRepresentation:     "standard",
-		testEnvEnablePing:             "true",
 		testEnvConnectTimeout:         "15s",
 		testEnvServerSelectionTimeout: "3s",
 		testEnvSocketTimeout:          "20s",
@@ -43,7 +42,6 @@ func verifyLoadedBaseFields(t *testing.T, cfg *Config) {
 	assert.Equal(t, "admin", cfg.AuthSource)
 	assert.Equal(t, "order-service", cfg.AppName)
 	assert.Equal(t, "standard", cfg.UUIDRepresentation)
-	assert.True(t, cfg.EnablePing)
 }
 
 func verifyLoadedRuntimeFields(t *testing.T, cfg *Config) {
@@ -71,7 +69,6 @@ func verifyMinimalConfig(t *testing.T, cfg *Config) {
 	assert.Equal(t, "localhost", cfg.Host)
 	assert.Equal(t, defaultPort, cfg.Port)
 	assert.Equal(t, ProtocolMongoDB, cfg.Protocol)
-	assert.True(t, cfg.EnablePing)
 	assert.Empty(t, cfg.Username)
 	assert.Empty(t, cfg.Password)
 	assert.Equal(t, testDefaultTimeoutSec*time.Second, cfg.ConnectTimeout)
@@ -88,27 +85,4 @@ func TestConfig_Load_MinimalEnv(t *testing.T) {
 	require.NotNil(t, cfg)
 	verifyMinimalConfig(t, cfg)
 	assert.NoError(t, cfg.Validate())
-}
-
-// TestConfig_Load_EnablePingOverrides tests loading the startup ping setting from the environment.
-func TestConfig_Load_EnablePingOverrides(t *testing.T) {
-	for _, test := range []struct {
-		name  string
-		value string
-		want  bool
-	}{
-		{name: "disabled", value: "false", want: false},
-		{name: "enabled", value: "true", want: true},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			setupEmptyEnv(t)
-			t.Setenv(testEnvHost, "localhost")
-			t.Setenv(testEnvEnablePing, test.value)
-
-			cfg, err := LoadConfig()
-			require.NoError(t, err)
-			require.NotNil(t, cfg)
-			assert.Equal(t, test.want, cfg.EnablePing)
-		})
-	}
 }

@@ -17,7 +17,6 @@ func TestDefaultOptions(t *testing.T) {
 	assert.Equal(t, mongodb.DefaultProtocol, opts.Protocol)
 	assert.Equal(t, mongodb.DefaultUUIDRepresentation, opts.UUIDRepresentation)
 	assert.Equal(t, mongodb.DefaultConnectTimeout, opts.ConnectTimeout)
-	assert.True(t, opts.EnablePing)
 	assert.False(t, opts.EnableTLS)
 	assert.False(t, opts.DirectConnection)
 }

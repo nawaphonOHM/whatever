@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/internal/rest/middleware"
+	"github.com/nawaphonOHM/whatever/pkg/logging"
 )
 
 // mapHTTPMethods converts HTTP methods into uppercase strings.
@@ -44,13 +45,21 @@ func applyCORSMethods(
 }
 
 // buildCORSConfig derives CORSConfig from Meta.Cors() or returns default.
-func buildCORSConfig(meta *contracts.Meta) middleware.CORSConfig {
+func buildCORSConfig(meta *contracts.Meta) *middleware.CORSConfig {
 	cfg := middleware.DefaultCORSConfig()
 	cors := corsFromMeta(meta)
 	if cors == nil {
+		logging.Info("no custom CORS configuration provided; using default CORS settings",
+			"allow_origins", cfg.AllowOrigins,
+			"allow_methods", cfg.AllowMethods,
+		)
 		return cfg
 	}
-	applyCORSOrigins(&cfg, cors)
-	applyCORSMethods(&cfg, cors)
+	applyCORSOrigins(cfg, cors)
+	applyCORSMethods(cfg, cors)
+	logging.Info("applying custom CORS configuration",
+		"allow_origins", cfg.AllowOrigins,
+		"allow_methods", cfg.AllowMethods,
+	)
 	return cfg
 }

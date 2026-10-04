@@ -20,19 +20,20 @@ func TestConnectURI_EmptyURI(t *testing.T) {
 }
 
 func TestConnectURI_ExtractDatabase(t *testing.T) {
+	setMockPingSuccess(t, nil)
 	ctx := context.Background()
-	client, err := ConnectURI(ctx, "mongodb://localhost:27017/extracted_db", WithPing(false))
+	client, err := ConnectURI(ctx, "mongodb://localhost:27017/extracted_db")
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	assert.Equal(t, "extracted_db", client.Database().Name())
 }
 
 func TestConnectURI_OverrideDatabase(t *testing.T) {
+	setMockPingSuccess(t, nil)
 	ctx := context.Background()
 	client, err := ConnectURI(
 		ctx,
 		"mongodb://localhost:27017/extracted_db",
-		WithPing(false),
 		WithDatabase("overridden_db"),
 	)
 	require.NoError(t, err)
