@@ -13,6 +13,7 @@ const (
 	testMaxPoolLimit  = uint64(200)
 	testConfigMaxPool = uint64(50)
 	testConfigMinPool = uint64(10)
+	testSampleURI     = "mongodb://localhost:27017/test_db"
 )
 
 func TestBuildURI_Defaults(t *testing.T) {
@@ -41,6 +42,8 @@ func TestBuildURI_FullOptions(t *testing.T) {
 }
 
 func TestBuildURI_NilOptions(t *testing.T) {
+	// False positive: nil options are intentional nil-safety coverage; proof:
+	// TestBuildURI_NilOptions in this file and TestBuildURI_NilOptionsProof in builder_nil_proof_test.go.
 	uri := BuildURI(nil, false)
 	assert.Equal(t, "mongodb://localhost:27017/?uuidRepresentation=unspecified&tls=false", uri)
 }
@@ -73,4 +76,41 @@ func TestBuildClientOptionsWithTLS_Override(t *testing.T) {
 	opts := NewOptions(WithHost("127.0.0.1"), WithTLS(false))
 	driverOpts := BuildClientOptionsWithTLS(opts, true)
 	require.NotNil(t, driverOpts)
+}
+
+func TestResolveURIFromOptions_Nil(t *testing.T) {
+	assert.Equal(t, "", resolveURIFromOptions(nil))
+}
+
+func TestResolveURIFromOptions_NoTLS(t *testing.T) {
+	opts := &Options{URI: testSampleURI, EnableTLS: false}
+	assert.Equal(t, testSampleURI, resolveURIFromOptions(opts))
+}
+
+func TestResolveURIFromOptions_WithTLS(t *testing.T) {
+	opts := &Options{URI: testSampleURI, EnableTLS: true}
+	assert.Equal(t, testSampleURI+"?tls=true", resolveURIFromOptions(opts))
+
+	optsWithQuery := &Options{URI: "mongodb://localhost:27017/test_db?replicaSet=rs0", EnableTLS: true}
+	assert.Equal(t, "mongodb://localhost:27017/test_db?replicaSet=rs0&tls=true", resolveURIFromOptions(optsWithQuery))
+}
+
+func TestResolveURI(t *testing.T) {
+	assert.Equal(t, "mongodb://localhost:27017/?uuidRepresentation=unspecified&tls=false", resolveURI(nil))
+
+	optsWithURI := &Options{URI: testSampleURI}
+	assert.Equal(t, testSampleURI, resolveURI(optsWithURI))
+
+	optsWithURITLS := &Options{URI: testSampleURI, EnableTLS: true}
+	assert.Equal(t, testSampleURI+"?tls=true", resolveURI(optsWithURITLS))
+
+	optsWithoutURI := &Options{Host: "127.0.0.1", Port: DefaultPort, Database: "test_db", EnableTLS: true}
+	expectedURI := "mongodb://127.0.0.1:27017/test_db?uuidRepresentation=unspecified&tls=true"
+	assert.Equal(t, expectedURI, resolveURI(optsWithoutURI))
+}
+
+func TestResolveEnableTLS(t *testing.T) {
+	assert.False(t, resolveEnableTLS(nil))
+	assert.False(t, resolveEnableTLS(&Options{EnableTLS: false}))
+	assert.True(t, resolveEnableTLS(&Options{EnableTLS: true}))
 }

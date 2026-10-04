@@ -51,6 +51,8 @@ func verifyNilFixtures(t *testing.T, c *TestClient) {
 
 // TestTestClient_NilSafety tests method calls on nil TestClient instances.
 func TestTestClient_NilSafety(t *testing.T) {
+	// False positive: the nil receiver is intentional nil-safety coverage; proof:
+	// TestTestClient_NilSafety in client_nil_test.go.
 	var nilClient *TestClient
 
 	verifyNilAccessors(t, nilClient)

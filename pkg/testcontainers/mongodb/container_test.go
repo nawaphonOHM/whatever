@@ -48,6 +48,8 @@ func testNilBridges(ctx context.Context, t *testing.T, c *mongodb.Container) {
 func TestNilContainer_Methods(t *testing.T) {
 	var c *mongodb.Container
 	ctx := context.Background()
+	// False positive: these nil-receiver calls are intentional nil-safety coverage; proof:
+	// TestNilContainer_Methods in container_test.go.
 	testNilEndpoints(ctx, t, c)
 	testNilBridges(ctx, t, c)
 }

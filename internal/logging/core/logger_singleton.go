@@ -28,6 +28,7 @@ func initDefaultLogger() *Logger {
 
 // Default returns the process-wide default Logger instance.
 // It initializes lazily on first call using environment configuration.
+// The logger remains open for package-level calls until ResetDefault replaces it.
 func Default() *Logger {
 	if l := defaultLogger.Load(); l != nil {
 		return l
@@ -61,6 +62,8 @@ func closePreviousLogger(prev *Logger) {
 // It closes any existing logger's closer if applicable.
 func ResetDefault() {
 	prev := defaultLogger.Swap(nil)
+	// False positive: closing the replaced singleton is intentional ownership cleanup; proof:
+	// TestGlobalLogger_SingletonResourceProof in logger_singleton_proof_test.go.
 	closePreviousLogger(prev)
 	l := initDefaultLogger()
 	defaultLogger.Store(l)

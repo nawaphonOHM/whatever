@@ -64,6 +64,8 @@ func TestNilTestClient(t *testing.T) {
 	var c *mongodb.TestClient
 	ctx := context.Background()
 
+	// False positive: calling methods on this nil receiver is intentional nil-safety coverage; proof:
+	// TestNilTestClient and assertNilClientFixtures in client_test.go.
 	assert.Nil(t, c.Database())
 	assert.Nil(t, c.Collection("users"))
 	assert.Nil(t, c.RawClient())
