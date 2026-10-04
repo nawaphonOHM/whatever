@@ -22,6 +22,7 @@ linters:
     - unused
     - misspell
     - revive
+    - depguard
   # All available settings of specific linters.
   settings:
     errcheck:
@@ -1328,6 +1329,12 @@ linters:
       # Mark all identifiers inside generated files as used.
       # Default: true
       generated-is-used: false
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: "unsafe"
+              desc: "unsafe package is not allowed"
 
 formatters:
   # Enable specific formatter.
