@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	loggingconfig "github.com/nawaphonOHM/whatever/internal/logging/config"
-	"github.com/nawaphonOHM/whatever/internal/logging/core"
+	loggingconfig "github.com/nawaphonOHM/whatever/v2/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/core"
 )
 
 func assertLifecycleLogs(t *testing.T, logs string) {

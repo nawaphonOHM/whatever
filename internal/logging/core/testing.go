@@ -3,7 +3,7 @@ package core
 import (
 	"io"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 )
 
 // SetTestLogger sets the default logger to the provided logger

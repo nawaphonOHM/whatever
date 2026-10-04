@@ -6,9 +6,9 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
-	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
 )
 
 const (

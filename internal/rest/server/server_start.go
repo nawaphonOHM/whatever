@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 // listenAndServeAsync starts ListenAndServe and reports non-close errors.

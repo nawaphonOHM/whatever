@@ -3,7 +3,7 @@ package mongodb
 import (
 	"context"
 
-	"github.com/nawaphonOHM/whatever/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )

@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

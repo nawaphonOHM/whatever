@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 // Server encapsulates the Gin engine and HTTP server lifecycle.

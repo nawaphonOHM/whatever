@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/pkg/testing/mongodb"
 )
 
 type mockTB struct {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 )
 
 // testSuccessResponse mirrors the public success response JSON shape.

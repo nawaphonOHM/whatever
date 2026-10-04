@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
-	"github.com/nawaphonOHM/whatever/internal/logging/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

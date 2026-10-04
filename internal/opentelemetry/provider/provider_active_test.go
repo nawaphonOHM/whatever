@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 )
 
 const testHalfSampleRate = 0.5

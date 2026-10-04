@@ -5,7 +5,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"github.com/nawaphonOHM/whatever/internal/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
 )
 
 // WithConnectTimeout sets the timeout for initial connection establishment.

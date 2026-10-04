@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 )
 
 // appendHTTPEndpointOption sets endpoint URL or host:port on the option slice.

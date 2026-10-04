@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
 )
 
 // With returns a new Logger that includes the given attributes.

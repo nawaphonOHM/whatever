@@ -6,8 +6,8 @@ import (
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
 )
 
 // newExporter constructs an OTLP SpanExporter according to the configured protocol.

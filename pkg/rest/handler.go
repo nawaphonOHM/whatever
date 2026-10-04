@@ -3,7 +3,7 @@
 package rest
 
 import (
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 )
 
 // Handler defines route handlers returning a standardized Response.

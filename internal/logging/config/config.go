@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	intcfg "github.com/nawaphonOHM/whatever/internal/rest/config"
+	intcfg "github.com/nawaphonOHM/whatever/v2/internal/rest/config"
 )
 
 // SetDefaults populates the configuration with initial default values.

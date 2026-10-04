@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/nawaphonOHM/whatever/internal/rest/server"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/server"
 )
 
 // Sentinel validation errors returned by StartREST.

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/mongodb"
 	"github.com/stretchr/testify/assert"
 )
 

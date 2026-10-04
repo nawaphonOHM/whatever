@@ -3,7 +3,7 @@ package mongodb_test
 import (
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	"github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/mongodb"
 )
 
 func verifyOptionCredentials(t *testing.T, o *mongodb.Options) {

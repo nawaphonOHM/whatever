@@ -3,7 +3,7 @@ package provider
 import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/nawaphonOHM/whatever/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
 )
 
 // buildSampler returns an appropriate Sampler based on the configured sample rate.

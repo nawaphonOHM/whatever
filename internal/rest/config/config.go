@@ -8,8 +8,8 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
-	"github.com/nawaphonOHM/whatever/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/internal/logging/central"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
 )
 
 // isNotExistError checks if error represents a file non-existence error.

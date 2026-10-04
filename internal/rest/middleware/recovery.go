@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/internal/rest/problem"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/problem"
 )
 
 // Recovery returns a middleware that recovers from any panics,

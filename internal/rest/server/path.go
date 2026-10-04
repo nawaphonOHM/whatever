@@ -5,7 +5,7 @@ import (
 	pathpkg "path"
 	"strings"
 
-	"github.com/nawaphonOHM/whatever/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 )
 
 // versionToken returns the bare version segment (e.g. "v1").

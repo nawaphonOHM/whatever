@@ -5,8 +5,8 @@ package mongodb
 import (
 	"context"
 
-	"github.com/nawaphonOHM/whatever/internal/mongodb/client"
-	"github.com/nawaphonOHM/whatever/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
 )
 
 // Client wraps the official mongo.Client and provides managed database and
