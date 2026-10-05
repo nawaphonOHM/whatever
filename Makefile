@@ -16,8 +16,12 @@ build: ## Verify compilation of all packages
 	go build -v ./...
 
 .PHONY: test
-test: ## Run unit and integration tests with race detection
+test: ## Run unit tests with race detection
 	go test -race -v ./...
+
+.PHONY: test-integration
+test-integration: ## Run Testcontainers integration tests with race detection
+	go test -tags=testcontainers -race -v ./...
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with race detection and HTML coverage report

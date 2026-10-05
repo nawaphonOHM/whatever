@@ -25,16 +25,19 @@ func chooseTargetColl(colls []string) string {
 	return "__probe__"
 }
 
+func resolveProbeDuration(d, defaultDur time.Duration) time.Duration {
+	if d <= 0 {
+		return defaultDur
+	}
+	return d
+}
+
 func probeListCollectionsWithoutMaxTime(
 	ctx context.Context,
 	db *mongo.Database,
 	timeout time.Duration,
 ) ([]string, error) {
-	effectiveTimeout := timeout
-	if effectiveTimeout <= 0 {
-		effectiveTimeout = DefaultSocketTimeout
-	}
-	timeoutCtx, cancel := context.WithTimeout(ctx, effectiveTimeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, resolveProbeDuration(timeout, DefaultSocketTimeout))
 	defer cancel()
 
 	colls, err := db.ListCollectionNames(timeoutCtx, bson.D{})
@@ -49,15 +52,10 @@ func probeListCollectionsWithMaxTime(
 	db *mongo.Database,
 	timeout time.Duration,
 ) error {
-	effectiveTimeout := timeout
-	if effectiveTimeout <= 0 {
-		effectiveTimeout = DefaultSocketTimeout
-	}
-	cmd := bson.D{
-		{Key: "listCollections", Value: 1},
-		{Key: "maxTimeMS", Value: effectiveTimeout.Milliseconds()},
-	}
-	if err := db.RunCommand(ctx, cmd).Err(); err != nil {
+	timeoutCtx, cancel := context.WithTimeout(ctx, resolveProbeDuration(timeout, DefaultSocketTimeout))
+	defer cancel()
+	cmd := bson.D{{Key: "listCollections", Value: 1}}
+	if err := db.RunCommand(timeoutCtx, cmd).Err(); err != nil {
 		return fmt.Errorf("failed to list collections with maxTimeMS: %w", err)
 	}
 	return nil
