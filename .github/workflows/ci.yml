@@ -28,7 +28,7 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
-          args: --timeout=5m
+          args: --timeout=5m --build-tags=testcontainers
 
   test:
     name: Test & Build
@@ -51,6 +51,9 @@ jobs:
 
       - name: Run tests with race detector and coverage
         run: go test -race -v -coverprofile=coverage.out ./...
+
+      - name: Run Testcontainers integration tests
+        run: go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...
 
       - name: Verify package compilation
         run: go build -v ./...
