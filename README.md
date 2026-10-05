@@ -18,6 +18,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [`pkg/logging`](#pkglogging)
   - [`pkg/logger`](#pkglogger)
   - [`pkg/mongodb`](#pkgmongodb)
+  - [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore)
   - [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb)
   - [`pkg/testing/mongodb`](#pkgtestingmongodb)
 - [Quick Start](#quick-start)
@@ -68,12 +69,17 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Readiness & Health Verification](#readiness--health-verification)
   - [Raw Driver Access](#raw-driver-access)
   - [Termination Hooks & Sentinel Errors](#termination-hooks--sentinel-errors)
-- [MongoDB Testcontainers (`pkg/testcontainers/mongodb`)](#mongodb-testcontainers-pkgtestcontainersmongodb)
+- [Firestore Testcontainers (`pkg/testcontainers/firestore`)](#firestore-testcontainers-pkgtestcontainersfirestore)
   - [Container Lifecycle & Startup](#container-lifecycle--startup)
   - [Functional Options & Customization](#functional-options--customization)
+  - [Connection Getters & Container Methods](#connection-getters--container-methods)
+  - [Constants & Sentinel Errors](#constants--sentinel-errors)
+- [MongoDB Testcontainers (`pkg/testcontainers/mongodb`)](#mongodb-testcontainers-pkgtestcontainersmongodb)
+  - [Container Lifecycle & Startup](#container-lifecycle--startup-1)
+  - [Functional Options & Customization](#functional-options--customization-1)
   - [Connection Getters & Managed Client](#connection-getters--managed-client)
   - [Integration Testing Patterns](#integration-testing-patterns)
-  - [Constants & Sentinel Errors](#constants--sentinel-errors)
+  - [Constants & Sentinel Errors](#constants--sentinel-errors-1)
 - [MongoDB Testing Toolkit (`pkg/testing/mongodb`)](#mongodb-testing-toolkit-pkgtestingmongodb)
   - [Architectural Separation & Test State Isolation](#architectural-separation--test-state-isolation)
   - [URI Connection & Functional Options](#uri-connection--functional-options)
@@ -144,6 +150,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   │   ├── problem/           # RFC 9457 Problem Details error response implementation
 │   │   └── server/            # Gin engine bootstrap, preflight route validation, and server lifecycle
 │   ├── testcontainers/
+│   │   ├── firestore/         # Testcontainers Firestore module integration, lifecycle, and emulator wiring
 │   │   └── mongodb/           # Testcontainers MongoDB module integration, lifecycle, and client wiring
 │   └── testing/
 │       └── mongodb/           # Test client engine, options builder, fixture management, and testing.TB hooks
@@ -153,6 +160,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
 │   ├── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
 │   ├── testcontainers/
+│   │   ├── firestore/         # Public Testcontainers Firestore emulator runner, options, and container handle
 │   │   └── mongodb/           # Public Testcontainers MongoDB testing runner, options, and container handle
 │   └── testing/
 │       └── mongodb/           # Public MongoDB test client, functional options, fixture helpers, and testing.TB helpers
@@ -177,6 +185,7 @@ The toolkit is divided into focused public packages under `pkg/`:
 | [`pkg/logging`](#pkglogging) | Environment-driven structured logging facade with extended levels & OTel trace injection | `logging.Info()`, `logging.InfoContext()`, `logging.ErrorContext()`, `logging.FatalContext()`, `logging.LogAttrs()` | `log/slog`, `go.opentelemetry.io/otel` |
 | [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
+| [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore) | Ephemeral Firestore emulator containers for integration tests | `firestore.Run()`, `container.URI()`, `container.Host()`, `container.Port()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb) | Ephemeral MongoDB containers with automated lifecycle and connection wiring for integration tests | `mongodb.Run()`, `container.Client()`, `container.ConnectionString()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testing/mongodb`](#pkgtestingmongodb) | Test MongoDB client with URI/options connectivity, automated `testing.TB` teardown, & fixture cleanup | `mongodb.NewTestClientURI()`, `mongodb.NewTestClient()`, `mongodb.ConnectURI()`, `client.TruncateCollections()` | `go.mongodb.org/mongo-driver/v2` |
 
@@ -217,9 +226,18 @@ Managed client for MongoDB deployments using the official MongoDB Go driver v2 (
 
 - **Zero-Boilerplate Initialization**: Seamlessly reads and validates configuration from `OHM9996_MONGODB_*` environment variables.
 - **Two-Phase Automatic TLS Fallback**: Attempts unencrypted connection first and automatically negotiates TLS if required by the remote cluster (e.g. MongoDB Atlas).
+- **Google Cloud Firestore Compatibility**: Automatically detects `firestore.goog` endpoints and substitutes admin ping commands with dummy single-document reads.
 - **Managed Connection Pool**: Configurable connection limits (`MaxPoolSize`, `MinPoolSize`), socket timeouts, and connect timeouts.
 - **Health Verification**: Built-in `Ping(ctx)` method to verify live cluster connectivity during readiness checks.
 - **Direct Handle & Raw Driver Access**: Provides `client.Database(...)` and `client.Collection(...)` helpers with fallback to default database, and `client.RawClient()` for transactions and change streams.
+
+### `pkg/testcontainers/firestore`
+
+Dedicated Testcontainers integration for spin-up and teardown of ephemeral Google Cloud Firestore emulator instances in automated test suites:
+
+- **Ephemeral Emulator Lifecycle**: Spin up isolated, throwaway Firestore emulator containers in Go tests using `firestore.Run(ctx, opts...)` and terminate them cleanly with `container.Terminate(ctx)`.
+- **Dynamic Endpoint Introspection**: Resolve mapped external ports, host addresses, and connection URIs via `container.Port(ctx)`, `container.Host(ctx)`, and `container.URI(ctx)`.
+- **Declarative Container Customization**: Configure custom Docker images (`WithImage`), Google Cloud project IDs (`WithProjectID`), Datastore compatibility mode (`WithDatastoreMode`), environment variables (`WithEnv`), and raw container customizers (`WithContainerOptions`).
 
 ### `pkg/testcontainers/mongodb`
 
@@ -1114,6 +1132,8 @@ To provide seamless connectivity across unencrypted local Docker instances, secu
 
 `mongodb.Connect(ctx)` always performs an active ping check during initialization to ensure that the remote MongoDB deployment is reachable before application routes begin serving traffic. It then lists collections, selects a random collection when available, and probes a document with `FindOne`; an empty database is checked through the `__probe__` namespace. If either verification fails, the connection pool is immediately closed and a wrapped error is returned.
 
+When connecting to Google Cloud Firestore with MongoDB compatibility (endpoints containing `firestore.goog`), the client automatically detects the endpoint and substitutes standard admin ping commands (`{ping: 1}`) with a dummy document read (`FindOne` on collection `"__ping__"`), treating `mongo.ErrNoDocuments` as success.
+
 There is no configuration switch to bypass startup verification. Applications can additionally invoke `client.Ping(ctx)` on demand (for example, inside readiness probes or background pollers).
 
 ### Database & Collection Handles
@@ -1215,6 +1235,87 @@ defer mongodb.SetExitFunc(prevExit)
 The package exports standard sentinel errors:
 - `mongodb.ErrNilClient`: Returned when attempting operations on an uninitialized client instance (`"mongodb client is not initialized"`).
 - `mongodb.ErrNilConfig`: Returned when internal configuration resolving is nil (`"mongodb config cannot be nil"`).
+
+---
+
+## Firestore Testcontainers (`pkg/testcontainers/firestore`)
+
+The `pkg/testcontainers/firestore` package provides lightweight, isolated Google Cloud Firestore emulator container management for integration testing using [Testcontainers for Go](https://golang.testcontainers.org/) and the official Google Cloud module (`github.com/testcontainers/testcontainers-go/modules/gcloud/firestore`). It spins up ephemeral Firestore instances with zero host dependencies, exposing dynamic connection endpoints and project metadata.
+
+### Container Lifecycle & Startup
+
+Start an ephemeral Firestore container using `firestore.Run(ctx, opts...)`. The function provisions an emulator container, assigns dynamic host port mappings, waits until Firestore is ready to accept connections, and returns a `*firestore.Container` handle:
+
+```go
+package integration_test
+
+import (
+	"context"
+	"testing"
+
+	tcfirestore "github.com/nawaphonOHM/whatever/pkg/testcontainers/firestore"
+)
+
+func TestFirestoreContainerStartup(t *testing.T) {
+	ctx := context.Background()
+
+	// Spin up disposable Firestore emulator container
+	container, err := tcfirestore.Run(ctx)
+	if err != nil {
+		t.Fatalf("Failed to start Firestore container: %v", err)
+	}
+	defer func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Fatalf("Failed to terminate container: %v", err)
+		}
+	}()
+
+	// Introspect connection endpoints
+	uri, err := container.URI(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get container URI: %v", err)
+	}
+	t.Logf("Firestore container running at: %s (Project: %s)", uri, container.ProjectID())
+}
+```
+
+### Functional Options & Customization
+
+`firestore.Run(ctx, opts...)` accepts functional options (`Option`) to customize container image, project ID, datastore mode, environment variables, and raw Testcontainers options:
+
+| Option | Signature | Description | Default |
+|---|---|---|---|
+| `WithImage` | `WithImage(image string) Option` | Specifies the Docker image tag for the Firestore emulator | `firestore.DefaultImage` (`"gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators"`) |
+| `WithProjectID` | `WithProjectID(projectID string) Option` | Sets the Google Cloud project ID for the emulator instance | `firestore.DefaultProjectID` (`"test-project"`) |
+| `WithDatastoreMode` | `WithDatastoreMode(enabled ...bool) Option` | Runs the emulator in Datastore compatibility mode | `false` |
+| `WithEnv` | `WithEnv(key, value string) Option` | Sets custom environment variables inside the container | `nil` |
+| `WithContainerOptions` | `WithContainerOptions(opts ...testcontainers.ContainerCustomizer) Option` | Appends raw `testcontainers-go` container customizers | `nil` |
+
+Helper functions `firestore.DefaultOptions()` and `firestore.NewOptions(opts...)` are also exported for programmatic options inspection.
+
+### Connection Getters & Container Methods
+
+The `*firestore.Container` instance provides helpers to retrieve dynamic connection details or manage container lifecycle:
+
+| Method | Return Type | Description |
+|---|---|---|
+| `container.URI(ctx)` | `(string, error)` | Returns the connection URI (`host:port`) for the running Firestore container |
+| `container.Host(ctx)` | `(string, error)` | Returns the host IP or hostname where the emulator is accessible |
+| `container.Port(ctx)` | `(int, error)` | Returns the mapped external TCP port as an `int` |
+| `container.ProjectID()` | `string` | Returns the configured Google Cloud Project ID |
+| `container.DatastoreMode()` | `bool` | Returns whether the emulator is running in Datastore compatibility mode |
+| `container.RawContainer()` | `*tcfirestore.Container` | Returns the underlying raw Testcontainers Firestore container handle |
+| `container.Terminate(ctx)` | `error` | Stops and deletes the running container |
+
+### Constants & Sentinel Errors
+
+The package exports standard defaults and sentinel errors:
+
+- `firestore.DefaultImage`: Default container image (`"gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators"`).
+- `firestore.DefaultPort`: Default internal TCP port (`"8080/tcp"`).
+- `firestore.DefaultProjectID`: Default Google Cloud project ID (`"test-project"`).
+- `firestore.ErrNilContainer`: Returned when attempting operations on a nil container instance (`"firestore container is nil"`).
+- `firestore.ErrContainerNotRunning`: Returned when attempting operations on an unstarted or terminated container (`"firestore container is not running"`).
 
 ---
 

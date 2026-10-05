@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,33 +9,38 @@ import (
 )
 
 const (
-	testConnUser = "testuser"
-	testConnPass = "testpass"
-	testPort59   = "59999"
+	envMongoHost     = "OHM9996_MONGODB_HOST"
+	envMongoPort     = "OHM9996_MONGODB_PORT"
+	envMongoUsername = "OHM9996_MONGODB_USERNAME"
+	envMongoPassword = "OHM9996_MONGODB_PASSWORD"
+	envMongoDatabase = "OHM9996_MONGODB_DATABASE"
+	testConnUser     = "testuser"
+	testConnPass     = "testpass"
+	testPort59       = "59999"
 )
 
 // setupConnectPingEnv configures environment variables targeting an
 // unreachable port.
 func setupConnectPingEnv(t *testing.T) {
-	t.Setenv("OHM9996_MONGODB_HOST", "127.0.0.1")
-	t.Setenv("OHM9996_MONGODB_PORT", testPort59)
-	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
-	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
+	t.Setenv(envMongoHost, "127.0.0.1")
+	t.Setenv(envMongoPort, testPort59)
+	t.Setenv(envMongoUsername, testConnUser)
+	t.Setenv(envMongoPassword, testConnPass)
 }
 
 func setupConnectCanceledEnv(t *testing.T) {
-	t.Setenv("OHM9996_MONGODB_HOST", "localhost")
-	t.Setenv("OHM9996_MONGODB_PORT", "28018")
-	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
-	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
+	t.Setenv(envMongoHost, "localhost")
+	t.Setenv(envMongoPort, "28018")
+	t.Setenv(envMongoUsername, testConnUser)
+	t.Setenv(envMongoPassword, testConnPass)
 }
 
 // TestConnect_LoadConfigFailure tests failure when config cannot be parsed.
 func TestConnect_LoadConfigFailure(t *testing.T) {
-	t.Setenv("OHM9996_MONGODB_HOST", "127.0.0.1")
-	t.Setenv("OHM9996_MONGODB_PORT", "invalid-port")
-	t.Setenv("OHM9996_MONGODB_USERNAME", testConnUser)
-	t.Setenv("OHM9996_MONGODB_PASSWORD", testConnPass)
+	t.Setenv(envMongoHost, "127.0.0.1")
+	t.Setenv(envMongoPort, "invalid-port")
+	t.Setenv(envMongoUsername, testConnUser)
+	t.Setenv(envMongoPassword, testConnPass)
 
 	ctx := context.Background()
 	client, err := Connect(ctx)
@@ -83,7 +87,7 @@ func TestConnect_ProbeFailure(t *testing.T) {
 	exitCalled, cleanupExit := setupExitCapture()
 	defer cleanupExit()
 
-	cleanup := setupMockPingAndProbe(errors.New("simulated probe failure"))
+	cleanup := setupMockPingAndProbe(assert.AnError)
 	defer cleanup()
 
 	client, err := Connect(context.Background())

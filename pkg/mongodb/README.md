@@ -71,15 +71,24 @@ orders := client.Collection("orders", "custom_db")
 
 `mongodb.Connect(ctx)` executes a four-step connectivity and permission probe sequence during client initialization:
 
-1. **Ping Check**: Executes `rawClient.Ping(ctx, ...)` as the first connectivity check to verify basic transport reachability.
+1. **Ping Check**: Executes `rawClient.Ping(ctx, ...)` as the first connectivity check to verify basic transport reachability. When targeting Google Cloud Firestore (endpoints containing `firestore.goog`), standard MongoDB admin ping commands (`{ping: 1}`) are unsupported; the client automatically substitutes this with a dummy document read (`FindOne` on collection `"__ping__"`), treating `mongo.ErrNoDocuments` as success.
 2. **List Collections (Context Timeout)**: Executes `listCollections` bounded by `context.WithTimeout(ctx, socketTimeout)` without the `maxTimeMS` parameter on the command, ensuring proxy and cluster compatibility under Go context cancellation.
 3. **List Collections (with `maxTimeMS`)**: Executes `db.RunCommand(ctx, bson.D{{"listCollections", 1}, {"maxTimeMS", socketTimeoutMs}})` where `socketTimeoutMs` is derived from `SocketTimeout` (defaulting to 10s / 10000ms) to validate server-side execution timeout enforcement.
 4. **Collection Document Probe**: Selects a target collection from the database (or defaults to `__probe__` for empty databases) and performs a `FindOne` query to verify read access. `mongo.ErrNoDocuments` is treated as a successful probe.
 
 If any step in the probe sequence fails, the client is cleanly disconnected and returns `failed to probe mongodb: <cause>`. This ensures configuration, network, and permission errors are caught immediately at startup; there is no option to bypass these checks.
 
+### Google Cloud Firestore Compatibility
+
+When connecting to Google Cloud Firestore with MongoDB compatibility (where `OHM9996_MONGODB_HOST` or the connection string contains `firestore.goog`, case-insensitive):
+
+- **Automatic Endpoint Detection**: The client inspects the host and connection URI to detect `firestore.goog` endpoints automatically.
+- **Dummy-Read Reachability Ping**: Standard MongoDB `{ping: 1}` administrative commands are rejected or unsupported by Firestore endpoints. The client transparently substitutes the ping with a non-mutating single-document read query (`FindOne`) on the `"__ping__"` collection in the target database.
+- **Error Handling**: A result of `mongo.ErrNoDocuments` or `nil` proves complete transport reachability, socket communication, TLS negotiation, and authentication without modifying any data. Real transport and network failures are propagated as standard errors.
+- **Runtime Ping Routing**: Pinging the client at runtime via `client.Ping(ctx)` automatically routes to the Firestore dummy read query when connected to a Firestore endpoint.
+
 ### Public API
 
 The public client exposes `Database`, `Collection`, `RawClient`, `Ping`,
-and `Disconnect` methods. `Ping` can be used by readiness probes to verify
+`IsFirestore`, and `Disconnect` methods. `Ping` can be used by readiness probes to verify
 connectivity on demand. The process exit hook can be intercepted during testing via `SetExitFunc`.

@@ -68,3 +68,38 @@ func TestClient_Ping_Unreachable(t *testing.T) {
 
 	assert.Error(t, client.Ping(ctx))
 }
+
+// TestClient_Ping_Firestore_CanceledContext tests Firestore ping with a canceled context.
+func TestClient_Ping_Firestore_CanceledContext(t *testing.T) {
+	rawClient, err := mongo.Connect(options.Client().ApplyURI(testMongoURI))
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, rawClient.Disconnect(context.Background()))
+	}()
+
+	client := NewClient(rawClient, testDefaultDB, true)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	assert.ErrorIs(t, client.Ping(ctx), context.Canceled)
+}
+
+// TestClient_Ping_Firestore_Unreachable tests Firestore ping against an unreachable cluster.
+func TestClient_Ping_Firestore_Unreachable(t *testing.T) {
+	rawClient, err := mongo.Connect(
+		options.Client().
+			ApplyURI(testUnreachableURI).
+			SetServerSelectionTimeout(testShortDur).
+			SetTimeout(testShortDur),
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, rawClient.Disconnect(context.Background()))
+	}()
+
+	client := NewClient(rawClient, testDefaultDB, true)
+	ctx, cancel := context.WithTimeout(context.Background(), testContextDur)
+	defer cancel()
+
+	assert.Error(t, client.Ping(ctx))
+}

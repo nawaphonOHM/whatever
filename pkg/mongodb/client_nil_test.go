@@ -27,6 +27,7 @@ func TestNilClient(t *testing.T) {
 	assert.Nil(t, client.Collection(testNilCollUsers))
 	assert.Nil(t, client.Collection(testNilCollUsers, testNilDBParam))
 	assert.Nil(t, client.RawClient())
+	assert.False(t, client.IsFirestore())
 	assert.ErrorIs(t, client.Ping(ctx), mongodb.ErrNilClient)
 	assert.ErrorIs(t, client.Disconnect(ctx), mongodb.ErrNilClient)
 }
