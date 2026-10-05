@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // buildUserInfo constructs user credentials for connection URI.
@@ -67,4 +68,17 @@ func (c *Config) BuildURI(enableTLS bool) string {
 		RawQuery: c.buildQuery(enableTLS),
 	}
 	return u.String()
+}
+
+// IsFirestoreURL reports whether the provided host or URI targets Google Cloud Firestore.
+func IsFirestoreURL(target string) bool {
+	return strings.Contains(strings.ToLower(target), "firestore.goog")
+}
+
+// IsFirestore reports whether the configuration targets Google Cloud Firestore.
+func (c *Config) IsFirestore() bool {
+	if c == nil {
+		return false
+	}
+	return IsFirestoreURL(c.Host)
 }
