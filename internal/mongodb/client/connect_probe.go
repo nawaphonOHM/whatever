@@ -24,7 +24,7 @@ func chooseTargetColl(colls []string) string {
 	if len(colls) > 0 {
 		return colls[rand.IntN(len(colls))]
 	}
-	return "__probe__"
+	return "probe"
 }
 
 func resolveProbeDuration(d, defaultDur time.Duration) time.Duration {
@@ -32,35 +32,6 @@ func resolveProbeDuration(d, defaultDur time.Duration) time.Duration {
 		return defaultDur
 	}
 	return d
-}
-
-func probeListCollectionsWithoutMaxTime(
-	ctx context.Context,
-	db *mongo.Database,
-	timeout time.Duration,
-) ([]string, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, resolveProbeDuration(timeout, defaultProbeTimeout))
-	defer cancel()
-
-	colls, err := db.ListCollectionNames(timeoutCtx, bson.D{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list collections without maxTimeMS: %w", err)
-	}
-	return colls, nil
-}
-
-func probeListCollectionsWithMaxTime(
-	ctx context.Context,
-	db *mongo.Database,
-	timeout time.Duration,
-) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, resolveProbeDuration(timeout, defaultProbeTimeout))
-	defer cancel()
-	cmd := bson.D{{Key: "listCollections", Value: 1}}
-	if err := db.RunCommand(timeoutCtx, cmd).Err(); err != nil {
-		return fmt.Errorf("failed to list collections with maxTimeMS: %w", err)
-	}
-	return nil
 }
 
 func probeDocument(ctx context.Context, db *mongo.Database, coll string) error {
@@ -76,26 +47,33 @@ func probeDocument(ctx context.Context, db *mongo.Database, coll string) error {
 
 func probeCollections(
 	ctx context.Context,
+	c *Client,
 	db *mongo.Database,
 	timeout time.Duration,
 ) ([]string, error) {
-	colls, err := probeListCollectionsWithoutMaxTime(ctx, db, timeout)
-	if err != nil {
-		return nil, err
+	if c.IsFirestore() {
+		return probeFirestoreCollections(ctx, db)
 	}
-	if err := probeListCollectionsWithMaxTime(ctx, db, timeout); err != nil {
-		return nil, err
+	return probeStandardCollections(ctx, db, timeout)
+}
+
+func resolveProbeDatabase(c *Client, dbName string) (*mongo.Database, error) {
+	if c == nil {
+		return nil, ErrNilClient
 	}
-	return colls, nil
+	db := c.Database(resolveDBName(dbName))
+	if db == nil {
+		return nil, ErrNilClient
+	}
+	return db, nil
 }
 
 func defaultProbeClient(ctx context.Context, c *Client, dbName string) error {
-	timeout := probeTimeoutFromContext(ctx)
-	db := c.Database(resolveDBName(dbName))
-	if db == nil {
-		return ErrNilClient
+	db, err := resolveProbeDatabase(c, dbName)
+	if err != nil {
+		return err
 	}
-	colls, err := probeCollections(ctx, db, timeout)
+	colls, err := probeCollections(ctx, c, db, probeTimeoutFromContext(ctx))
 	if err != nil {
 		return err
 	}

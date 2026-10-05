@@ -14,12 +14,24 @@ func (c *Config) buildUserInfo() *url.Userinfo {
 	return nil
 }
 
+// resolvePort returns effective connection port for URI.
+func (c *Config) resolvePort() int {
+	if c.IsFirestore() {
+		return c.resolveFirestorePort()
+	}
+	return c.Port
+}
+
+func (c *Config) isHostWithPort() bool {
+	return c.Protocol == ProtocolMongoDBSrv || strings.Contains(c.Host, ":")
+}
+
 // buildHost constructs host and optional port for connection URI.
 func (c *Config) buildHost() string {
-	if c.Protocol == ProtocolMongoDBSrv || c.Port == 0 {
+	if c.isHostWithPort() || c.resolvePort() == 0 {
 		return c.Host
 	}
-	return fmt.Sprintf("%s:%d", c.Host, c.Port)
+	return fmt.Sprintf("%s:%d", c.Host, c.resolvePort())
 }
 
 // appendAuthSourceQuery adds optional authSource parameter.
@@ -48,14 +60,17 @@ func (c *Config) resolveUUIDRep() string {
 
 // buildQuery constructs query string for connection URI.
 func (c *Config) buildQuery(enableTLS bool) string {
+	if c.IsFirestore() {
+		return c.buildFirestoreQuery()
+	}
 	query := fmt.Sprintf("uuidRepresentation=%s&tls=%t", url.QueryEscape(c.resolveUUIDRep()), enableTLS)
 	query = c.appendAuthSourceQuery(query)
 	return c.appendAppNameQuery(query)
 }
 
-// BuildURI constructs a standard MongoDB connection URI string based on
+// buildURIFromFields constructs a standard MongoDB connection URI string based on
 // the configuration parameters and the enableTLS flag.
-func (c *Config) BuildURI(enableTLS bool) string {
+func (c *Config) buildURIFromFields(enableTLS bool) string {
 	proto := c.Protocol
 	if proto == "" {
 		proto = ProtocolMongoDB
@@ -70,15 +85,8 @@ func (c *Config) BuildURI(enableTLS bool) string {
 	return u.String()
 }
 
-// IsFirestoreURL reports whether the provided host or URI targets Google Cloud Firestore.
-func IsFirestoreURL(target string) bool {
-	return strings.Contains(strings.ToLower(target), "firestore.goog")
-}
-
-// IsFirestore reports whether the configuration targets Google Cloud Firestore.
-func (c *Config) IsFirestore() bool {
-	if c == nil {
-		return false
-	}
-	return IsFirestoreURL(c.Host)
+// BuildURI constructs a standard MongoDB connection URI string based on
+// the configuration parameters and the enableTLS flag.
+func (c *Config) BuildURI(enableTLS bool) string {
+	return c.buildURIFromFields(enableTLS)
 }

@@ -32,6 +32,10 @@ var tlsErrorPatterns = []string{
 	"ssl required",
 	"tls required",
 	"connection closed",
+	"connection reset by peer",
+	"incomplete read of full message",
+	"broken pipe",
+	"server selection error",
 }
 
 // matchTLSPattern matches error message substrings against known TLS error indicators.

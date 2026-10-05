@@ -29,6 +29,18 @@ func Test_isTLSError(t *testing.T) {
 	assert.True(t, isTLSError(errors.New("ssl required")))
 }
 
+// Test_isTLSError_NetworkAndResetPatterns tests network reset patterns that indicate TLS requirements.
+func Test_isTLSError_NetworkAndResetPatterns(t *testing.T) {
+	assert.True(t, isTLSError(errors.New("connection reset by peer")))
+	assert.True(t, isTLSError(errors.New("incomplete read of full message")))
+	assert.True(t, isTLSError(errors.New("broken pipe")))
+	assert.True(t, isTLSError(errors.New("server selection error")))
+	assert.True(t, isTLSError(errors.New("read: connection reset by peer")))
+	assert.True(t, isTLSError(errors.New("incomplete read of full message: read tcp: connection reset by peer")))
+	assert.True(t, isTLSError(errors.New("server selection error: context deadline exceeded")))
+	assert.True(t, isTLSError(errors.New("write: broken pipe")))
+}
+
 // Test_handleConnectionError tests connection error logging and exit hook execution.
 func Test_handleConnectionError(t *testing.T) {
 	assert.Nil(t, handleConnectionError(context.Background(), nil))
