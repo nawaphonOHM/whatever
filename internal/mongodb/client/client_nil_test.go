@@ -17,6 +17,7 @@ func verifyNilClientMethods(t *testing.T, c *Client) {
 	assert.Nil(t, c.Collection(testCollUsers))
 	assert.Nil(t, c.Collection(testCollUsers, "test"))
 	assert.Nil(t, c.RawClient())
+	assert.False(t, c.IsFirestore())
 	assert.ErrorIs(t, c.Ping(ctx), ErrNilClient)
 	assert.ErrorIs(t, c.Disconnect(ctx), ErrNilClient)
 }
