@@ -33,7 +33,7 @@ func SetMockPingFirestore(fn func(context.Context, *mongo.Client, string) error)
 }
 
 // SetMockProbe overrides probeClient for testing and returns a restore function.
-func SetMockProbe(fn func(context.Context, *mongo.Client, string) error) func() {
+func SetMockProbe(fn func(context.Context, *Client, string) error) func() {
 	prev := probeClient
 	if fn != nil {
 		probeClient = fn

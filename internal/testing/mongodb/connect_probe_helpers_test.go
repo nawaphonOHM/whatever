@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -9,12 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 )
 
 const (
 	testCustomProbeDur = 5 * time.Second
 	testNegativeDur    = -1 * time.Second
 	testProbeHelperURI = "mongodb://127.0.0.1:59999"
+	testDBName         = "testdb"
 )
 
 func TestResolveProbeTimeout(t *testing.T) {
@@ -60,7 +64,7 @@ func getDisconnectedDatabase(t *testing.T) (*mongo.Client, *mongo.Database) {
 	rawClient, err := mongo.Connect(options.Client().ApplyURI(testProbeHelperURI))
 	require.NoError(t, err)
 	require.NoError(t, rawClient.Disconnect(context.Background()))
-	return rawClient, rawClient.Database("testdb")
+	return rawClient, rawClient.Database(testDBName)
 }
 
 func TestProbeListCollections_DisconnectedClient(t *testing.T) {
@@ -81,5 +85,30 @@ func TestProbeListCollections_DisconnectedClient(t *testing.T) {
 func TestProbeDocumentAndClient_DisconnectedClient(t *testing.T) {
 	rawClient, db := getDisconnectedDatabase(t)
 	assert.ErrorContains(t, probeDocument(context.Background(), db, "__probe__"), errStep4Substr)
-	assert.Error(t, defaultProbeClient(context.Background(), rawClient, "testdb"))
+	c := client.NewClient(rawClient, testDBName)
+	assert.Error(t, defaultProbeClient(context.Background(), c, testDBName))
+	assert.Equal(t, ErrNilClient, defaultProbeClient(context.Background(), nil, testDBName))
+}
+
+func TestSetMockProbe_OverridesAndRestores(t *testing.T) {
+	customErr := errors.New("custom mock probe error")
+	restore := SetMockProbe(func(context.Context, *client.Client, string) error {
+		return customErr
+	})
+	defer restore()
+
+	assert.Equal(t, customErr, probeClient(context.Background(), nil, testDBName))
+
+	restore()
+	assert.Equal(t, ErrNilClient, probeClient(context.Background(), nil, testDBName))
+}
+
+func TestSetMockProbe_NilRestoresDefault(t *testing.T) {
+	restore := SetMockProbe(func(context.Context, *client.Client, string) error {
+		return errors.New("temporary error")
+	})
+	defer restore()
+
+	SetMockProbe(nil)
+	assert.Equal(t, ErrNilClient, probeClient(context.Background(), nil, testDBName))
 }

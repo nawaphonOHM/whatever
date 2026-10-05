@@ -5,17 +5,15 @@ package mongodb
 import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
 )
 
+// Client wraps the official mongo.Client and provides managed database and collection access.
+type Client = client.Client
+
 // TestClient wraps mongo client handles with testing and fixture utilities.
 type TestClient = mongodb.TestClient
-
-// Option defines a functional option for configuring MongoDB test connections.
-type Option = mongodb.Option
-
-// Options holds configuration settings for test MongoDB connections.
-type Options = mongodb.Options
 
 // Constants for MongoDB testing default settings.
 const (

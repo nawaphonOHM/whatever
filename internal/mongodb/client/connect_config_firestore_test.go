@@ -32,7 +32,7 @@ func setupMockPingFirestoreFailure(err error) func() {
 	cleanupFirestore := SetMockPingFirestore(func(context.Context, *mongo.Client, string) error {
 		return err
 	})
-	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	cleanupProbe := SetMockProbe(func(context.Context, *Client, string) error {
 		return nil
 	})
 	return func() {
@@ -50,7 +50,7 @@ func setupMockFirestoreConfigSuccess() (*bool, func()) {
 		called = ctx != nil && rc != nil && dbName == "firestore_config_db"
 		return nil
 	})
-	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	cleanupProbe := SetMockProbe(func(context.Context, *Client, string) error {
 		return nil
 	})
 	return &called, func() {

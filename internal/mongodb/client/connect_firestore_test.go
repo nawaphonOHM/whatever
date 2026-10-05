@@ -27,7 +27,7 @@ func setupMockFirestoreSuccess() (*int, func()) {
 		firestorePingCalled++
 		return nil
 	})
-	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	cleanupProbe := SetMockProbe(func(context.Context, *Client, string) error {
 		return nil
 	})
 	return &firestorePingCalled, func() {
@@ -41,7 +41,7 @@ func setupMockFirestoreFail(pingErr, probeErr error) func() {
 	cleanupPing := SetMockPingFirestore(func(context.Context, *mongo.Client, string) error {
 		return pingErr
 	})
-	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	cleanupProbe := SetMockProbe(func(context.Context, *Client, string) error {
 		return probeErr
 	})
 	return func() {

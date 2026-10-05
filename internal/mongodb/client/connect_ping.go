@@ -70,7 +70,8 @@ func verifyPing(ctx context.Context, cfg *config.Config, rawClient *mongo.Client
 }
 
 func verifyProbe(ctx context.Context, rawClient *mongo.Client, dbName string) error {
-	if err := probeClient(ctx, rawClient, dbName); err != nil {
+	managedClient := NewClient(rawClient, dbName)
+	if err := probeClient(ctx, managedClient, dbName); err != nil {
 		if disconnectErr := rawClient.Disconnect(ctx); disconnectErr != nil {
 			return errors.Join(fmt.Errorf(errProbeFormat, err), disconnectErr)
 		}

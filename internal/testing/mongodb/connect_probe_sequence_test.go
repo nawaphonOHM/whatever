@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 )
 
 const (
@@ -21,7 +23,7 @@ func setupMockProbeSequence(expectedErr error) func() {
 	prevPing := SetMockPing(func(context.Context, *mongo.Client) error {
 		return nil
 	})
-	prevProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	prevProbe := SetMockProbe(func(context.Context, *client.Client, string) error {
 		return expectedErr
 	})
 	return func() {
@@ -41,8 +43,8 @@ func TestConnect_ProbeSequence_Step2_Failure(t *testing.T) {
 	cleanup := setupMockProbeSequence(errors.New(errStep2Substr + ": deadline"))
 	defer cleanup()
 
-	client, err := Connect(context.Background())
-	assert.Nil(t, client)
+	tc, err := Connect(context.Background())
+	assert.Nil(t, tc)
 	assertProbeError(t, err, errStep2Substr)
 }
 
@@ -50,8 +52,8 @@ func TestConnect_ProbeSequence_Step3_Failure(t *testing.T) {
 	cleanup := setupMockProbeSequence(errors.New(errStep3Substr + ": server error"))
 	defer cleanup()
 
-	client, err := Connect(context.Background())
-	assert.Nil(t, client)
+	tc, err := Connect(context.Background())
+	assert.Nil(t, tc)
 	assertProbeError(t, err, errStep3Substr)
 }
 
@@ -59,8 +61,8 @@ func TestConnect_ProbeSequence_Step4_Failure(t *testing.T) {
 	cleanup := setupMockProbeSequence(errors.New(errStep4Substr + " \"users\": err"))
 	defer cleanup()
 
-	client, err := Connect(context.Background())
-	assert.Nil(t, client)
+	tc, err := Connect(context.Background())
+	assert.Nil(t, tc)
 	assertProbeError(t, err, errStep4Substr)
 }
 
@@ -68,17 +70,17 @@ func TestConnect_ProbeSequence_Success(t *testing.T) {
 	cleanup := setupMockProbeSequence(nil)
 	defer cleanup()
 
-	client, err := Connect(context.Background())
+	tc, err := Connect(context.Background())
 	require.NoError(t, err)
-	require.NotNil(t, client)
-	assert.NoError(t, client.Close())
+	require.NotNil(t, tc)
+	assert.NoError(t, tc.Close())
 }
 
 func TestConnectURI_ProbeSequence_Failure(t *testing.T) {
 	cleanup := setupMockProbeSequence(errors.New(errStep2Substr + ": context canceled"))
 	defer cleanup()
 
-	client, err := ConnectURI(context.Background(), "mongodb://127.0.0.1:27017/testdb")
-	assert.Nil(t, client)
+	tc, err := ConnectURI(context.Background(), "mongodb://127.0.0.1:27017/testdb")
+	assert.Nil(t, tc)
 	assertProbeError(t, err, errStep2Substr)
 }

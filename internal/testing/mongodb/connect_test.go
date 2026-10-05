@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 )
 
 const testInvalidPort = 99999
@@ -33,7 +35,7 @@ func setMockPingSuccess(t *testing.T, pingCalled *bool) {
 		}
 		return nil
 	}
-	probeClient = func(context.Context, *mongo.Client, string) error {
+	probeClient = func(context.Context, *client.Client, string) error {
 		return nil
 	}
 }
@@ -48,16 +50,16 @@ func setMockProbeError(t *testing.T, expectedErr error) {
 	pingClient = func(context.Context, *mongo.Client) error {
 		return nil
 	}
-	probeClient = func(context.Context, *mongo.Client, string) error {
+	probeClient = func(context.Context, *client.Client, string) error {
 		return expectedErr
 	}
 }
 
 func TestConnect_InvalidPort(t *testing.T) {
 	ctx := context.Background()
-	client, err := Connect(ctx, WithPort(testInvalidPort))
+	tc, err := Connect(ctx, WithPort(testInvalidPort))
 	require.ErrorIs(t, err, ErrInvalidPort)
-	assert.Nil(t, client)
+	assert.Nil(t, tc)
 }
 
 func TestConnect_ProbeFailure(t *testing.T) {
@@ -65,9 +67,9 @@ func TestConnect_ProbeFailure(t *testing.T) {
 	setMockProbeError(t, expectedErr)
 
 	ctx := context.Background()
-	client, err := Connect(ctx, WithDatabase("probe_test_db"))
+	tc, err := Connect(ctx, WithDatabase("probe_test_db"))
 	require.Error(t, err)
-	assert.Nil(t, client)
+	assert.Nil(t, tc)
 	assert.Contains(t, err.Error(), "simulated probe error")
 }
 
@@ -76,9 +78,9 @@ func TestConnect_PingFailure(t *testing.T) {
 	setMockPingError(t, expectedErr)
 
 	ctx := context.Background()
-	client, err := Connect(ctx)
+	tc, err := Connect(ctx)
 	require.Error(t, err)
-	assert.Nil(t, client)
+	assert.Nil(t, tc)
 	assert.Contains(t, err.Error(), "simulated ping error")
 }
 
@@ -87,9 +89,9 @@ func TestConnect_PingSuccess(t *testing.T) {
 	setMockPingSuccess(t, &pingCalled)
 
 	ctx := context.Background()
-	client, err := Connect(ctx, WithDatabase("ping_db"))
+	tc, err := Connect(ctx, WithDatabase("ping_db"))
 	require.NoError(t, err)
-	require.NotNil(t, client)
+	require.NotNil(t, tc)
 	assert.True(t, pingCalled)
-	assert.Equal(t, "ping_db", client.Database().Name())
+	assert.Equal(t, "ping_db", tc.Database().Name())
 }

@@ -17,6 +17,7 @@ const (
 	testCustomProbeDur = 5 * time.Second
 	testNegativeDur    = -1 * time.Second
 	testProbeHelperURI = "mongodb://127.0.0.1:59999"
+	testDBName         = "testdb"
 )
 
 func TestResolveProbeTimeout(t *testing.T) {
@@ -62,7 +63,7 @@ func getDisconnectedDatabase(t *testing.T) (*mongo.Client, *mongo.Database) {
 	rawClient, err := mongo.Connect(options.Client().ApplyURI(testProbeHelperURI))
 	require.NoError(t, err)
 	require.NoError(t, rawClient.Disconnect(context.Background()))
-	return rawClient, rawClient.Database("testdb")
+	return rawClient, rawClient.Database(testDBName)
 }
 
 func TestProbeListCollections_DisconnectedClient(t *testing.T) {
@@ -83,5 +84,7 @@ func TestProbeListCollections_DisconnectedClient(t *testing.T) {
 func TestProbeDocumentAndClient_DisconnectedClient(t *testing.T) {
 	rawClient, db := getDisconnectedDatabase(t)
 	assert.ErrorContains(t, probeDocument(context.Background(), db, "__probe__"), errStep4Substr)
-	assert.Error(t, defaultProbeClient(context.Background(), rawClient, "testdb"))
+	c := NewClient(rawClient, testDBName)
+	assert.Error(t, defaultProbeClient(context.Background(), c, testDBName))
+	assert.Equal(t, ErrNilClient, defaultProbeClient(context.Background(), nil, testDBName))
 }

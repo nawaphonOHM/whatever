@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 )
 
 func setMockTLSPing(t *testing.T, attempts *int) {
@@ -24,7 +26,7 @@ func setMockTLSPing(t *testing.T, attempts *int) {
 		}
 		return nil
 	}
-	probeClient = func(context.Context, *mongo.Client, string) error {
+	probeClient = func(context.Context, *client.Client, string) error {
 		return nil
 	}
 }
@@ -42,9 +44,9 @@ func TestConnect_TLSFallbackSuccess(t *testing.T) {
 	setMockTLSPing(t, &attempts)
 
 	ctx := context.Background()
-	client, err := Connect(ctx, WithTLS(false))
+	tc, err := Connect(ctx, WithTLS(false))
 	require.NoError(t, err)
-	require.NotNil(t, client)
+	require.NotNil(t, tc)
 	assert.Equal(t, 2, attempts)
 }
 
@@ -54,9 +56,9 @@ func TestConnectURI_TLSFallbackSuccess(t *testing.T) {
 
 	ctx := context.Background()
 	uri := "mongodb://localhost:27017"
-	client, err := ConnectURI(ctx, uri, WithTLS(false))
+	tc, err := ConnectURI(ctx, uri, WithTLS(false))
 	require.NoError(t, err)
-	require.NotNil(t, client)
+	require.NotNil(t, tc)
 	assert.Equal(t, 2, attempts)
 }
 
