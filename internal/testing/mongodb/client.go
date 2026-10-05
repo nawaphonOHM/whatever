@@ -16,12 +16,20 @@ type TestClient struct {
 }
 
 // NewClient creates a new TestClient wrapping an official mongo.Client.
-func NewClient(rawClient *mongo.Client, defaultDatabase string) *TestClient {
+func NewClient(rawClient *mongo.Client, defaultDatabase string, isFirestore ...bool) *TestClient {
 	return &TestClient{
-		client:          client.NewClient(rawClient, defaultDatabase),
+		client:          client.NewClient(rawClient, defaultDatabase, isFirestore...),
 		rawClient:       rawClient,
 		defaultDatabase: defaultDatabase,
 	}
+}
+
+// IsFirestore reports whether the underlying client is configured for Google Cloud Firestore.
+func (c *TestClient) IsFirestore() bool {
+	if c == nil || c.client == nil {
+		return false
+	}
+	return c.client.IsFirestore()
 }
 
 // isNil reports whether the TestClient receiver or raw client handle is nil.
@@ -54,10 +62,13 @@ func (c *TestClient) Collection(name string, dbName ...string) *mongo.Collection
 	return db.Collection(name)
 }
 
-// Ping verifies connectivity to the MongoDB deployment.
+// Ping verifies connectivity to the MongoDB deployment or Firestore endpoint.
 func (c *TestClient) Ping(ctx context.Context) error {
 	if c.isNil() {
 		return ErrNilClient
+	}
+	if c.IsFirestore() {
+		return pingFirestoreClient(ctx, c.rawClient, c.defaultDatabase)
 	}
 	return c.rawClient.Ping(ctx, readpref.Primary())
 }

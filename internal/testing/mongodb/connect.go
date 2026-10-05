@@ -23,7 +23,7 @@ func attemptConnection(
 	if err := verifyClientPingAndProbe(ctx, o, rawClient); err != nil {
 		return nil, err
 	}
-	return NewClient(rawClient, o.Database), nil
+	return NewClient(rawClient, o.Database, o.IsFirestore()), nil
 }
 
 // fallbackTLSAttempt retries connection with TLS enabled if error indicates TLS requirement.

@@ -9,6 +9,8 @@ const (
 	DefaultHost = "localhost"
 	// DefaultPort is the default MongoDB port for test connections.
 	DefaultPort = 27017
+	// DefaultFirestorePort is the default port for Firestore MongoDB endpoints.
+	DefaultFirestorePort = 443
 	// DefaultProtocol is the default MongoDB connection scheme.
 	DefaultProtocol = "mongodb"
 	// DefaultConnectTimeout is the default connection timeout for test clients.

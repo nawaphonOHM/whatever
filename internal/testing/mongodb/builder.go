@@ -62,10 +62,18 @@ func collectDriverOptions(o *Options, extraOpts []*options.ClientOptions) []*opt
 	return append(extraOpts, o.DriverOptions...)
 }
 
+func applyFirestoreOptions(opts *options.ClientOptions, o *Options) {
+	if o != nil && o.IsFirestore() {
+		opts.SetLoadBalanced(true).
+			SetRetryWrites(false)
+	}
+}
+
 // applyOptionsConfig configures timeouts, pool limits, and app name.
 func applyOptionsConfig(opts *options.ClientOptions, o *Options) {
 	applyTimeouts(opts, o)
 	applyPoolAndDirect(opts, o)
+	applyFirestoreOptions(opts, o)
 	if o != nil && o.AppName != "" {
 		opts.SetAppName(o.AppName)
 	}

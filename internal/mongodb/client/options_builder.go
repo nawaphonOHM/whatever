@@ -18,6 +18,26 @@ func applyExtraOptions(
 	return options.MergeClientOptions(allOpts...)
 }
 
+func applyFirestoreOptions(opts *options.ClientOptions, c *config.Config) {
+	if c.IsFirestore() {
+		opts.SetLoadBalanced(true).
+			SetRetryWrites(false)
+	}
+}
+
+func applyAppOptions(opts *options.ClientOptions, c *config.Config) {
+	if c.AppName != "" {
+		opts.SetAppName(c.AppName)
+	}
+}
+
+func resolveConfig(cfg *config.Config) *config.Config {
+	if cfg == nil {
+		return config.DefaultConfig()
+	}
+	return cfg
+}
+
 // BuildClientOptionsWithTLS creates official mongo-driver ClientOptions from
 // Config with explicit TLS setting and merges any additional driver options.
 func BuildClientOptionsWithTLS(
@@ -25,11 +45,7 @@ func BuildClientOptionsWithTLS(
 	enableTLS bool,
 	extraOpts ...*options.ClientOptions,
 ) *options.ClientOptions {
-	c := cfg
-	if c == nil {
-		c = config.DefaultConfig()
-	}
-
+	c := resolveConfig(cfg)
 	opts := options.Client().
 		ApplyURI(c.BuildURI(enableTLS)).
 		SetConnectTimeout(c.ConnectTimeout).
@@ -39,18 +55,21 @@ func BuildClientOptionsWithTLS(
 		SetMaxPoolSize(c.MaxPoolSize).
 		SetMinPoolSize(c.MinPoolSize)
 
-	if c.AppName != "" {
-		opts.SetAppName(c.AppName)
-	}
+	applyFirestoreOptions(opts, c)
+	applyAppOptions(opts, c)
 
 	return applyExtraOptions(opts, extraOpts)
 }
 
+func resolveDefaultTLS(cfg *config.Config) bool {
+	return cfg != nil && cfg.IsFirestore()
+}
+
 // BuildClientOptions creates official mongo-driver ClientOptions from Config
-// with TLS disabled by default and merges any additional driver options.
+// with TLS disabled by default (or enabled if Firestore) and merges any additional driver options.
 func BuildClientOptions(
 	cfg *config.Config,
 	extraOpts ...*options.ClientOptions,
 ) *options.ClientOptions {
-	return BuildClientOptionsWithTLS(cfg, false, extraOpts...)
+	return BuildClientOptionsWithTLS(cfg, resolveDefaultTLS(cfg), extraOpts...)
 }

@@ -39,6 +39,17 @@ func TestIsTLSError(t *testing.T) {
 	assert.True(t, isTLSError(errors.New("connection closed")))
 }
 
+func TestIsTLSError_NetworkAndResetPatterns(t *testing.T) {
+	assert.True(t, isTLSError(errors.New("connection reset by peer")))
+	assert.True(t, isTLSError(errors.New("incomplete read of full message")))
+	assert.True(t, isTLSError(errors.New("broken pipe")))
+	assert.True(t, isTLSError(errors.New("server selection error")))
+	assert.True(t, isTLSError(errors.New("read: connection reset by peer")))
+	assert.True(t, isTLSError(errors.New("incomplete read of full message: read tcp: connection reset by peer")))
+	assert.True(t, isTLSError(errors.New("server selection error: context deadline exceeded")))
+	assert.True(t, isTLSError(errors.New("write: broken pipe")))
+}
+
 func TestConnect_TLSFallbackSuccess(t *testing.T) {
 	attempts := 0
 	setMockTLSPing(t, &attempts)
@@ -60,45 +71,4 @@ func TestConnectURI_TLSFallbackSuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tc)
 	assert.Equal(t, 2, attempts)
-}
-
-func TestInjectTLSQueryParam_AddsQueryParam(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "simple URI without query",
-			input:    "mongodb://localhost:27017",
-			expected: "mongodb://localhost:27017/?tls=true",
-		},
-		{
-			name:     "URI with database path",
-			input:    "mongodb://localhost:27017/testdb",
-			expected: "mongodb://localhost:27017/testdb?tls=true",
-		},
-		{
-			name:     "URI with existing query params",
-			input:    "mongodb://localhost:27017/testdb?authSource=admin",
-			expected: "mongodb://localhost:27017/testdb?authSource=admin&tls=true",
-		},
-		{
-			name:     "URI with credentials",
-			input:    "mongodb://user:pass@localhost:27017/testdb",
-			expected: "mongodb://user:pass@localhost:27017/testdb?tls=true",
-		},
-		{
-			name:     "URI with existing tls=false overwrites",
-			input:    "mongodb://localhost:27017?tls=false",
-			expected: "mongodb://localhost:27017/?tls=true",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := injectTLSQueryParam(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }

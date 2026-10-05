@@ -22,6 +22,24 @@ func logConnectionOptions(ctx context.Context, cfg *config.Config, enableTLS boo
 	)
 }
 
+func isFirestoreTarget(cfg *config.Config) bool {
+	return cfg != nil && cfg.IsFirestore()
+}
+
+func resolveTargetTLS(cfg *config.Config, enableTLS bool) bool {
+	return enableTLS || isFirestoreTarget(cfg)
+}
+
+func createRawClient(cfg *config.Config, enableTLS bool, opts ...Option) (*mongo.Client, error) {
+	optionsContainer := NewOptions(opts...)
+	clientOptions := BuildClientOptionsWithTLS(cfg, enableTLS, optionsContainer.DriverOptions...)
+	rawClient, err := mongo.Connect(clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf(errCreateClientFormat, err)
+	}
+	return rawClient, nil
+}
+
 // attemptConnection establishes a driver client with specified TLS and verifies ping and probe.
 func attemptConnection(
 	ctx context.Context,
@@ -29,13 +47,11 @@ func attemptConnection(
 	enableTLS bool,
 	opts ...Option,
 ) (*Client, error) {
-	optionsContainer := NewOptions(opts...)
-	logConnectionOptions(ctx, cfg, enableTLS)
-	clientOptions := BuildClientOptionsWithTLS(cfg, enableTLS, optionsContainer.DriverOptions...)
-
-	rawClient, err := mongo.Connect(clientOptions)
+	effectiveTLS := resolveTargetTLS(cfg, enableTLS)
+	logConnectionOptions(ctx, cfg, effectiveTLS)
+	rawClient, err := createRawClient(cfg, effectiveTLS, opts...)
 	if err != nil {
-		return nil, fmt.Errorf(errCreateClientFormat, err)
+		return nil, err
 	}
 
 	if err := verifyPingAndProbe(ctx, cfg, rawClient); err != nil {
@@ -44,19 +60,27 @@ func attemptConnection(
 	return NewClient(rawClient, resolveDatabaseName(cfg), cfg.IsFirestore()), nil
 }
 
-// initAndPingClient performs two-phase connection: attempts unencrypted connection first,
-// and falls back to TLS if the server requires TLS encryption.
+func isTLSFallbackNeeded(cfg *config.Config, err error) bool {
+	if isFirestoreTarget(cfg) {
+		return false
+	}
+	return isTLSError(err)
+}
+
+// initAndPingClient performs two-phase connection: attempts unencrypted connection first
+// (or direct TLS for Firestore), and falls back to TLS if the server requires TLS encryption.
 func initAndPingClient(
 	ctx context.Context,
 	cfg *config.Config,
 	opts ...Option,
 ) (*Client, error) {
-	client, err := attemptConnection(ctx, cfg, false, opts...)
+	initialTLS := isFirestoreTarget(cfg)
+	client, err := attemptConnection(ctx, cfg, initialTLS, opts...)
 	if err == nil {
 		return client, nil
 	}
 
-	if isTLSError(err) {
+	if isTLSFallbackNeeded(cfg, err) {
 		return fallbackTLSAttempt(ctx, cfg, opts...)
 	}
 

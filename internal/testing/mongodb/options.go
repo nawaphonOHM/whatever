@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
 )
 
 // Option defines a functional option for configuring MongoDB test connections.
@@ -59,4 +61,12 @@ func NewOptions(opts ...Option) *Options {
 		}
 	}
 	return o
+}
+
+// IsFirestore reports whether the options target Google Cloud Firestore.
+func (o *Options) IsFirestore() bool {
+	if o == nil {
+		return false
+	}
+	return config.IsFirestoreURL(o.Host) || config.IsFirestoreURL(o.URI)
 }

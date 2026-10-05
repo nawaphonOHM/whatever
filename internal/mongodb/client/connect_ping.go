@@ -24,7 +24,7 @@ func defaultPingClient(ctx context.Context, rawClient *mongo.Client) error {
 
 func defaultPingFirestoreClient(ctx context.Context, rawClient *mongo.Client, dbName string) error {
 	db := rawClient.Database(resolveDBName(dbName))
-	res := db.Collection("__ping__").FindOne(ctx, bson.D{})
+	res := db.Collection("ping").FindOne(ctx, bson.D{})
 	if err := res.Err(); err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return err
 	}
@@ -69,8 +69,8 @@ func verifyPing(ctx context.Context, cfg *config.Config, rawClient *mongo.Client
 	return nil
 }
 
-func verifyProbe(ctx context.Context, rawClient *mongo.Client, dbName string) error {
-	managedClient := NewClient(rawClient, dbName)
+func verifyProbe(ctx context.Context, rawClient *mongo.Client, dbName string, isFirestore ...bool) error {
+	managedClient := NewClient(rawClient, dbName, isFirestore...)
 	if err := probeClient(ctx, managedClient, dbName); err != nil {
 		if disconnectErr := rawClient.Disconnect(ctx); disconnectErr != nil {
 			return errors.Join(fmt.Errorf(errProbeFormat, err), disconnectErr)
@@ -91,5 +91,5 @@ func verifyPingAndProbe(
 		return err
 	}
 	probeCtx := withProbeTimeout(ctx, resolveProbeTimeout(cfg))
-	return verifyProbe(probeCtx, rawClient, resolveDatabaseName(cfg))
+	return verifyProbe(probeCtx, rawClient, resolveDatabaseName(cfg), cfg.IsFirestore())
 }

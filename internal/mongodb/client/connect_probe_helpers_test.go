@@ -51,8 +51,8 @@ func TestResolveDatabaseHelpers(t *testing.T) {
 	cfg := &config.Config{Database: "customdb"}
 	assert.Equal(t, "customdb", resolveDatabaseName(cfg))
 
-	assert.Equal(t, "__probe__", chooseTargetColl(nil))
-	assert.Equal(t, "__probe__", chooseTargetColl(make([]string, 0)))
+	assert.Equal(t, "probe", chooseTargetColl(nil))
+	assert.Equal(t, "probe", chooseTargetColl(make([]string, 0)))
 
 	colls := []string{"coll1", "coll2", "coll3"}
 	assert.Contains(t, colls, chooseTargetColl(colls))
@@ -83,7 +83,7 @@ func TestProbeListCollections_DisconnectedClient(t *testing.T) {
 
 func TestProbeDocumentAndClient_DisconnectedClient(t *testing.T) {
 	rawClient, db := getDisconnectedDatabase(t)
-	assert.ErrorContains(t, probeDocument(context.Background(), db, "__probe__"), errStep4Substr)
+	assert.ErrorContains(t, probeDocument(context.Background(), db, "probe"), errStep4Substr)
 	c := NewClient(rawClient, testDBName)
 	assert.Error(t, defaultProbeClient(context.Background(), c, testDBName))
 	assert.Equal(t, ErrNilClient, defaultProbeClient(context.Background(), nil, testDBName))
