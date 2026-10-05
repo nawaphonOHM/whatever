@@ -196,9 +196,55 @@ func TestParallelOperations(t *testing.T) {
 }
 ```
 
+### 6. Mocking Connection Ping and Probe Hooks (`SetMockPing`, `SetMockProbe`)
+
+For fast, isolated unit tests that avoid launching live MongoDB instances or Docker containers, `pkg/testing/mongodb` allows intercepting ping and probe verification hooks using `SetMockPing` and `SetMockProbe`:
+
+- `SetMockPing`: Overrides driver ping reachability check (`func(context.Context, *mongo.Client) error`).
+- `SetMockProbe`: Overrides connection probing (`func(context.Context, *Client, string) error`), receiving the managed `*Client` (or `*testmongo.Client`) handle and the target database name.
+
+Both functions return a restore function to safely reset hook state in `t.Cleanup`:
+
+```go
+func TestService_ProbeFailure(t *testing.T) {
+	// 1. Mock connection ping to succeed
+	t.Cleanup(testmongo.SetMockPing(func(ctx context.Context, raw *mongo.Client) error {
+		return nil
+	}))
+
+	// 2. Mock connection probe using managed *Client
+	restore := testmongo.SetMockProbe(func(ctx context.Context, c *testmongo.Client, dbName string) error {
+		// Inspect managed client or return simulated error
+		return errors.New("simulated probe failure")
+	})
+	t.Cleanup(restore)
+
+	// 3. Connect will execute the mock probe and fail gracefully
+	ctx := context.Background()
+	client, err := testmongo.Connect(ctx, testmongo.WithDatabase("test_db"))
+	if err == nil {
+		t.Fatal("Expected error due to mock probe failure")
+	}
+	if client != nil {
+		t.Fatal("Expected nil client on probe failure")
+	}
+}
+```
+
+Passing `nil` to `SetMockProbe(nil)` or executing the returned restore function immediately reverts probe behavior to `defaultProbeClient`.
+
 ---
 
 ## API Reference
+
+### Type Aliases
+
+| Alias | Target Type | Description |
+|---|---|---|
+| `Client` | `client.Client` (`internal/mongodb/client.Client`) | Managed MongoDB client wrapper providing database and collection access |
+| `TestClient` | `mongodb.TestClient` (`internal/testing/mongodb.TestClient`) | MongoDB client with testing, fixture, and lifecycle helpers |
+| `Option` | `mongodb.Option` | Functional option configuring test connections |
+| `Options` | `mongodb.Options` | Configuration settings for test connections |
 
 ### Constructors & Helpers
 
@@ -211,6 +257,13 @@ func TestParallelOperations(t *testing.T) {
 | `NewClient` | `NewClient(rawClient *mongo.Client, defaultDatabase string) *TestClient` | Wraps an existing official `*mongo.Client` with `TestClient` fixture utilities |
 | `DefaultOptions` | `DefaultOptions() *Options` | Returns an `Options` struct initialized with recommended test defaults |
 | `NewOptions` | `NewOptions(opts ...Option) *Options` | Evaluates functional options over test defaults and returns the resulting `*Options` |
+
+### Mocking & Testing Hooks
+
+| Function | Signature | Description |
+|---|---|---|
+| `SetMockPing` | `SetMockPing(fn func(context.Context, *mongo.Client) error) func()` | Overrides driver ping verification for unit tests and returns a restore function |
+| `SetMockProbe` | `SetMockProbe(fn func(context.Context, *Client, string) error) func()` | Overrides connection probing for unit tests using managed `*Client` and returns a restore function |
 
 ### Functional Options
 
@@ -245,7 +298,7 @@ func TestParallelOperations(t *testing.T) {
 | `Disconnect` | `Disconnect(ctx context.Context) error` | Gracefully closes all connections in the pool |
 | `Close` | `Close(ctx ...context.Context) error` | Gracefully closes the client (uses default `10s` timeout if context is omitted) |
 | `RawClient` | `RawClient() *mongo.Client` | Returns the underlying official driver `*mongo.Client` handle |
-| `Client` | `Client() *client.Client` | Returns the underlying internal client handle |
+| `Client` | `Client() *Client` | Returns the underlying internal `*Client` handle |
 | `DropDatabase` | `DropDatabase(ctx context.Context, name ...string) error` | Drops the specified or default database |
 | `DropCollection` | `DropCollection(ctx context.Context, collection string, dbName ...string) error` | Drops a specific collection from the resolved database |
 | `TruncateCollections` | `TruncateCollections(ctx context.Context, collections ...string) error` | Deletes all documents from specified collections or all non-system collections |

@@ -15,7 +15,7 @@ func SetMockPing(fn func(context.Context, *mongo.Client) error) func() {
 }
 
 // SetMockProbe overrides the mock probe function for testing and returns a restore function.
-func SetMockProbe(fn func(context.Context, *mongo.Client, string) error) func() {
+func SetMockProbe(fn func(context.Context, *Client, string) error) func() {
 	return mongodb.SetMockProbe(fn)
 }
 

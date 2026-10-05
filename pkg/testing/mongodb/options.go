@@ -4,6 +4,12 @@ import (
 	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
 )
 
+// Option defines a functional option for configuring MongoDB test connections.
+type Option = mongodb.Option
+
+// Options holds configuration settings for test MongoDB connections.
+type Options = mongodb.Options
+
 // DefaultOptions returns an Options struct populated with recommended test defaults.
 func DefaultOptions() *Options {
 	return mongodb.DefaultOptions()

@@ -31,7 +31,7 @@ func createValidTestConfig() *config.Config {
 
 func setupMockPing(fn func(context.Context, *mongo.Client) error) func() {
 	cleanupPing := SetMockPing(fn)
-	cleanupProbe := SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	cleanupProbe := SetMockProbe(func(context.Context, *Client, string) error {
 		return nil
 	})
 	return func() {

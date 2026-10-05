@@ -2,6 +2,7 @@ package mongodb_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -37,7 +38,7 @@ func setMockConnectionSuccess(t *testing.T) {
 	t.Cleanup(mongodb.SetMockPing(func(context.Context, *mongo.Client) error {
 		return nil
 	}))
-	t.Cleanup(mongodb.SetMockProbe(func(context.Context, *mongo.Client, string) error {
+	t.Cleanup(mongodb.SetMockProbe(func(context.Context, *mongodb.Client, string) error {
 		return nil
 	}))
 }
@@ -87,4 +88,22 @@ func TestNewTestClientURI_Failure(t *testing.T) {
 	assert.Nil(t, client)
 	assert.True(t, mock.fatalfCalled)
 	assert.Contains(t, mock.fatalfMsg, "failed to connect to mongodb uri")
+}
+
+func TestSetMockProbe_NewTestClient_Failure(t *testing.T) {
+	t.Cleanup(mongodb.SetMockPing(func(context.Context, *mongo.Client) error {
+		return nil
+	}))
+
+	probeErr := errors.New("probe failure during NewTestClient")
+	restore := mongodb.SetMockProbe(func(context.Context, *mongodb.Client, string) error {
+		return probeErr
+	})
+	defer restore()
+
+	mock := &mockTB{TB: t}
+	client := mongodb.NewTestClient(mock, mongodb.WithDatabase("probe_fail_db"))
+	assert.Nil(t, client)
+	assert.True(t, mock.fatalfCalled)
+	assert.Contains(t, mock.fatalfMsg, "probe failure during NewTestClient")
 }

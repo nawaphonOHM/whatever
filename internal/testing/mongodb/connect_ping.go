@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
@@ -46,7 +47,7 @@ func SetMockPing(fn func(context.Context, *mongo.Client) error) func() {
 }
 
 // SetMockProbe overrides probeClient for testing and returns a restore function.
-func SetMockProbe(fn func(context.Context, *mongo.Client, string) error) func() {
+func SetMockProbe(fn func(context.Context, *client.Client, string) error) func() {
 	prev := probeClient
 	if fn != nil {
 		probeClient = fn
@@ -69,7 +70,8 @@ func verifyClientPing(ctx context.Context, rawClient *mongo.Client) error {
 }
 
 func verifyClientProbe(ctx context.Context, rawClient *mongo.Client, database string) error {
-	if err := probeClient(ctx, rawClient, database); err != nil {
+	managedClient := client.NewClient(rawClient, database)
+	if err := probeClient(ctx, managedClient, database); err != nil {
 		if disconnectErr := rawClient.Disconnect(ctx); disconnectErr != nil {
 			return errors.Join(fmt.Errorf(errProbeFormat, err), disconnectErr)
 		}

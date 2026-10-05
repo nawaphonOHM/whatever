@@ -74,14 +74,29 @@ func probeDocument(ctx context.Context, db *mongo.Database, coll string) error {
 	return nil
 }
 
-func defaultProbeClient(ctx context.Context, rawClient *mongo.Client, dbName string) error {
-	timeout := probeTimeoutFromContext(ctx)
-	db := rawClient.Database(resolveDBName(dbName))
+func probeCollections(
+	ctx context.Context,
+	db *mongo.Database,
+	timeout time.Duration,
+) ([]string, error) {
 	colls, err := probeListCollectionsWithoutMaxTime(ctx, db, timeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := probeListCollectionsWithMaxTime(ctx, db, timeout); err != nil {
+		return nil, err
+	}
+	return colls, nil
+}
+
+func defaultProbeClient(ctx context.Context, c *Client, dbName string) error {
+	timeout := probeTimeoutFromContext(ctx)
+	db := c.Database(resolveDBName(dbName))
+	if db == nil {
+		return ErrNilClient
+	}
+	colls, err := probeCollections(ctx, db, timeout)
+	if err != nil {
 		return err
 	}
 	return probeDocument(ctx, db, chooseTargetColl(colls))
