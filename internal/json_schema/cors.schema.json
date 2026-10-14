@@ -120,16 +120,19 @@
     },
     "http-methods": {
       "type": "array",
-      "enum": [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "HEAD",
-        "OPTIONS",
-        "CONNECT",
-        "TRACE"
-      ]
+      "items": {
+        "type": "string",
+        "enum": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "HEAD",
+          "OPTIONS",
+          "CONNECT",
+          "TRACE"
+        ]
+      }
     }
   },
   "properties": {
