@@ -7,7 +7,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/client"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

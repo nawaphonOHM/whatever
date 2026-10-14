@@ -3,7 +3,7 @@ package firestore
 import (
 	"context"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/testcontainers/firestore"
+	"github.com/nawaphonOHM/whatever/v3/internal/testcontainers/firestore"
 )
 
 // Run creates and starts a Firestore container with the provided functional options.

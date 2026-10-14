@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 )
 
 // Context defines the read-only request execution context supplied to

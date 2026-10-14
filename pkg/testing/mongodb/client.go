@@ -5,8 +5,8 @@ package mongodb
 import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
-	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v3/internal/testing/mongodb"
 )
 
 // Client wraps the official mongo.Client and provides managed database and collection access.

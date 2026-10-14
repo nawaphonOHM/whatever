@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	mongoclient "github.com/nawaphonOHM/whatever/v2/pkg/mongodb"
-	"github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/mongodb"
+	mongoclient "github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
 )
 
 func assertClientPing(ctx context.Context, t *testing.T, c *mongodb.Container) *mongoclient.Client {

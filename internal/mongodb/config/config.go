@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/logging/central"
-	intcfg "github.com/nawaphonOHM/whatever/v2/internal/rest/config"
+	"github.com/nawaphonOHM/whatever/v3/internal/logging/central"
+	intcfg "github.com/nawaphonOHM/whatever/v3/internal/rest/config"
 )
 
 const (

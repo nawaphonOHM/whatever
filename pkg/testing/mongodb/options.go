@@ -1,7 +1,7 @@
 package mongodb
 
 import (
-	"github.com/nawaphonOHM/whatever/v2/internal/testing/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/internal/testing/mongodb"
 )
 
 // Option defines a functional option for configuring MongoDB test connections.

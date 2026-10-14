@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
 )
 
 func runEphemeralContainer(ctx context.Context, t *testing.T) *mongodb.Container {

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/logging/core"
-	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v3/internal/logging/core"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 	"github.com/stretchr/testify/assert"
 )
 

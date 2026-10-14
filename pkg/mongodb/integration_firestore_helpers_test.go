@@ -11,7 +11,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	intclient "github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
+	intclient "github.com/nawaphonOHM/whatever/v3/internal/mongodb/client"
 )
 
 const (

@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"github.com/nawaphonOHM/whatever/v2/pkg/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 )
 
 const (

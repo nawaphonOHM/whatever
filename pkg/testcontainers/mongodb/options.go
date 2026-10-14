@@ -3,7 +3,7 @@ package mongodb
 import (
 	"github.com/testcontainers/testcontainers-go"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/testcontainers/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/internal/testcontainers/mongodb"
 )
 
 // DefaultOptions returns an Options struct populated with default settings.

@@ -4,12 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	otelcfg "github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
-	otelmw "github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/middleware"
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/middleware"
-	intprob "github.com/nawaphonOHM/whatever/v2/internal/rest/problem"
-	"github.com/nawaphonOHM/whatever/v2/pkg/logger"
+	otelcfg "github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/config"
+	otelmw "github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/middleware"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/middleware"
+	intprob "github.com/nawaphonOHM/whatever/v3/internal/rest/problem"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logger"
 )
 
 const (

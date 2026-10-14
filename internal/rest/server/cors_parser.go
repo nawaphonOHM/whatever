@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/middleware"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/middleware"
 )
 
 // CORSFileConfig represents the deserialized cors.schema.json structure.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/config"
 )
 
 const defaultProbeTimeout = 10 * time.Second

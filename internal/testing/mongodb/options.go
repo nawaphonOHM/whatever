@@ -5,7 +5,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/config"
 )
 
 // Option defines a functional option for configuring MongoDB test connections.
