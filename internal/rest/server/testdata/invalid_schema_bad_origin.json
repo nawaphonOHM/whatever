@@ -1,0 +1,5 @@
+{
+  "allow-origins": [
+    "https://invalid origin with spaces"
+  ]
+}

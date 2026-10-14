@@ -32,6 +32,7 @@ func setServerConfigOverrides(t *testing.T) {
 		"OHM9996_SERVER_USE_RAW_PATH":              envTrue,
 		"OHM9996_SERVER_UNESCAPE_PATH_VALUES":      envFalse,
 		"OHM9996_SERVER_REMOVE_EXTRA_SLASH":        envTrue,
+		"OHM9996_SERVER_CORS_PATH":                 "/custom/cors.yaml",
 		"OHM9996_SERVER_MAX_BODY_SIZE":             "67108864",
 		"OHM9996_SERVER_READ_HEADER_TIMEOUT":       "8s",
 		"OHM9996_SERVER_MAX_HEADER_BYTES":          "2097152",

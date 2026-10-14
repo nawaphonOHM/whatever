@@ -1,49 +1,8 @@
 package contracts
 
-// CorsSetting configures Cross-Origin Resource Sharing policy options.
-type CorsSetting struct {
-	allowOrigin      []string
-	allowHTTPMethods []HTTPMethod
-}
-
-// NewCorsSetting initializes a new CorsSetting builder.
-func NewCorsSetting() *CorsSetting {
-	return &CorsSetting{}
-}
-
-// WithAllowOrigin sets the allowed CORS origins.
-func (c *CorsSetting) WithAllowOrigin(origins ...string) *CorsSetting {
-	c.allowOrigin = append([]string(nil), origins...)
-	return c
-}
-
-// WithAllowHTTPMethods sets the allowed CORS HTTP methods.
-func (c *CorsSetting) WithAllowHTTPMethods(
-	methods ...HTTPMethod,
-) *CorsSetting {
-	c.allowHTTPMethods = append([]HTTPMethod(nil), methods...)
-	return c
-}
-
-// AllowOrigin returns a copy of the allowed CORS origins.
-func (c *CorsSetting) AllowOrigin() []string {
-	if c == nil || c.allowOrigin == nil {
-		return nil
-	}
-	return append([]string(nil), c.allowOrigin...)
-}
-
-// AllowHTTPMethods returns a copy of the allowed CORS HTTP methods.
-func (c *CorsSetting) AllowHTTPMethods() []HTTPMethod {
-	if c == nil || c.allowHTTPMethods == nil {
-		return nil
-	}
-	return append([]HTTPMethod(nil), c.allowHTTPMethods...)
-}
-
 // Meta holds server configuration metadata such as CORS settings.
 type Meta struct {
-	cors *CorsSetting
+	corsPath string
 }
 
 // NewMeta initializes a new Meta builder.
@@ -51,18 +10,18 @@ func NewMeta() *Meta {
 	return &Meta{}
 }
 
-// WithCors sets the CORS configuration on the Meta instance.
-func (m *Meta) WithCors(cors *CorsSetting) *Meta {
-	m.cors = cors
+// WithCorsPath sets the CORS configuration file path on the Meta instance.
+func (m *Meta) WithCorsPath(path string) *Meta {
+	m.corsPath = path
 	return m
 }
 
-// Cors returns the configured CorsSetting or nil if unset.
-func (m *Meta) Cors() *CorsSetting {
+// CorsPath returns the configured CORS configuration file path.
+func (m *Meta) CorsPath() string {
 	if m == nil {
-		return nil
+		return ""
 	}
-	return m.cors
+	return m.corsPath
 }
 
 // BluePrint defines the application blueprint including metadata and APIs.

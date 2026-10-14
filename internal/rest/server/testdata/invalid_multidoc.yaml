@@ -1,0 +1,5 @@
+allow-origins:
+  - https://example.com
+---
+allow-origins:
+  - https://other.example.com

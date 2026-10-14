@@ -1,0 +1,6 @@
+{
+  "allow-origins": [
+    "https://example.com"
+  ],
+  "allow-methods": "PATCH"
+}

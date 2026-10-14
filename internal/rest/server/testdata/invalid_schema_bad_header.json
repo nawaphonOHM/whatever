@@ -1,0 +1,8 @@
+{
+  "allow-origins": [
+    "https://example.com"
+  ],
+  "allow-headers": [
+    "authorization"
+  ]
+}

@@ -45,6 +45,7 @@ func assertOverrideHTTP(t *testing.T, cfg *Config) {
 	assert.True(t, cfg.UseRawPath)
 	assert.False(t, cfg.UnescapePathValues)
 	assert.True(t, cfg.RemoveExtraSlash)
+	assert.Equal(t, "/custom/cors.yaml", cfg.CORSPath)
 }
 
 func assertOverrideResource(t *testing.T, cfg *Config) {

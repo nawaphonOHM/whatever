@@ -43,6 +43,7 @@ func assertHTTPDefaults(t *testing.T, cfg *Config) {
 	assert.False(t, cfg.UseRawPath)
 	assert.True(t, cfg.UnescapePathValues)
 	assert.False(t, cfg.RemoveExtraSlash)
+	assert.Empty(t, cfg.CORSPath)
 }
 
 func assertResourceDefaults(t *testing.T, cfg *Config) {

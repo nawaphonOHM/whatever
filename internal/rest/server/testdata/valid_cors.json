@@ -1,0 +1,12 @@
+{
+  "allow-origins": [
+    "https://app.example.com",
+    "https://admin.example.com"
+  ],
+  "allow-methods": "POST",
+  "allow-headers": [
+    "Authorization",
+    "Content-Type",
+    "X-Request-ID"
+  ]
+}
