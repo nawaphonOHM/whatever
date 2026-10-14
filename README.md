@@ -470,7 +470,9 @@ The CORS configuration file (`.json`, `.yaml`, or `.yml`) is validated against J
 ```yaml
 allow-origins:
   - https://app.example.com
-allow-methods: GET
+allow-methods:
+  - GET
+  - POST
 allow-headers:
   - Content-Type
   - Authorization
@@ -482,7 +484,10 @@ allow-headers:
   "allow-origins": [
     "https://app.example.com"
   ],
-  "allow-methods": "GET",
+  "allow-methods": [
+    "GET",
+    "POST"
+  ],
   "allow-headers": [
     "Content-Type",
     "Authorization"
@@ -492,9 +497,9 @@ allow-headers:
 
 #### Schema Constraints & Rules
 - **`allow-origins`**: Slice of origin URLs matching pattern `^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/.*)?$`. Note that while the schema allows optional path suffixes (`(?:/.*)?`), standard browser `Origin` request headers contain only `scheme://host[:port]` without paths; therefore, configured origins with path components will not match incoming browser origins at runtime. In addition, wildcards (`*`), raw `localhost`, and port numbers (e.g. `:3000`) are not allowed by the schema pattern.
-- **`allow-methods`**: A single HTTP method string from the schema enum (`GET`, `POST`, `PUT`, `DELETE`, `HEAD`, `OPTIONS`, `CONNECT`, `TRACE`). Must be a string (not an array); `PATCH` is not present in the schema enum.
+- **`allow-methods`**: Slice/array of uppercase HTTP method strings from the schema enum (`GET`, `POST`, `PUT`, `DELETE`, `HEAD`, `OPTIONS`, `CONNECT`, `TRACE`). Must be an array of strings (e.g. `["GET", "POST"]` in JSON or a YAML list as shown in the example above). Note: Supplying a scalar string (e.g. `"GET"`) is rejected with a schema validation error (`Invalid type. Expected: array, given: string`), which is a breaking change from legacy scalar formats. `PATCH` is not present in the schema enum.
 - **`allow-headers`**: Slice of header names from the schema enum (e.g. `Content-Type`, `Authorization`, `Accept`, `Origin`, `X-Request-ID`). Header names are case-sensitive.
-- **`request-headers` & `request-methods`**: Optional schema fields representing client preflight request headers (`Access-Control-Request-*`). These fields are validated against the schema, but have **NO runtime effect** on server CORS response headers (CORS response headers are controlled exclusively by `allow-*` fields).
+- **`request-headers` & `request-methods`**: Optional schema fields representing client preflight request headers and methods (`Access-Control-Request-*`). `request-methods` accepts an array of uppercase HTTP method strings from the same schema enum as `allow-methods` (scalar strings are rejected). These fields are validated against the schema, but have **NO runtime effect** on server CORS response headers (CORS response headers are controlled exclusively by `allow-*` fields).
 - **Caching & `Vary: Origin`**: When CORS is enabled with a non-wildcard origin list, every response includes `Vary: Origin` so shared caches cannot mix allowed and disallowed origin results. Matching origins are echoed in `Access-Control-Allow-Origin`; disallowed origins still omit all `Access-Control-Allow-*` headers. Disabled CORS emits neither allow headers nor `Vary: Origin`.
 
 ### Middleware Pipeline

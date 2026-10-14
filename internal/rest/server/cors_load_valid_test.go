@@ -19,7 +19,7 @@ func TestLoadAndValidateCORS_EmptyPath(t *testing.T) {
 func TestLoadAndValidateCORS_ValidJSON(t *testing.T) {
 	content := `{
 		"allow-origins": ["https://example.com", "http://localhost.dev"],
-		"allow-methods": "POST",
+		"allow-methods": ["POST", "GET"],
 		"allow-headers": ["Authorization", "Content-Type", "Accept"]
 	}`
 	path := writeTempConfigFile(t, "cors.json", content)
@@ -28,7 +28,7 @@ func TestLoadAndValidateCORS_ValidJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	assert.Equal(t, []string{"https://example.com", "http://localhost.dev"}, cfg.AllowOrigins)
-	assert.Equal(t, []string{"POST"}, cfg.AllowMethods)
+	assert.Equal(t, []string{"POST", "GET"}, cfg.AllowMethods)
 	assert.Equal(t, []string{"Authorization", "Content-Type", "Accept"}, cfg.AllowHeaders)
 }
 
@@ -37,7 +37,9 @@ func TestLoadAndValidateCORS_ValidYAML(t *testing.T) {
 allow-origins:
   - https://api.example.com
   - https://app.example.com/v1
-allow-methods: GET
+allow-methods:
+  - GET
+  - POST
 allow-headers:
   - Content-Type
   - X-Request-ID
@@ -47,7 +49,7 @@ allow-headers:
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	assert.Equal(t, []string{"https://api.example.com", "https://app.example.com/v1"}, cfg.AllowOrigins)
-	assert.Equal(t, []string{"GET"}, cfg.AllowMethods)
+	assert.Equal(t, []string{"GET", "POST"}, cfg.AllowMethods)
 	assert.Equal(t, []string{"Content-Type", "X-Request-ID"}, cfg.AllowHeaders)
 }
 
@@ -55,18 +57,50 @@ func TestLoadAndValidateCORS_ValidYAMLWithRequests(t *testing.T) {
 	yamlReqContent := `
 allow-origins:
   - https://example.com
-allow-methods: POST
+allow-methods:
+  - POST
+  - PUT
 allow-headers:
   - Authorization
 request-headers:
   - Content-Type
-request-methods: GET
+  - X-Request-ID
+request-methods:
+  - GET
+  - DELETE
 `
 	path := writeTempConfigFile(t, "cors_request.yaml", yamlReqContent)
 	cfg, err := LoadAndValidateCORS(path)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	assert.Equal(t, []string{"https://example.com"}, cfg.AllowOrigins)
-	assert.Equal(t, []string{"POST"}, cfg.AllowMethods)
+	assert.Equal(t, []string{"POST", "PUT"}, cfg.AllowMethods)
 	assert.Equal(t, []string{"Authorization"}, cfg.AllowHeaders)
+}
+
+func TestLoadAndValidateCORS_EmptyMethodsArrayJSON(t *testing.T) {
+	content := `{
+		"allow-origins": ["https://example.com"],
+		"allow-methods": []
+	}`
+	path := writeTempConfigFile(t, "cors_empty_methods.json", content)
+	cfg, err := LoadAndValidateCORS(path)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	assert.Equal(t, []string{"https://example.com"}, cfg.AllowOrigins)
+	assert.Empty(t, cfg.AllowMethods)
+}
+
+func TestLoadAndValidateCORS_EmptyMethodsArrayYAML(t *testing.T) {
+	yamlContent := `
+allow-origins:
+  - https://example.com
+allow-methods: []
+`
+	path := writeTempConfigFile(t, "cors_empty_methods.yaml", yamlContent)
+	cfg, err := LoadAndValidateCORS(path)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	assert.Equal(t, []string{"https://example.com"}, cfg.AllowOrigins)
+	assert.Empty(t, cfg.AllowMethods)
 }

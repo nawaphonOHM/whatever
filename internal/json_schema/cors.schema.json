@@ -119,17 +119,20 @@
       }
     },
     "http-methods": {
-      "type": "string",
-      "enum": [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "HEAD",
-        "OPTIONS",
-        "CONNECT",
-        "TRACE"
-      ]
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "HEAD",
+          "OPTIONS",
+          "CONNECT",
+          "TRACE"
+        ]
+      }
     }
   },
   "properties": {

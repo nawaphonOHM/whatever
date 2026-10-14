@@ -27,7 +27,7 @@ func TestNewFromBluePrint_EnvFallback(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, preflight.Code)
 	assertCORSHeaders(t, preflight, expectedHeaders{
 		origin:  testAppOrigin,
-		methods: getMethod,
+		methods: yamlExpectedMethods,
 		headers: "Authorization, Content-Type, Accept",
 	})
 }
@@ -48,7 +48,7 @@ func TestNewFromBluePrint_MetaPrecedenceOverEnv(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, preflight.Code)
 	assertCORSHeaders(t, preflight, expectedHeaders{
 		origin:  testAppOrigin,
-		methods: postMethod,
+		methods: jsonExpectedMethods,
 		headers: jsonExpectedHeaders,
 	})
 }

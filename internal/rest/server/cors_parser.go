@@ -9,8 +9,8 @@ import (
 
 // CORSFileConfig represents the deserialized cors.schema.json structure.
 type CORSFileConfig struct {
-	AllowMethods   string   `json:"allow-methods" yaml:"allow-methods"`
-	RequestMethods string   `json:"request-methods" yaml:"request-methods"`
+	AllowMethods   []string `json:"allow-methods" yaml:"allow-methods"`
+	RequestMethods []string `json:"request-methods" yaml:"request-methods"`
 	AllowOrigins   []string `json:"allow-origins" yaml:"allow-origins"`
 	AllowHeaders   []string `json:"allow-headers" yaml:"allow-headers"`
 	RequestHeaders []string `json:"request-headers" yaml:"request-headers"`
@@ -39,13 +39,6 @@ func filterValidMethods(methods []string) []string {
 	return out
 }
 
-func mapCORSMethods(methodsStr string) []string {
-	if methodsStr == "" {
-		return nil
-	}
-	return filterValidMethods(strings.Split(methodsStr, ","))
-}
-
 func applyAllowFields(cfg *middleware.CORSConfig, fileCfg *CORSFileConfig) {
 	if len(fileCfg.AllowOrigins) > 0 {
 		cfg.AllowOrigins = fileCfg.AllowOrigins
@@ -61,7 +54,7 @@ func buildCORSConfig(fileCfg *CORSFileConfig) *middleware.CORSConfig {
 		return cfg
 	}
 	applyAllowFields(cfg, fileCfg)
-	if methods := mapCORSMethods(fileCfg.AllowMethods); len(methods) > 0 {
+	if methods := filterValidMethods(fileCfg.AllowMethods); len(methods) > 0 {
 		cfg.AllowMethods = methods
 	}
 	return cfg

@@ -28,7 +28,7 @@ func assertEnvYAMLPreflight(t *testing.T, url string) {
 	assert.Equal(t, http.StatusNoContent, preflight.StatusCode)
 	assertCORSHeaders(t, preflight, expectedCORS{
 		origin:  testAppOrigin,
-		methods: getMethod,
+		methods: yamlExpectedMethods,
 		headers: yamlExpectedHeaders,
 	})
 }
@@ -43,7 +43,7 @@ func assertEnvJSONPreflight(t *testing.T, url string) {
 	assert.Equal(t, http.StatusNoContent, preflight.StatusCode)
 	assertCORSHeaders(t, preflight, expectedCORS{
 		origin:  testAppOrigin,
-		methods: postMethod,
+		methods: jsonExpectedMethods,
 		headers: jsonExpectedHeaders,
 	})
 }

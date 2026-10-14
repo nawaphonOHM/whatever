@@ -25,7 +25,7 @@ func TestNewFromBluePrint_ValidYAMLFixture(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, preflight.Code)
 	assertCORSHeaders(t, preflight, expectedHeaders{
 		origin:  testAdminOrigin,
-		methods: getMethod,
+		methods: yamlExpectedMethods,
 		headers: "Authorization, Content-Type, Accept",
 	})
 
@@ -52,7 +52,7 @@ func TestNewFromBluePrint_ValidYAMLWithRequestsFixture(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, preflight.Code)
 	assertCORSHeaders(t, preflight, expectedHeaders{
 		origin:  testAppOrigin,
-		methods: "PUT",
+		methods: "PUT, DELETE",
 		headers: "Authorization, Content-Type",
 	})
 }
