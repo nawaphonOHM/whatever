@@ -119,7 +119,7 @@
       }
     },
     "http-methods": {
-      "type": "string",
+      "type": "array",
       "enum": [
         "GET",
         "POST",
