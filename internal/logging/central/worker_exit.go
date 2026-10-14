@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v3/internal/logging/callstack"
 )
 
 // Exit dispatches an exit event to the worker and flushes.

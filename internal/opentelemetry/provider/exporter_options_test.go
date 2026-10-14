@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/config"
 )
 
 func TestBuildGRPCOptions_Variants(t *testing.T) {

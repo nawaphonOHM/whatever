@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/client"
 )
 
 func TestChooseTargetColl_ReturnsProbe(t *testing.T) {

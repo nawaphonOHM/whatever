@@ -3,7 +3,7 @@ package mongodb
 import (
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/config"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/config"
 )
 
 const (

@@ -3,7 +3,7 @@
 package firestore
 
 import (
-	"github.com/nawaphonOHM/whatever/v2/internal/testcontainers/firestore"
+	"github.com/nawaphonOHM/whatever/v3/internal/testcontainers/firestore"
 )
 
 // Container wraps a running Firestore Testcontainer and provides connection utilities.

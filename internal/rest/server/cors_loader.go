@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/middleware"
-	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/middleware"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 )
 
 func readAndParseCORS(path string) ([]byte, *CORSFileConfig, error) {

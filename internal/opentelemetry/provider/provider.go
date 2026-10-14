@@ -10,9 +10,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/v2/internal/opentelemetry/config"
-	"github.com/nawaphonOHM/whatever/v2/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v3/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/config"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 )
 
 // ShutdownFunc defines the callback function to flush and terminate the TracerProvider.

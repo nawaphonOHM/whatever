@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	jsonschema "github.com/nawaphonOHM/whatever/v2/internal/json_schema"
+	jsonschema "github.com/nawaphonOHM/whatever/v3/internal/json_schema"
 	"github.com/xeipuuv/gojsonschema"
 )
 

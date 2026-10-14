@@ -3,7 +3,7 @@ package firestore_test
 import (
 	"testing"
 
-	"github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/firestore"
+	"github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/firestore"
 	"github.com/stretchr/testify/assert"
 )
 

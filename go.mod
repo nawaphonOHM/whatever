@@ -1,4 +1,4 @@
-module github.com/nawaphonOHM/whatever/v2
+module github.com/nawaphonOHM/whatever/v3
 
 go 1.27.1
 

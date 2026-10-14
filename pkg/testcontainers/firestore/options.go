@@ -3,7 +3,7 @@ package firestore
 import (
 	"github.com/testcontainers/testcontainers-go"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/testcontainers/firestore"
+	"github.com/nawaphonOHM/whatever/v3/internal/testcontainers/firestore"
 )
 
 // DefaultOptions returns an Options struct populated with default settings.

@@ -3,7 +3,7 @@
 package rest
 
 import (
-	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 )
 
 // Meta holds server configuration metadata such as CORS settings.

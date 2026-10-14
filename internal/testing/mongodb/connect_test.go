@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"github.com/nawaphonOHM/whatever/v2/internal/mongodb/client"
+	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/client"
 )
 
 const testInvalidPort = 99999
