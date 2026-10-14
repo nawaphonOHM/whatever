@@ -28,17 +28,17 @@ type TimeoutFields struct {
 // Config defines the configuration for the HTTP server.
 // All environment variable keys use the OHM9996_ prefix.
 type Config struct {
+	OTel        *otelcfg.Config
 	Host        string `env:"OHM9996_SERVER_HOST" envDefault:""`
 	Mode        string `env:"OHM9996_GIN_MODE" envDefault:"release"`
 	AppVersion  string `env:"OHM9996_APP_VERSION" envDefault:""`
 	DisplayName string `env:"OHM9996_SERVER_DISPLAY_NAME" envDefault:"application"`
 	ProfilePath string `env:"OHM9996_SERVER_PROFILE_PATH" envDefault:"/debug/pprof"`
-	OTel        *otelcfg.Config
+	HTTPFields
 	ProxyFields
 	ResourceFields
-	Port int `env:"OHM9996_SERVER_PORT" envDefault:"8080"`
 	TimeoutFields
-	HTTPFields
+	Port            int  `env:"OHM9996_SERVER_PORT" envDefault:"8080"`
 	EnableAccessLog bool `env:"OHM9996_SERVER_ENABLE_ACCESS_LOG" envDefault:"true"`
 	EnableMetrics   bool `env:"OHM9996_SERVER_ENABLE_METRICS" envDefault:"false"`
 	EnableProfiling bool `env:"OHM9996_SERVER_ENABLE_PROFILING" envDefault:"false"`

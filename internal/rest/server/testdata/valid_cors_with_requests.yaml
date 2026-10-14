@@ -1,0 +1,10 @@
+allow-origins:
+  - https://app.example.com
+allow-methods: PUT
+allow-headers:
+  - Authorization
+  - Content-Type
+request-headers:
+  - Authorization
+  - Content-Type
+request-methods: PUT

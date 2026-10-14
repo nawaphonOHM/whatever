@@ -6,14 +6,6 @@ import (
 	"github.com/nawaphonOHM/whatever/v2/internal/rest/contracts"
 )
 
-// CorsSetting configures Cross-Origin Resource Sharing policy options.
-type CorsSetting = contracts.CorsSetting
-
-// NewCorsSetting initializes a new CorsSetting builder.
-func NewCorsSetting() *CorsSetting {
-	return contracts.NewCorsSetting()
-}
-
 // Meta holds server configuration metadata such as CORS settings.
 type Meta = contracts.Meta
 

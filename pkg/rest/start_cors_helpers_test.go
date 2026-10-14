@@ -1,72 +1,106 @@
 package rest
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// corsPreflightRequest sends an OPTIONS preflight request to the given URL.
-func corsPreflightRequest(
-	t *testing.T,
-	url string,
-) *http.Response {
+const (
+	e2ePingURLFormat    = "http://%s:%d/api/v1/ping"
+	testAppOrigin       = "https://app.example.com"
+	testAdminOrigin     = "https://admin.example.com"
+	testHeaderOrigin    = "Origin"
+	postMethod          = "POST"
+	getMethod           = "GET"
+	jsonExpectedHeaders = "Authorization, Content-Type, X-Request-ID"
+	yamlExpectedHeaders = "Authorization, Content-Type, Accept"
+	schemaValidationErr = "failed schema validation"
+)
+
+type preflightReq struct {
+	origin  string
+	method  string
+	headers string
+}
+
+type expectedCORS struct {
+	origin  string
+	methods string
+	headers string
+}
+
+func pingURL(port int) string {
+	return fmt.Sprintf(e2ePingURLFormat, testHost, port)
+}
+
+func setHeaderIfPresent(req *http.Request, key, val string) {
+	if val != "" {
+		req.Header.Set(key, val)
+	}
+}
+
+func setPreflightHeaders(req *http.Request, opts preflightReq) {
+	setHeaderIfPresent(req, "Origin", opts.origin)
+	setHeaderIfPresent(req, "Access-Control-Request-Method", opts.method)
+	setHeaderIfPresent(req, "Access-Control-Request-Headers", opts.headers)
+}
+
+func corsPreflightRequest(t *testing.T, url string, req preflightReq) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodOptions, url, nil)
+	httpReq, err := http.NewRequest(http.MethodOptions, url, nil)
 	require.NoError(t, err)
-	req.Header.Set("Origin", "https://example.com")
-	req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+	setPreflightHeaders(httpReq, req)
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	require.NoError(t, err)
+	return resp
+}
+
+func corsGETRequest(t *testing.T, url, origin string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	setHeaderIfPresent(req, "Origin", origin)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	return resp
 }
 
-// closeBody closes the response body and asserts no error.
-func closeBody(t *testing.T, body io.Closer) {
+func closeBody(t *testing.T, body io.ReadCloser) {
 	t.Helper()
+	_, err := io.Copy(io.Discard, body)
+	assert.NoError(t, err)
 	assert.NoError(t, body.Close())
+	http.DefaultClient.CloseIdleConnections()
 }
 
-// newCustomCORSBlueprint creates a blueprint with custom CORS settings.
-func newCustomCORSBlueprint() *BluePrint {
-	cors := NewCorsSetting().
-		WithAllowOrigin("https://example.com").
-		WithAllowHTTPMethods(POST, PATCH)
-	meta := NewMeta().WithCors(cors)
+func newCORSBlueprintWithFixture(corsPath string) *BluePrint {
+	meta := NewMeta()
+	if corsPath != "" {
+		meta = meta.WithCorsPath(corsPath)
+	}
 
-	api := &ExportableAPI{
-		Path:   "/test",
-		Method: GET,
-		Handler: func(Context) Response {
-			return OK("ok")
-		},
+	regPing := &RRestAPIRegistration{
+		Version: 1,
+		Prefix:  "/api",
+		Apis: []*ExportableAPI{{
+			Path:   "/ping",
+			Method: GET,
+			Handler: func(Context) Response {
+				return OK("pong")
+			},
+		}},
 	}
-	reg := &RRestAPIRegistration{
-		Apis: []*ExportableAPI{api},
-	}
-	return NewBluePrint().WithMeta(meta).WithAPIs(reg)
+	return NewBluePrint().WithMeta(meta).WithAPIs(regPing)
 }
 
-// assertCORSHeaders verifies CORS response headers.
-func assertCORSHeaders(
-	t *testing.T,
-	resp *http.Response,
-	expectedOrigin,
-	expectedMethods string,
-) {
-	t.Helper()
-	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
-	assert.Equal(t, expectedOrigin,
-		resp.Header.Get("Access-Control-Allow-Origin"))
-	if expectedMethods != "" {
-		assert.Equal(t, expectedMethods,
-			resp.Header.Get("Access-Control-Allow-Methods"))
-	} else {
-		assert.NotEmpty(t,
-			resp.Header.Get("Access-Control-Allow-Methods"))
-	}
+func testdataFixturePath(filename string) string {
+	return filepath.Join("testdata", filename)
 }

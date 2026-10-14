@@ -26,7 +26,11 @@ func registerBlueprint(
 	cfg *Config,
 	bp *contracts.BluePrint,
 ) error {
-	srv.SetupMiddlewares(buildCORSConfig(bp.Meta()))
+	corsCfg, err := loadCORSConfig(cfg, bp)
+	if err != nil {
+		return err
+	}
+	srv.SetupMiddlewares(corsCfg)
 	return srv.RegisterRoutesWithVersion(bp.Apis(), cfg.AppVersion)
 }
 

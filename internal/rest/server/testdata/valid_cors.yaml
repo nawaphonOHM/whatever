@@ -1,0 +1,8 @@
+allow-origins:
+  - https://app.example.com
+  - https://admin.example.com
+allow-methods: GET
+allow-headers:
+  - Authorization
+  - Content-Type
+  - Accept

@@ -46,6 +46,7 @@ func setStartEnv(t *testing.T, port int) {
 	t.Setenv(envServerHost, testHost)
 	t.Setenv(envServerPort, fmt.Sprintf("%d", port))
 	t.Setenv(envAppVersion, "1.0.0")
+	t.Setenv("OHM9996_SERVER_CORS_PATH", "")
 }
 
 // startRESTAsync launches StartREST and waits for bind.

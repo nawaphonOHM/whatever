@@ -43,31 +43,3 @@ func TestStartREST_Success(t *testing.T) {
 
 	signalAndWait(t, errCh)
 }
-
-// TestStartREST_CustomCORS verifies custom CORS headers are applied.
-func TestStartREST_CustomCORS(t *testing.T) {
-	port := getFreePort(t)
-	setStartEnv(t, port)
-	errCh := startRESTAsync(newCustomCORSBlueprint())
-
-	url := fmt.Sprintf("http://%s:%d/health", testHost, port)
-	resp := corsPreflightRequest(t, url)
-	defer closeBody(t, resp.Body)
-
-	assertCORSHeaders(t, resp, "https://example.com", "POST, PATCH")
-	signalAndWait(t, errCh)
-}
-
-// TestStartREST_DefaultCORS verifies default CORS headers when unconfigured.
-func TestStartREST_DefaultCORS(t *testing.T) {
-	port := getFreePort(t)
-	setStartEnv(t, port)
-	errCh := startRESTAsync(NewBluePrint())
-
-	url := fmt.Sprintf("http://%s:%d/health", testHost, port)
-	resp := corsPreflightRequest(t, url)
-	defer closeBody(t, resp.Body)
-
-	assertCORSHeaders(t, resp, "*", "")
-	signalAndWait(t, errCh)
-}

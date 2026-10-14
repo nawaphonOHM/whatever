@@ -198,7 +198,7 @@ The primary REST framework package provides declarative route registration contr
 - **RFC 9457 Problem Details**: Compliant error representations (`rest.BadRequest`, `rest.Unauthorized`, `rest.Forbidden`, `rest.NotFound`, `rest.InternalServerError`, `rest.Error`).
 - **Standardized Response Builders**: Consistent JSON success formatting (`rest.OK`, `rest.Created`, `rest.NoContent`, `rest.JSON`).
 - **Context Abstraction**: Unified `rest.Context` interface for URL params, query parameters, headers, cookies, JSON payload binding (`c.ShouldBindJSON`), and typed context values.
-- **CORS & Metadata Configuration**: Flexible CORS configuration via `rest.NewCorsSetting()` and `rest.NewMeta()`.
+- **CORS & Metadata Configuration**: File-based CORS configuration (.json/.yaml) validated against JSON Schema via `meta.WithCorsPath("cors.yaml")` or `OHM9996_SERVER_CORS_PATH` (disabled by default).
 - **Built-in Probes & Lifecycle**: Mounts reserved `/health` (liveness) and `/ready` (readiness) probe endpoints and provides signal-driven graceful shutdown via `rest.StartREST(bp)`.
 
 ### `pkg/logging`
@@ -309,12 +309,10 @@ func main() {
 	}
 
 	// 3. Configure CORS policy and assemble application blueprint
-	cors := rest.NewCorsSetting().
-		WithAllowOrigin("http://localhost:3000").
-		WithAllowHTTPMethods(rest.GET, rest.POST, rest.OPTIONS)
+	meta := rest.NewMeta().WithCorsPath("./configs/cors.yaml")
 
 	bp := rest.NewBluePrint().
-		WithMeta(rest.NewMeta().WithCors(cors)).
+		WithMeta(meta).
 		WithAPIs(itemRoutes)
 
 	// 4. Start the REST server
@@ -353,7 +351,7 @@ When `rest.StartREST(bp)` is invoked, it configures the underlying HTTP engine a
 2. **Request ID Tracking**: Generates or propagates `X-Request-ID` headers across all requests via `middleware.RequestID()`.
 3. **Structured HTTP Access Logging**: High-throughput access logger (`pkg/logger`) recording method, path, status, latency, client IP, and trace IDs (configurable via `OHM9996_SERVER_ENABLE_ACCESS_LOG`).
 4. **Panic Recovery**: Robust recovery middleware (`middleware.Recovery()`) capturing unhandled panics and writing RFC 9457 Problem Details error responses.
-5. **CORS Handling**: Attaches CORS middleware (`middleware.CORS()`) using rules configured via `bp.WithMeta(rest.NewMeta().WithCors(...))` or permissive environment defaults.
+5. **CORS Handling**: Attaches CORS middleware (`middleware.CORS()`) using rules configured via `bp.WithMeta(rest.NewMeta().WithCorsPath(...))` or `OHM9996_SERVER_CORS_PATH` (disabled by default).
 6. **Liveness & Readiness Probes**: Mounts reserved health check endpoints (`GET /health` and `GET /ready`) exempted from both `/api` and version prefixes.
 7. **Runtime Profiling (pprof)**: Exposes profiling endpoints at `OHM9996_SERVER_PROFILE_PATH` when enabled (`OHM9996_SERVER_ENABLE_PROFILING=true`).
 8. **Signal-Driven Graceful Shutdown**: Automatically captures `SIGINT` and `SIGTERM` signals and allows inflight requests to complete within `OHM9996_SERVER_SHUTDOWN_TIMEOUT`.
@@ -454,21 +452,50 @@ $$\text{FullPath} = \text{CalculateFullPath}(\text{Version}, \text{Prefix}, \tex
 
 ### CORS & Blueprint Metadata
 
-Custom Cross-Origin Resource Sharing (CORS) policies can be configured on the blueprint via `rest.NewMeta()` and `rest.NewCorsSetting()`:
+Custom Cross-Origin Resource Sharing (CORS) policies can be configured on the blueprint via `rest.NewMeta().WithCorsPath(path)` or environment variable `OHM9996_SERVER_CORS_PATH`:
 
 ```go
-cors := rest.NewCorsSetting().
-	WithAllowOrigin("https://app.example.com", "https://admin.example.com").
-	WithAllowHTTPMethods(rest.GET, rest.POST, rest.PUT, rest.DELETE, rest.OPTIONS)
-
-meta := rest.NewMeta().WithCors(cors)
+meta := rest.NewMeta().WithCorsPath("./configs/cors.yaml")
 
 bp := rest.NewBluePrint().
 	WithMeta(meta).
 	WithAPIs(apiRegistrations...)
 ```
 
-If no CORS configuration is provided, the server defaults to a permissive CORS configuration allowing all origins (`*`) and standard headers.
+The CORS configuration file (`.json`, `.yaml`, or `.yml`) is validated against JSON schema (`cors.schema.json`) at server startup. If no CORS configuration is provided, CORS is disabled by default (no `Access-Control-Allow-Origin` headers emitted).
+
+#### Example Configuration Files
+
+**YAML (`configs/cors.yaml`):**
+```yaml
+allow-origins:
+  - https://app.example.com
+allow-methods: GET
+allow-headers:
+  - Content-Type
+  - Authorization
+```
+
+**JSON (`configs/cors.json`):**
+```json
+{
+  "allow-origins": [
+    "https://app.example.com"
+  ],
+  "allow-methods": "GET",
+  "allow-headers": [
+    "Content-Type",
+    "Authorization"
+  ]
+}
+```
+
+#### Schema Constraints & Rules
+- **`allow-origins`**: Slice of origin URLs matching pattern `^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/.*)?$`. Note that while the schema allows optional path suffixes (`(?:/.*)?`), standard browser `Origin` request headers contain only `scheme://host[:port]` without paths; therefore, configured origins with path components will not match incoming browser origins at runtime. In addition, wildcards (`*`), raw `localhost`, and port numbers (e.g. `:3000`) are not allowed by the schema pattern.
+- **`allow-methods`**: A single HTTP method string from the schema enum (`GET`, `POST`, `PUT`, `DELETE`, `HEAD`, `OPTIONS`, `CONNECT`, `TRACE`). Must be a string (not an array); `PATCH` is not present in the schema enum.
+- **`allow-headers`**: Slice of header names from the schema enum (e.g. `Content-Type`, `Authorization`, `Accept`, `Origin`, `X-Request-ID`). Header names are case-sensitive.
+- **`request-headers` & `request-methods`**: Optional schema fields representing client preflight request headers (`Access-Control-Request-*`). These fields are validated against the schema, but have **NO runtime effect** on server CORS response headers (CORS response headers are controlled exclusively by `allow-*` fields).
+- **Caching & `Vary: Origin`**: When CORS is enabled with a non-wildcard origin list, every response includes `Vary: Origin` so shared caches cannot mix allowed and disallowed origin results. Matching origins are echoed in `Access-Control-Allow-Origin`; disallowed origins still omit all `Access-Control-Allow-*` headers. Disabled CORS emits neither allow headers nor `Vary: Origin`.
 
 ### Middleware Pipeline
 
@@ -1821,16 +1848,11 @@ Configuration values are resolved using the following order of precedence:
 
 ### CORS Policy Configuration
 
-CORS policies are configured programmatically via blueprint metadata (`rest.NewCorsSetting()` and `meta.WithCors(cors)`). When CORS is enabled without overrides, the server applies the following built-in defaults:
+CORS policies are configured by providing a path to a `.json`, `.yaml`, or `.yml` configuration file via blueprint metadata (`meta.WithCorsPath(...)`) or environment variable `OHM9996_SERVER_CORS_PATH`. By default, CORS is disabled unless explicitly configured.
 
-| Setting / Property | Type | Default Value | Description |
+| Variable | Type | Default | Description |
 |---|---|---|---|
-| `AllowOrigins` | `[]string` | `["*"]` | List of allowed CORS origin URL patterns (supports wildcard `*`) |
-| `AllowMethods` | `[]string` | `["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]` | Allowed HTTP methods |
-| `AllowHeaders` | `[]string` | `["Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"]` | Allowed request headers in CORS requests |
-| `ExposeHeaders` | `[]string` | `["Content-Length", "X-Request-ID"]` | Response headers accessible to browser JavaScript |
-| `AllowCredentials` | `bool` | `false` | Allows cookies and HTTP authentication credentials |
-| `MaxAge` | `string` | `"86400"` (24 hours) | Preflight response cache time in seconds |
+| `OHM9996_SERVER_CORS_PATH` | `string` | `""` (disabled) | Path to `.json`, `.yaml`, or `.yml` CORS configuration file |
 
 ### OpenTelemetry Tracing Configuration
 
@@ -1952,12 +1974,8 @@ func main() {
 	}
 
 	// 3. Configure CORS policy and assemble blueprint metadata
-	cors := rest.NewCorsSetting().
-		WithAllowOrigin("http://localhost:3000", "https://app.example.com").
-		WithAllowHTTPMethods(rest.GET, rest.POST, rest.PUT, rest.DELETE, rest.OPTIONS)
-
 	meta := rest.NewMeta().
-		WithCors(cors)
+		WithCorsPath("./configs/cors.yaml")
 
 	blueprint := rest.NewBluePrint().
 		WithMeta(meta).
