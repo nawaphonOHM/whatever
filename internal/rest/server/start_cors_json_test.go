@@ -21,7 +21,7 @@ func assertJSONPreflights(t *testing.T, srv *Server) {
 	assert.Equal(t, http.StatusNoContent, appPre.Code)
 	assertCORSHeaders(t, appPre, expectedHeaders{
 		origin:  testAppOrigin,
-		methods: postMethod,
+		methods: jsonExpectedMethods,
 		headers: jsonExpectedHeaders,
 	})
 
@@ -38,7 +38,7 @@ func assertJSONGETs(t *testing.T, srv *Server) {
 	assert.Equal(t, http.StatusOK, appGET.Code)
 	assertCORSHeaders(t, appGET, expectedHeaders{
 		origin:  testAppOrigin,
-		methods: postMethod,
+		methods: jsonExpectedMethods,
 		headers: jsonExpectedHeaders,
 	})
 

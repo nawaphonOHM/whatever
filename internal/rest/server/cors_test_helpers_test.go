@@ -21,6 +21,8 @@ const (
 	schemaValidationErr = "failed schema validation"
 	postMethod          = "POST"
 	getMethod           = "GET"
+	jsonExpectedMethods = "POST, GET"
+	yamlExpectedMethods = "GET, POST"
 )
 
 type preflightOpts struct {

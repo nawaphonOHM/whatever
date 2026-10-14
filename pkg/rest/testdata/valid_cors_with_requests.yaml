@@ -1,10 +1,14 @@
 allow-origins:
   - https://app.example.com
-allow-methods: PUT
+allow-methods:
+  - PUT
+  - DELETE
 allow-headers:
   - Authorization
   - Content-Type
 request-headers:
   - Authorization
   - Content-Type
-request-methods: PUT
+request-methods:
+  - PUT
+  - DELETE

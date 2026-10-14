@@ -11,8 +11,38 @@ func TestLoadAndValidateCORS_YAMLSchemaViolations(t *testing.T) {
 	cases := []schemaTestCase{
 		{
 			name:    "invalid method enum",
-			content: "allow-methods: PATCH\n",
-			wantErr: "allow-methods must be one of the following",
+			content: "allow-methods:\n  - PATCH\n",
+			wantErr: "allow-methods.0 must be one of the following",
+		},
+		{
+			name:    "mixed valid and invalid allow-methods at index 1",
+			content: "allow-methods:\n  - GET\n  - PATCH\n",
+			wantErr: "allow-methods.1 must be one of the following",
+		},
+		{
+			name:    "mixed valid and invalid request-methods at index 1",
+			content: "request-methods:\n  - POST\n  - INVALID_METHOD\n",
+			wantErr: "request-methods.1 must be one of the following",
+		},
+		{
+			name:    "lowercase allow-methods rejected",
+			content: "allow-methods:\n  - get\n",
+			wantErr: "allow-methods.0 must be one of the following",
+		},
+		{
+			name:    "lowercase request-methods rejected",
+			content: "request-methods:\n  - post\n",
+			wantErr: "request-methods.0 must be one of the following",
+		},
+		{
+			name:    "non-string item in allow-methods",
+			content: "allow-methods:\n  - 123\n",
+			wantErr: "Invalid type. Expected: string",
+		},
+		{
+			name:    "non-string item in request-methods",
+			content: "request-methods:\n  - true\n",
+			wantErr: "Invalid type. Expected: string",
 		},
 		{
 			name:    "unknown property",
@@ -30,9 +60,14 @@ func TestLoadAndValidateCORS_YAMLSchemaViolations(t *testing.T) {
 			wantErr: "must be one of the following",
 		},
 		{
-			name:    "wrong type for methods",
-			content: "request-methods:\n  - GET\n",
-			wantErr: "Invalid type. Expected: string, given: array",
+			name:    "wrong type for allow-methods",
+			content: "allow-methods: GET\n",
+			wantErr: "Invalid type. Expected: array, given: string",
+		},
+		{
+			name:    "wrong type for request-methods",
+			content: "request-methods: GET\n",
+			wantErr: "Invalid type. Expected: array, given: string",
 		},
 	}
 	for _, tc := range cases {

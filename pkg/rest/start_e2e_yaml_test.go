@@ -18,7 +18,7 @@ func assertYAMLE2EAllowed(t *testing.T, url string) {
 	assert.Equal(t, http.StatusNoContent, preflight.StatusCode)
 	assertCORSHeaders(t, preflight, expectedCORS{
 		origin:  testAdminOrigin,
-		methods: getMethod,
+		methods: yamlExpectedMethods,
 		headers: yamlExpectedHeaders,
 	})
 }
@@ -59,7 +59,7 @@ func assertYAMLRequestsPreflight(t *testing.T, url string) {
 	assert.Equal(t, http.StatusNoContent, preflight.StatusCode)
 	assertCORSHeaders(t, preflight, expectedCORS{
 		origin:  testAppOrigin,
-		methods: "PUT",
+		methods: "PUT, DELETE",
 		headers: "Authorization, Content-Type",
 	})
 }

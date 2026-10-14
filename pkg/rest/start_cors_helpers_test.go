@@ -18,6 +18,8 @@ const (
 	testHeaderOrigin    = "Origin"
 	postMethod          = "POST"
 	getMethod           = "GET"
+	jsonExpectedMethods = "POST, GET"
+	yamlExpectedMethods = "GET, POST"
 	jsonExpectedHeaders = "Authorization, Content-Type, X-Request-ID"
 	yamlExpectedHeaders = "Authorization, Content-Type, Accept"
 	schemaValidationErr = "failed schema validation"

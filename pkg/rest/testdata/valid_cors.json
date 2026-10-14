@@ -3,7 +3,10 @@
     "https://app.example.com",
     "https://admin.example.com"
   ],
-  "allow-methods": "POST",
+  "allow-methods": [
+    "POST",
+    "GET"
+  ],
   "allow-headers": [
     "Authorization",
     "Content-Type",

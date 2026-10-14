@@ -17,7 +17,7 @@ func assertJSONE2EPreflights(t *testing.T, url string) {
 	assert.Equal(t, http.StatusNoContent, appPre.StatusCode)
 	assertCORSHeaders(t, appPre, expectedCORS{
 		origin:  testAppOrigin,
-		methods: postMethod,
+		methods: jsonExpectedMethods,
 		headers: jsonExpectedHeaders,
 	})
 
@@ -36,7 +36,7 @@ func assertJSONE2EGETs(t *testing.T, url string) {
 	assert.Equal(t, http.StatusOK, appGET.StatusCode)
 	assertCORSHeaders(t, appGET, expectedCORS{
 		origin:  testAppOrigin,
-		methods: postMethod,
+		methods: jsonExpectedMethods,
 		headers: jsonExpectedHeaders,
 	})
 

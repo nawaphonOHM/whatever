@@ -35,13 +35,13 @@ func TestLoadAndValidateCORS_MethodAndHeaderViolations(t *testing.T) {
 		},
 		{
 			name:    "invalid HTTP method enum",
-			content: `{"allow-methods": "INVALID_METHOD"}`,
-			wantErr: "allow-methods must be one of the following",
+			content: `{"allow-methods": ["INVALID_METHOD"]}`,
+			wantErr: "allow-methods.0 must be one of the following",
 		},
 		{
 			name:    "PATCH method rejected",
-			content: `{"allow-methods": "PATCH"}`,
-			wantErr: "allow-methods must be one of the following",
+			content: `{"allow-methods": ["PATCH"]}`,
+			wantErr: "allow-methods.0 must be one of the following",
 		},
 		{
 			name:    "invalid HTTP header enum",
@@ -60,8 +60,28 @@ func TestLoadAndValidateCORS_MethodAndHeaderViolations(t *testing.T) {
 		},
 		{
 			name:    "invalid request-methods enum",
-			content: `{"request-methods": "UNKNOWN_METHOD"}`,
-			wantErr: "request-methods must be one of the following",
+			content: `{"request-methods": ["UNKNOWN_METHOD"]}`,
+			wantErr: "request-methods.0 must be one of the following",
+		},
+		{
+			name:    "mixed valid and invalid allow-methods at index 1",
+			content: `{"allow-methods": ["GET", "PATCH"]}`,
+			wantErr: "allow-methods.1 must be one of the following",
+		},
+		{
+			name:    "mixed valid and invalid request-methods at index 1",
+			content: `{"request-methods": ["POST", "INVALID_METHOD"]}`,
+			wantErr: "request-methods.1 must be one of the following",
+		},
+		{
+			name:    "lowercase allow-methods rejected",
+			content: `{"allow-methods": ["get"]}`,
+			wantErr: "allow-methods.0 must be one of the following",
+		},
+		{
+			name:    "lowercase request-methods rejected",
+			content: `{"request-methods": ["post"]}`,
+			wantErr: "request-methods.0 must be one of the following",
 		},
 	}
 	runSchemaTestCases(t, cases)
@@ -90,9 +110,24 @@ func TestLoadAndValidateCORS_OriginAndTypeViolations(t *testing.T) {
 			wantErr: patternMismatch,
 		},
 		{
-			name:    "request-methods array instead of string",
-			content: `{"request-methods": ["GET"]}`,
-			wantErr: "Invalid type. Expected: string, given: array",
+			name:    "allow-methods string instead of array",
+			content: `{"allow-methods": "GET"}`,
+			wantErr: "Invalid type. Expected: array, given: string",
+		},
+		{
+			name:    "request-methods string instead of array",
+			content: `{"request-methods": "GET"}`,
+			wantErr: "Invalid type. Expected: array, given: string",
+		},
+		{
+			name:    "allow-methods non-string element type",
+			content: `{"allow-methods": [123]}`,
+			wantErr: "Invalid type. Expected: string",
+		},
+		{
+			name:    "request-methods non-string element type",
+			content: `{"request-methods": [true]}`,
+			wantErr: "Invalid type. Expected: string",
 		},
 	}
 	runSchemaTestCases(t, cases)
