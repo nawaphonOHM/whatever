@@ -18,6 +18,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [`pkg/logging`](#pkglogging)
   - [`pkg/logger`](#pkglogger)
   - [`pkg/mongodb`](#pkgmongodb)
+  - [`pkg/storage`](#pkgstorage)
   - [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore)
   - [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb)
   - [`pkg/testing/mongodb`](#pkgtestingmongodb)
@@ -69,6 +70,13 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Readiness & Health Verification](#readiness--health-verification)
   - [Raw Driver Access](#raw-driver-access)
   - [Termination Hooks & Sentinel Errors](#termination-hooks--sentinel-errors)
+- [Cloud Object Storage (`pkg/storage`)](#cloud-object-storage-pkgstorage)
+  - [Connecting & Lifecycle](#connecting--lifecycle-1)
+  - [Automatic Cloud Provider Detection](#automatic-cloud-provider-detection)
+  - [Object Operations & Stream Management](#object-operations--stream-management)
+  - [Pre-signed URLs](#pre-signed-urls)
+  - [Connectivity Probing & Readiness](#connectivity-probing--readiness)
+  - [Termination Hooks & Sentinel Errors](#termination-hooks--sentinel-errors-1)
 - [Firestore Testcontainers (`pkg/testcontainers/firestore`)](#firestore-testcontainers-pkgtestcontainersfirestore)
   - [Container Lifecycle & Startup](#container-lifecycle--startup)
   - [Functional Options & Customization](#functional-options--customization)
@@ -96,6 +104,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [CORS Policy Configuration](#cors-policy-configuration)
   - [OpenTelemetry Tracing Configuration](#opentelemetry-tracing-configuration)
   - [MongoDB Configuration](#mongodb-configuration)
+  - [Object Storage Configuration](#object-storage-configuration)
   - [Structured Logger Configuration](#structured-logger-configuration)
 - [Consumer Bootstrap](#consumer-bootstrap)
 - [Development Workflows](#development-workflows)
@@ -149,6 +158,11 @@ This repository is structured as a modular library. Consuming microservices impo
 │   │   ├── middleware/        # CORS, Panic Recovery, Request ID, and Access Log middlewares
 │   │   ├── problem/           # RFC 9457 Problem Details error response implementation
 │   │   └── server/            # Gin engine bootstrap, preflight route validation, and server lifecycle
+│   ├── storage/
+│   │   ├── client/            # Managed S3/GCS storage client wrapper, options, and operations
+│   │   ├── config/            # Storage environment configuration loader and validation
+│   │   ├── contracts/         # Abstract storage contracts, models, and sentinel errors
+│   │   └── detector/          # URL pattern-based cloud provider detector (AWS, GCS, S3-compatible)
 │   ├── testcontainers/
 │   │   ├── firestore/         # Testcontainers Firestore module integration, lifecycle, and emulator wiring
 │   │   └── mongodb/           # Testcontainers MongoDB module integration, lifecycle, and client wiring
@@ -159,6 +173,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   ├── logging/               # Package-level structured logging facade and severity levels
 │   ├── mongodb/               # Public MongoDB connection entrypoint and managed client
 │   ├── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
+│   ├── storage/               # Public Cloud Object Storage entrypoint and managed client
 │   ├── testcontainers/
 │   │   ├── firestore/         # Public Testcontainers Firestore emulator runner, options, and container handle
 │   │   └── mongodb/           # Public Testcontainers MongoDB testing runner, options, and container handle
@@ -185,6 +200,7 @@ The toolkit is divided into focused public packages under `pkg/`:
 | [`pkg/logging`](#pkglogging) | Environment-driven structured logging facade with extended levels & OTel trace injection | `logging.Info()`, `logging.InfoContext()`, `logging.ErrorContext()`, `logging.FatalContext()`, `logging.LogAttrs()` | `log/slog`, `go.opentelemetry.io/otel` |
 | [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
+| [`pkg/storage`](#pkgstorage) | Cloud object storage client for AWS S3, Google Cloud Storage, & S3-compatible endpoints | `storage.Connect()`, `client.PutObject()`, `client.GetObject()`, `client.PresignGetObject()`, `client.Ping()` | `aws/aws-sdk-go-v2/service/s3` |
 | [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore) | Ephemeral Firestore emulator containers for integration tests | `firestore.Run()`, `container.URI()`, `container.Host()`, `container.Port()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb) | Ephemeral MongoDB containers with automated lifecycle and connection wiring for integration tests | `mongodb.Run()`, `container.Client()`, `container.ConnectionString()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testing/mongodb`](#pkgtestingmongodb) | Test MongoDB client with URI/options connectivity, automated `testing.TB` teardown, & fixture cleanup | `mongodb.NewTestClientURI()`, `mongodb.NewTestClient()`, `mongodb.ConnectURI()`, `client.TruncateCollections()` | `go.mongodb.org/mongo-driver/v2` |
@@ -230,6 +246,18 @@ Managed client for MongoDB deployments using the official MongoDB Go driver v2 (
 - **Managed Connection Pool**: Configurable connection limits (`MaxPoolSize`, `MinPoolSize`), socket timeouts, and connect timeouts.
 - **Health Verification**: Built-in `Ping(ctx)` method to verify live cluster connectivity during readiness checks.
 - **Direct Handle & Raw Driver Access**: Provides `client.Database(...)` and `client.Collection(...)` helpers with fallback to default database, and `client.RawClient()` for transactions and change streams.
+
+### `pkg/storage`
+
+Unified cloud object storage client supporting AWS S3, Google Cloud Storage XML API, and generic S3-compatible providers:
+
+- **Unified Abstract Contract**: Perform object uploads, downloads, deletions, metadata queries, and listings via the clean `Storage` interface.
+- **Zero-Boilerplate Configuration**: Seamlessly loads and validates settings via `OHM9996_STORAGE_*` environment variables.
+- **Automatic Provider Detection**: Automatically classifies target endpoints into `ProviderAWS`, `ProviderGCS`, or `ProviderS3Compatible` based on URL patterns.
+- **Pre-signed URLs**: Generates pre-signed GET and PUT URLs with configurable expiration durations (up to 7 days).
+- **Stream Handling & Multipart Uploads**: Buffers non-seekable streams and automatically utilizes multipart uploads for large payloads.
+- **Startup Connectivity Probing**: Non-destructive `HeadBucket` reachability probe with graceful fallback to `ListObjectsV2`.
+- **Defensive Error Handling**: Safe receiver checks returning standardized sentinel errors (`ErrObjectNotFound`, `ErrBucketNotFound`, `ErrAccessDenied`, `ErrNilClient`, `ErrNilConfig`, `ErrInvalidExpiry`).
 
 ### `pkg/testcontainers/firestore`
 
@@ -1270,6 +1298,157 @@ The package exports standard sentinel errors:
 
 ---
 
+## Cloud Object Storage (`pkg/storage`)
+
+The `pkg/storage` package provides a unified, production-ready cloud object storage client supporting Amazon Web Services (AWS) S3, Google Cloud Storage (via S3 XML API interoperability), and generic S3-compatible backends (such as MinIO, LocalStack, and Ceph).
+
+Consuming applications interact exclusively with clean public APIs (`pkg/storage`), while configuration, validation, cloud provider detection, and AWS SDK options configuration remain encapsulated in `internal/storage/*`.
+
+### Connecting & Lifecycle
+
+Initialize storage connectivity via `storage.Connect(ctx, opts...)` or `storage.ConnectWithConfig(ctx, cfg, opts...)`. The client loads settings from `OHM9996_STORAGE_*` environment variables (with fallback to `.env`/`configs/.env`), detects the cloud provider, constructs the underlying AWS SDK v2 client, and executes an initial bucket connectivity probe:
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/nawaphonOHM/whatever/v3/pkg/storage"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// Connect using environment variables (OHM9996_STORAGE_*)
+	client, err := storage.Connect(ctx)
+	if err != nil {
+		log.Fatalf("Failed to connect to storage: %v", err)
+	}
+
+	// Use client operations
+	_ = client
+}
+```
+
+### Automatic Cloud Provider Detection
+
+When resolving target endpoints, `OHM9996_STORAGE_ENDPOINT` takes precedence over `OHM9996_STORAGE_BUCKET_URL`. URLs without an explicit scheme default to `https://`. Hostnames are normalized (lowercased, trailing dots trimmed), and provider classification is evaluated in the following order:
+
+1. **Google Cloud Storage (`ProviderGCS` / `"gcs"`)**:
+   - Matches when the hostname equals or ends with `.storage.googleapis.com`, `.storage.googleapis`, `.stroage.googleapis.com`, or `.stroage.googleapis` (e.g., `https://storage.googleapis.com`, `https://mybucket.storage.googleapis.com`).
+   - Configures S3 XML interoperability mode with HMAC credentials and path-style addressing.
+2. **AWS S3 (`ProviderAWS` / `"aws"`)**:
+   - Matches when any dot-separated hostname label equals `s3` or starts with `s3-` (e.g., `s3.amazonaws.com`, `bucket.s3.us-east-1.amazonaws.com`, `s3.local:9000`), or when the host equals or ends with `.amazonaws.com` / `amazonaws.com`.
+   - Selected by default when neither custom endpoint nor bucket URL is provided.
+   - By default, native `amazonaws.com` / `amazonaws.com.cn` endpoints use the AWS SDK's virtual-hosted routing; non-Amazon target hosts (including AWS-classified `s3.local:9000`) use path-style addressing. `OHM9996_STORAGE_USE_PATH_STYLE=true` forces path-style addressing for any provider.
+3. **S3-Compatible Storage (`ProviderS3Compatible` / `"s3-compatible"`)**:
+   - Matches any other custom URL (e.g., `http://localhost:9000` for MinIO, `http://localhost:4566` for LocalStack, `https://minio.internal.net`, `https://mys3bucket.example.com`).
+   - Enables path-style addressing and custom base endpoint resolver.
+
+### Object Operations & Stream Management
+
+The `Storage` contract provides unified lifecycle operations:
+
+```go
+// 1. PutObject (upload data from any io.Reader)
+// RequestTimeout bounds the whole upload operation (including multipart);
+// configure RequestTimeout generously for large payloads or use pre-signed URLs.
+putOut, err := client.PutObject(ctx, storage.PutObjectInput{
+	Key:         "reports/annual.pdf",
+	Body:        pdfReader,
+	ContentType: "application/pdf",
+})
+
+// Convenience builder for byte slices
+input := storage.NewPutObjectBytes("my-bucket", "data.json", jsonBytes, "application/json")
+_, err = client.PutObject(ctx, input)
+
+// 2. GetObject (retrieve payload stream and metadata)
+// RequestTimeout only bounds header arrival; caller owns Body and must Close it.
+getOut, err := client.GetObject(ctx, storage.GetObjectInput{
+	Key: "reports/annual.pdf",
+})
+if err != nil {
+	log.Fatalf("Download failed: %v", err)
+}
+defer getOut.Body.Close()
+
+// Or read and close safely via helper utility:
+data, err := storage.ReadAllBody(getOut)
+
+// 3. DeleteObject
+_, err = client.DeleteObject(ctx, storage.DeleteObjectInput{
+	Key: "reports/annual.pdf",
+})
+
+// 4. HeadObject & Exists
+exists, err := client.Exists(ctx, "", "reports/annual.pdf")
+headOut, err := client.HeadObject(ctx, storage.HeadObjectInput{
+	Key: "reports/annual.pdf",
+})
+
+// 5. ListObjects (with prefix and delimiter)
+listOut, err := client.ListObjects(ctx, storage.ListObjectsInput{
+	Prefix:    "reports/",
+	Delimiter: "/",
+	MaxKeys:   100,
+})
+```
+
+### Pre-signed URLs
+
+Generate pre-signed GET and PUT URLs with configurable expiration durations (up to 7 days, falling back to default when `ExpiresIn` is 0):
+
+```go
+// Pre-signed GET (download) URL (passing 0 uses configured default OHM9996_STORAGE_PRESIGN_EXPIRY)
+getPresigned, err := client.PresignGetObject(ctx, storage.PresignGetObjectInput{
+	Key:       "reports/annual.pdf",
+	ExpiresIn: 30 * time.Minute,
+})
+
+// Pre-signed PUT (upload) URL
+// When ContentType is set, the uploading client must send the returned Headers unchanged in the PUT request.
+putPresigned, err := client.PresignPutObject(ctx, storage.PresignPutObjectInput{
+	Key:         "uploads/avatar.jpg",
+	ContentType: "image/jpeg",
+	ExpiresIn:   15 * time.Minute,
+})
+```
+
+### Connectivity Probing & Readiness
+
+`storage.Connect(ctx)` automatically performs a non-destructive reachability probe on the default bucket (`HeadBucket`, with automatic fallback to single-key `ListObjectsV2` when access is denied by restrictive bucket policies). Probing can be skipped via `storage.WithSkipProbe(true)`.
+
+Applications can also invoke `client.Ping(ctx)` on demand for Kubernetes readiness probes (`/ready`).
+
+### Termination Hooks & Sentinel Errors
+
+Process exit behavior during initialization:
+- **Missing mandatory configuration** (`OHM9996_STORAGE_BUCKET` via `Connect` / `LoadConfig`): Logs a diagnostic message and triggers **graceful termination (`exitFunc(0)`)**.
+- **Startup connectivity probe failure** (when probing is enabled): Logs diagnostic details with a call stack snapshot and triggers **abnormal termination (`exitFunc(1)`)**.
+- **Configuration validation or client build errors** passed to `ConnectWithConfig`: Returns an error directly without triggering process exit hooks.
+
+The exit hook can be intercepted during testing:
+
+```go
+prevExit := storage.SetExitFunc(func(code int) {
+	// Custom exit logic or test assertion
+})
+defer storage.SetExitFunc(prevExit)
+```
+
+The package exports standard sentinel errors:
+- `storage.ErrObjectNotFound`: Returned when the requested object key does not exist.
+- `storage.ErrBucketNotFound`: Returned when the target bucket does not exist.
+- `storage.ErrNilClient`: Returned when invoking operations on an uninitialized client instance.
+- `storage.ErrNilConfig`: Returned when configuration is nil.
+- `storage.ErrAccessDenied`: Returned when the storage service rejects the request (HTTP 403).
+- `storage.ErrInvalidExpiry`: Returned when pre-signed URL expiration is negative or exceeds 7 days.
+
+---
+
 ## Firestore Testcontainers (`pkg/testcontainers/firestore`)
 
 The `pkg/testcontainers/firestore` package provides lightweight, isolated Google Cloud Firestore emulator container management for integration testing using [Testcontainers for Go](https://golang.testcontainers.org/) and the official Google Cloud module (`github.com/testcontainers/testcontainers-go/modules/gcloud/firestore`). It spins up ephemeral Firestore instances with zero host dependencies, exposing dynamic connection endpoints and project metadata.
@@ -1892,6 +2071,28 @@ CORS policies are configured by providing a path to a `.json`, `.yaml`, or `.yml
 | `OHM9996_MONGODB_MIN_POOL_SIZE` | `uint64` | `5` | Minimum number of idle connections maintained in the pool |
 
 If mandatory configuration (`HOST`) is missing, or if connection fails after TLS fallback, the client logs descriptive error details and triggers a peaceful termination hook (`exitFunc(0)`).
+
+### Object Storage Configuration
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `OHM9996_STORAGE_BUCKET` | `string` | `""` (Required) | Default bucket name (3 to 222 characters) |
+| `OHM9996_STORAGE_REGION` | `string` | `"us-east-1"` | AWS region or S3-compatible region identifier |
+| `OHM9996_STORAGE_ACCESS_KEY_ID` | `string` | `""` (empty) | Access key ID for static authentication |
+| `OHM9996_STORAGE_SECRET_ACCESS_KEY` | `string` | `""` (empty) | Secret access key for static authentication |
+| `OHM9996_STORAGE_SESSION_TOKEN` | `string` | `""` (empty) | AWS session token for temporary credentials |
+| `OHM9996_STORAGE_ENDPOINT` | `string` | `""` (empty) | Custom service endpoint URL or hostname (takes precedence over `BUCKET_URL`) |
+| `OHM9996_STORAGE_BUCKET_URL` | `string` | `""` (empty) | Custom bucket URL (used if `ENDPOINT` is unset) |
+| `OHM9996_STORAGE_PORT` | `int` | `0` | Custom port number (1–65535), applied only when endpoint/bucket URL lacks explicit port |
+| `OHM9996_STORAGE_USE_PATH_STYLE` | `bool` | `false` | Force path-style addressing (`true`/`false`) |
+| `OHM9996_STORAGE_INSECURE` | `bool` | `false` | Force endpoint/bucket URL scheme to `http` (`true`/`false`) |
+| `OHM9996_STORAGE_DISABLE_SSL` | `bool` | `false` | Force endpoint/bucket URL scheme to `http` (`true`/`false`) |
+| `OHM9996_STORAGE_CONNECT_TIMEOUT` | `duration` | `10s` | Maximum duration bounding TCP dial and TLS handshake on transport client (ignored if `WithHTTPClient` is provided) |
+| `OHM9996_STORAGE_REQUEST_TIMEOUT` | `duration` | `30s` | Per-request timeout bounding header arrival for `GetObject` and whole transfer duration for `PutObject` |
+| `OHM9996_STORAGE_PING_TIMEOUT` | `duration` | `5s` | Maximum duration for bucket connectivity probes |
+| `OHM9996_STORAGE_PRESIGN_EXPIRY` | `duration` | `15m` | Default pre-signed URL expiration duration (maximum 7 days; used when `ExpiresIn` is `0`) |
+
+When loading configuration via `storage.Connect()` or `config.LoadConfig()`, if mandatory configuration (`OHM9996_STORAGE_BUCKET`) is missing, the client logs diagnostic error details and triggers graceful termination (`exitFunc(0)`). Startup connectivity probe failures trigger abnormal termination (`exitFunc(1)`).
 
 ### Structured Logger Configuration
 
