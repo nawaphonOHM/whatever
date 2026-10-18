@@ -1198,7 +1198,7 @@ There is no configuration switch to bypass startup verification. Applications ca
 
 ### Database & Collection Handles
 
-The managed client resolves default database names and exposes direct access to official MongoDB Go Driver v2 handles (`*mongo.Database` and `*mongo.Collection`):
+The managed client resolves default database names and exposes database and collection handles. Collection operations can use the public `mongodb.Collection` alias without importing the driver package:
 
 ```go
 package repository
@@ -1206,8 +1206,7 @@ package repository
 import (
 	"context"
 
-	"github.com/nawaphonOHM/whatever/pkg/mongodb"
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 )
 
 type User struct {
@@ -1229,14 +1228,14 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, 
 	coll := r.client.Collection("users")
 
 	var user User
-	err := coll.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := coll.FindOne(ctx, mongodb.M{"email": email}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *UserRepository) RecordAudit(ctx context.Context, entry bson.M) error {
+func (r *UserRepository) RecordAudit(ctx context.Context, entry mongodb.M) error {
 	// Explicitly target a specific database override ("audit_db")
 	coll := r.client.Collection("audit_logs", "audit_db")
 
@@ -1295,6 +1294,7 @@ defer mongodb.SetExitFunc(prevExit)
 The package exports standard sentinel errors:
 - `mongodb.ErrNilClient`: Returned when attempting operations on an uninitialized client instance (`"mongodb client is not initialized"`).
 - `mongodb.ErrNilConfig`: Returned when internal configuration resolving is nil (`"mongodb config cannot be nil"`).
+- `mongodb.ErrNoDocuments`: Sentinel error aliasing `mongo.ErrNoDocuments`, indicating that a query returned no documents (`"mongo: no documents in result"`).
 
 ---
 
@@ -1968,6 +1968,7 @@ func TestParallelSubtests(t *testing.T) {
 - `mongodb.ErrEmptyURI`: `"mongodb uri cannot be empty"`
 - `mongodb.ErrInvalidPort`: `"mongodb port must be between 1 and 65535"`
 - `mongodb.ErrNilTestingTB`: `"testing.TB cannot be nil"`
+- `mongodb.ErrNoDocuments`: `"mongo: no documents in result"`
 
 ---
 
