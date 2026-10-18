@@ -41,8 +41,8 @@ import (
 	"context"
 	"testing"
 
-	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
-	testmongo "github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+	tcmongo "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
+	testmongo "github.com/nawaphonOHM/whatever/v3/pkg/testing/mongodb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -233,6 +233,41 @@ func TestService_ProbeFailure(t *testing.T) {
 
 Passing `nil` to `SetMockProbe(nil)` or executing the returned restore function immediately reverts probe behavior to `defaultProbeClient`.
 
+### 7. BSON Serialization and Empty Query Assertions
+
+Test authors can encode/decode test fixtures and assert empty query outcomes directly through `pkg/testing/mongodb` without importing official driver packages:
+
+```go
+func TestPayloadEncodingAndNotFound(t *testing.T) {
+	ctx := context.Background()
+	client := testmongo.NewTestClient(t, testmongo.WithDatabase("test_db"))
+
+	type Account struct {
+		ID   string `bson:"_id"`
+		Plan string `bson:"plan"`
+	}
+
+	// 1. Marshal test payload into BSON bytes:
+	data, err := testmongo.Marshal(Account{ID: "acc_123", Plan: "pro"})
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	// 2. Unmarshal BSON bytes into target struct:
+	var decoded Account
+	if err := testmongo.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+
+	// 3. Assert document not found using test sentinel error:
+	var result Account
+	err = client.Collection("accounts").FindOne(ctx, map[string]any{"_id": "nonexistent"}).Decode(&result)
+	if !errors.Is(err, testmongo.ErrNoDocuments) {
+		t.Fatalf("Expected ErrNoDocuments, got: %v", err)
+	}
+}
+```
+
 ---
 
 ## API Reference
@@ -257,6 +292,8 @@ Passing `nil` to `SetMockProbe(nil)` or executing the returned restore function 
 | `NewClient` | `NewClient(rawClient *mongo.Client, defaultDatabase string) *TestClient` | Wraps an existing official `*mongo.Client` with `TestClient` fixture utilities |
 | `DefaultOptions` | `DefaultOptions() *Options` | Returns an `Options` struct initialized with recommended test defaults |
 | `NewOptions` | `NewOptions(opts ...Option) *Options` | Evaluates functional options over test defaults and returns the resulting `*Options` |
+| `Marshal` | `Marshal(val any) ([]byte, error)` | Serializes a Go struct, map, or document into BSON wire format bytes (`bson.Marshal`) |
+| `Unmarshal` | `Unmarshal(data []byte, val any) error` | Deserializes BSON wire format bytes into destination pointer (`bson.Unmarshal`) |
 
 ### Mocking & Testing Hooks
 
@@ -313,6 +350,7 @@ Passing `nil` to `SetMockProbe(nil)` or executing the returned restore function 
 | `ErrEmptyURI` | `"mongodb uri cannot be empty"` | Passing an empty URI to `ConnectURI` or `NewTestClientURI` |
 | `ErrInvalidPort` | `"mongodb port must be between 1 and 65535"` | Specifying a port number outside `1..65535` under `mongodb://` |
 | `ErrNilTestingTB` | `"testing.TB cannot be nil"` | Passing `nil` `testing.TB` to `NewTestClient` or `NewTestClientURI` |
+| `ErrNoDocuments` | `"mongo: no documents in result"` | Query returns no documents (`mongo.ErrNoDocuments` sentinel error alias) |
 
 ### Default Constants
 

@@ -3,12 +3,15 @@ package mongodb_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	drivermongo "go.mongodb.org/mongo-driver/v2/mongo"
 
+	productionmongodb "github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 	"github.com/nawaphonOHM/whatever/v3/pkg/testing/mongodb"
 )
 
@@ -39,17 +42,26 @@ func TestConstants(t *testing.T) {
 }
 
 func TestSentinelErrors(t *testing.T) {
-	require.Error(t, mongodb.ErrNilClient)
-	require.Error(t, mongodb.ErrNilConfig)
-	require.Error(t, mongodb.ErrEmptyURI)
-	require.Error(t, mongodb.ErrInvalidPort)
-	require.Error(t, mongodb.ErrNilTestingTB)
+	sentinels := []error{
+		mongodb.ErrNilClient,
+		mongodb.ErrNilConfig,
+		mongodb.ErrEmptyURI,
+		mongodb.ErrInvalidPort,
+		mongodb.ErrNilTestingTB,
+	}
 
-	assert.True(t, errors.Is(mongodb.ErrNilClient, mongodb.ErrNilClient))
-	assert.True(t, errors.Is(mongodb.ErrNilConfig, mongodb.ErrNilConfig))
-	assert.True(t, errors.Is(mongodb.ErrEmptyURI, mongodb.ErrEmptyURI))
-	assert.True(t, errors.Is(mongodb.ErrInvalidPort, mongodb.ErrInvalidPort))
-	assert.True(t, errors.Is(mongodb.ErrNilTestingTB, mongodb.ErrNilTestingTB))
+	for _, err := range sentinels {
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, err))
+	}
+}
+
+func TestErrNoDocumentsAlias(t *testing.T) {
+	err := mongodb.ErrNoDocuments
+
+	assert.ErrorIs(t, err, drivermongo.ErrNoDocuments)
+	assert.ErrorIs(t, fmt.Errorf("query failed: %w", err), drivermongo.ErrNoDocuments)
+	assert.Same(t, productionmongodb.ErrNoDocuments, err)
 }
 
 func assertNilClientFixtures(ctx context.Context, t *testing.T, c *mongodb.TestClient) {
