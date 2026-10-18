@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testOriginExample = "https://example.com"
+
 func TestLoadAndValidateCORS_EmptyPath(t *testing.T) {
 	cfg, err := LoadAndValidateCORS("")
 	require.NoError(t, err)
@@ -27,7 +29,7 @@ func TestLoadAndValidateCORS_ValidJSON(t *testing.T) {
 	cfg, err := LoadAndValidateCORS(path)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	assert.Equal(t, []string{"https://example.com", "http://localhost.dev"}, cfg.AllowOrigins)
+	assert.Equal(t, []string{testOriginExample, "http://localhost.dev"}, cfg.AllowOrigins)
 	assert.Equal(t, []string{"POST", "GET"}, cfg.AllowMethods)
 	assert.Equal(t, []string{"Authorization", "Content-Type", "Accept"}, cfg.AllowHeaders)
 }
@@ -73,7 +75,7 @@ request-methods:
 	cfg, err := LoadAndValidateCORS(path)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	assert.Equal(t, []string{"https://example.com"}, cfg.AllowOrigins)
+	assert.Equal(t, []string{testOriginExample}, cfg.AllowOrigins)
 	assert.Equal(t, []string{"POST", "PUT"}, cfg.AllowMethods)
 	assert.Equal(t, []string{"Authorization"}, cfg.AllowHeaders)
 }
@@ -87,7 +89,7 @@ func TestLoadAndValidateCORS_EmptyMethodsArrayJSON(t *testing.T) {
 	cfg, err := LoadAndValidateCORS(path)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	assert.Equal(t, []string{"https://example.com"}, cfg.AllowOrigins)
+	assert.Equal(t, []string{testOriginExample}, cfg.AllowOrigins)
 	assert.Empty(t, cfg.AllowMethods)
 }
 
@@ -101,6 +103,6 @@ allow-methods: []
 	cfg, err := LoadAndValidateCORS(path)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	assert.Equal(t, []string{"https://example.com"}, cfg.AllowOrigins)
+	assert.Equal(t, []string{testOriginExample}, cfg.AllowOrigins)
 	assert.Empty(t, cfg.AllowMethods)
 }

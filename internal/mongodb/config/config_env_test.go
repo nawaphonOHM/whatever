@@ -45,10 +45,10 @@ func verifyLoadedBaseFields(t *testing.T, cfg *Config) {
 }
 
 func verifyLoadedRuntimeFields(t *testing.T, cfg *Config) {
-	assert.Equal(t, 15*time.Second, cfg.ConnectTimeout)
-	assert.Equal(t, 3*time.Second, cfg.ServerSelectionTimeout)
-	assert.Equal(t, 20*time.Second, cfg.SocketTimeout)
-	assert.Equal(t, 5*time.Minute, cfg.MaxConnIdleTime)
+	assert.Equal(t, testCustomConnectSec*time.Second, cfg.ConnectTimeout)
+	assert.Equal(t, testCustomSelectSec*time.Second, cfg.ServerSelectionTimeout)
+	assert.Equal(t, testCustomSocketSec*time.Second, cfg.SocketTimeout)
+	assert.Equal(t, testCustomIdleMin*time.Minute, cfg.MaxConnIdleTime)
 	assert.Equal(t, uint64(testCustomMaxPoolVal), cfg.MaxPoolSize)
 	assert.Equal(t, uint64(testCustomMinPoolVal), cfg.MinPoolSize)
 }

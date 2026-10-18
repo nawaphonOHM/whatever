@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"net"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -9,14 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const logLevelError = "ERROR"
+const (
+	logLevelError = "ERROR"
+	logKeyLevel   = "level"
+)
 
 func assertPublicRouteRegError(t *testing.T, data []byte, substr string) {
 	t.Helper()
 	entries := parseJSONLogEntries(data)
 	routeEntry := findLogByMsg(entries, "failed to register REST routes")
 	require.NotNil(t, routeEntry)
-	assert.Equal(t, logLevelError, routeEntry["level"])
+	assert.Equal(t, logLevelError, routeEntry[logKeyLevel])
 	assert.Contains(t, routeEntry["error"], substr)
 }
 
@@ -40,7 +42,7 @@ func testPublicNilBlueprint(t *testing.T) {
 	entries := parseJSONLogEntries(buf.Bytes())
 	nilEntry := findLogByMsg(entries, "failed to initialize REST server: blueprint is nil")
 	require.NotNil(t, nilEntry)
-	assert.Equal(t, logLevelError, nilEntry["level"])
+	assert.Equal(t, logLevelError, nilEntry[logKeyLevel])
 }
 
 func testPublicConfigError(t *testing.T) {
@@ -53,7 +55,7 @@ func testPublicConfigError(t *testing.T) {
 	entries := parseJSONLogEntries(buf.Bytes())
 	cfgEntry := findLogByMsg(entries, "failed to load REST server config")
 	require.NotNil(t, cfgEntry)
-	assert.Equal(t, logLevelError, cfgEntry["level"])
+	assert.Equal(t, logLevelError, cfgEntry[logKeyLevel])
 	assert.NotEmpty(t, cfgEntry["error"])
 }
 
@@ -97,17 +99,8 @@ func assertPublicPortInUseLog(t *testing.T, data []byte) {
 	entries := parseJSONLogEntries(data)
 	failEntry := findLogByMsg(entries, "REST server failed to start")
 	require.NotNil(t, failEntry)
-	assert.Equal(t, logLevelError, failEntry["level"])
+	assert.Equal(t, logLevelError, failEntry[logKeyLevel])
 	assert.NotEmpty(t, failEntry["error"])
-}
-
-func occupyTCPPort(t *testing.T) (net.Listener, int) {
-	t.Helper()
-	l, err := net.Listen("tcp", testHost+":0")
-	require.NoError(t, err)
-	tcpAddr, ok := l.Addr().(*net.TCPAddr)
-	require.True(t, ok)
-	return l, tcpAddr.Port
 }
 
 func TestStartREST_LifecycleLogging_PortInUse(t *testing.T) {

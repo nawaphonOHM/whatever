@@ -25,13 +25,16 @@ const (
 	testSelectSec      = 3
 	testSocketSec      = 20
 	testIdleMin        = 5
+	testTimeout10s     = 10 * time.Second
+	testTimeout5s      = 5 * time.Second
+	testIdleTime10m    = 10 * time.Minute
 )
 
 func verifyDefaultClientTimeouts(t *testing.T, clientOpts *options.ClientOptions) {
-	assert.Equal(t, 10*time.Second, *clientOpts.ConnectTimeout)
-	assert.Equal(t, 5*time.Second, *clientOpts.ServerSelectionTimeout)
-	assert.Equal(t, 10*time.Second, *clientOpts.Timeout)
-	assert.Equal(t, 10*time.Minute, *clientOpts.MaxConnIdleTime)
+	assert.Equal(t, testTimeout10s, *clientOpts.ConnectTimeout)
+	assert.Equal(t, testTimeout5s, *clientOpts.ServerSelectionTimeout)
+	assert.Equal(t, testTimeout10s, *clientOpts.Timeout)
+	assert.Equal(t, testIdleTime10m, *clientOpts.MaxConnIdleTime)
 }
 
 func verifyDefaultClientPool(t *testing.T, clientOpts *options.ClientOptions) {

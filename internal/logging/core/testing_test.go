@@ -20,7 +20,7 @@ func TestSetTestLogger(t *testing.T) {
 
 	Info("captured test message")
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "captured test message", logMap["msg"])
+	assert.Equal(t, "captured test message", logMap[testMsg])
 
 	cleanup()
 	assert.NotEqual(t, testLogger, Default())

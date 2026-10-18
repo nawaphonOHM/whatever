@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ func verifyDotEnvLoadedConfig(t *testing.T, cfg *TestConfig) {
 	assert.Equal(t, dotEnvPort, cfg.Port)
 	assert.Equal(t, "127.0.0.1", cfg.Host)
 	assert.True(t, cfg.Debug)
-	assert.Equal(t, 15*time.Second, cfg.Timeout)
+	assert.Equal(t, testTimeout15s, cfg.Timeout)
 	assert.Equal(t, sqliteURL, cfg.DatabaseURL)
 }
 

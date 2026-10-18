@@ -78,5 +78,5 @@ func TestPutObject_AWSDefaultChainMultipartChecksums(t *testing.T) {
 	reqs := rec.all()
 	require.Len(t, reqs, multipartRequestCount)
 	assert.Equal(t, "CRC32", reqs[0].Header.Get("x-amz-checksum-algorithm"))
-	assertCompleteChecksums(t, reqs[3])
+	assertCompleteChecksums(t, reqs[completeRequestIndex])
 }

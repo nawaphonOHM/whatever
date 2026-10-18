@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/nawaphonOHM/whatever/v3/pkg/storage"
 )
+
+const testPresignOptionExpiry time.Duration = 5
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -43,7 +46,7 @@ func publicConnectOpts(client *http.Client) []storage.Option {
 		storage.WithHTTPClient(client),
 		storage.WithSkipProbe(false),
 		storage.WithDriverOptions(func(opts *s3.Options) { opts.UsePathStyle = true }),
-		storage.WithPresignOptions(func(opts *s3.PresignOptions) { opts.Expires = 5 }),
+		storage.WithPresignOptions(func(opts *s3.PresignOptions) { opts.Expires = testPresignOptionExpiry }),
 	}
 }
 

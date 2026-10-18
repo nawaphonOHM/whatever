@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -30,7 +29,7 @@ func newTestPresignClient() *client.Client {
 		Presign:       presign,
 		Provider:      contracts.ProviderAWS,
 		DefaultBucket: "my-bucket",
-		PresignExpiry: 15 * time.Minute,
+		PresignExpiry: testPresignExpiry15m,
 	})
 }
 
@@ -40,7 +39,7 @@ func TestClient_PresignGetObject(t *testing.T) {
 	c := newTestPresignClient()
 	out, err := c.PresignGetObject(context.Background(), contracts.PresignGetObjectInput{
 		Key:       "download.pdf",
-		ExpiresIn: 5 * time.Minute,
+		ExpiresIn: testPresignExpiry5m,
 	})
 
 	require.NoError(t, err)
@@ -49,7 +48,7 @@ func TestClient_PresignGetObject(t *testing.T) {
 	assert.Contains(t, out.URL, "my-bucket")
 	assert.Contains(t, out.URL, "download.pdf")
 	assert.Contains(t, out.URL, "X-Amz-Signature")
-	assert.Equal(t, 5*time.Minute, out.ExpiresIn)
+	assert.Equal(t, testPresignExpiry5m, out.ExpiresIn)
 }
 
 func TestClient_PresignPutObject(t *testing.T) {
@@ -59,7 +58,7 @@ func TestClient_PresignPutObject(t *testing.T) {
 	out, err := c.PresignPutObject(context.Background(), contracts.PresignPutObjectInput{
 		Key:         "upload.png",
 		ContentType: "image/png",
-		ExpiresIn:   20 * time.Minute,
+		ExpiresIn:   testPresignExpiry20m,
 	})
 
 	require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestClient_PresignPutObject(t *testing.T) {
 	assert.Equal(t, http.MethodPut, out.Method)
 	assert.Contains(t, out.URL, "upload.png")
 	assert.Contains(t, out.URL, "X-Amz-Signature")
-	assert.Equal(t, 20*time.Minute, out.ExpiresIn)
+	assert.Equal(t, testPresignExpiry20m, out.ExpiresIn)
 }
 
 func TestClient_Presign_NilClient(t *testing.T) {

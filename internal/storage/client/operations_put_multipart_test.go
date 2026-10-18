@@ -20,6 +20,7 @@ const (
 	partNumberParam = "partNumber"
 
 	multipartRequestCount = 4
+	completeRequestIndex  = 3
 )
 
 func putZeros(t *testing.T, rec *recorder, size int64) (*contracts.PutObjectOutput, error) {
@@ -58,8 +59,8 @@ func assertMultipartRequests(t *testing.T, reqs []recordedRequest) {
 	assert.Equal(t, "application/octet-stream", reqs[0].Header.Get("Content-Type"))
 	assert.Equal(t, int64(partSize), reqs[1].BodyLen)
 	assert.Equal(t, int64(1), reqs[2].BodyLen)
-	assert.Equal(t, "up-1", reqs[3].Query.Get("uploadId"))
-	assert.Contains(t, string(reqs[3].Body), "<PartNumber>2</PartNumber>")
+	assert.Equal(t, "up-1", reqs[completeRequestIndex].Query.Get("uploadId"))
+	assert.Contains(t, string(reqs[completeRequestIndex].Body), "<PartNumber>2</PartNumber>")
 }
 
 func TestPutObject_MultipartFailureAbortsUpload(t *testing.T) {

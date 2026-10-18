@@ -9,23 +9,26 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func TestWithOptions_Timeouts(t *testing.T) {
-	opts := NewOptions(
-		WithConnectTimeout(3*time.Second),
-		WithServerSelectionTimeout(2*time.Second),
-		WithSocketTimeout(4*time.Second),
-		WithMaxConnIdleTime(5*time.Minute),
-	)
-	assert.Equal(t, 3*time.Second, opts.ConnectTimeout)
-	assert.Equal(t, 2*time.Second, opts.ServerSelectionTimeout)
-	assert.Equal(t, 4*time.Second, opts.SocketTimeout)
-	assert.Equal(t, 5*time.Minute, opts.MaxConnIdleTime)
-}
-
 const (
+	testTimeout3s   = 3 * time.Second
+	testTimeout4s   = 4 * time.Second
+	testIdleTime5m  = 5 * time.Minute
 	testMinPoolSize = 10
 	testMaxPoolSize = 50
 )
+
+func TestWithOptions_Timeouts(t *testing.T) {
+	opts := NewOptions(
+		WithConnectTimeout(testTimeout3s),
+		WithServerSelectionTimeout(2*time.Second),
+		WithSocketTimeout(testTimeout4s),
+		WithMaxConnIdleTime(testIdleTime5m),
+	)
+	assert.Equal(t, testTimeout3s, opts.ConnectTimeout)
+	assert.Equal(t, 2*time.Second, opts.ServerSelectionTimeout)
+	assert.Equal(t, testTimeout4s, opts.SocketTimeout)
+	assert.Equal(t, testIdleTime5m, opts.MaxConnIdleTime)
+}
 
 func TestWithOptions_PoolAndFlags(t *testing.T) {
 	opts := NewOptions(

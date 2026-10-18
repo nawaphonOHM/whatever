@@ -29,8 +29,8 @@ func TestLogger_Fatal_CustomExit(t *testing.T) {
 
 	assert.Equal(t, int32(1), exitCode.Load())
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "fatal error occurred", logMap["msg"])
-	assert.Equal(t, "FATAL", logMap["level"])
+	assert.Equal(t, "fatal error occurred", logMap[testMsg])
+	assert.Equal(t, "FATAL", logMap[testKeyLevel])
 }
 
 func TestLogger_FatalContext_WithSpanAndCustomExit(t *testing.T) {
@@ -44,7 +44,7 @@ func TestLogger_FatalContext_WithSpanAndCustomExit(t *testing.T) {
 
 	assert.Equal(t, int32(1), exitCode.Load())
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", logMap["trace_id"])
+	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", logMap[testKeyTraceID])
 }
 
 func TestLogger_SetExitFunc(t *testing.T) {
@@ -60,7 +60,7 @@ func TestLogger_SetExitFunc(t *testing.T) {
 
 	assert.Equal(t, int32(1), exitCode.Load())
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "FATAL", logMap["level"])
+	assert.Equal(t, "FATAL", logMap[testKeyLevel])
 }
 
 func TestPackageLevel_Fatal(t *testing.T) {

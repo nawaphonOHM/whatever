@@ -48,7 +48,7 @@ func TestNew_LevelFiltering(t *testing.T) {
 				return
 			}
 			logMap := parseJSONLog(t, buf.Bytes())
-			assert.Equal(t, tt.expectedLevel, logMap["level"])
+			assert.Equal(t, tt.expectedLevel, logMap[testKeyLevel])
 		})
 	}
 }
@@ -59,8 +59,8 @@ func TestNewJSON_And_NewText(t *testing.T) {
 		l := NewJSON(buf, config.LevelDebug)
 		l.Debug("json debug message")
 		logMap := parseJSONLog(t, buf.Bytes())
-		assert.Equal(t, "DEBUG", logMap["level"])
-		assert.Equal(t, "json debug message", logMap["msg"])
+		assert.Equal(t, "DEBUG", logMap[testKeyLevel])
+		assert.Equal(t, "json debug message", logMap[testMsg])
 	})
 
 	t.Run("NewText", func(t *testing.T) {

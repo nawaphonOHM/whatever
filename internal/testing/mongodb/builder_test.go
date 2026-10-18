@@ -54,9 +54,9 @@ func TestBuildClientOptions_Configuration(t *testing.T) {
 		WithHost("127.0.0.1"),
 		WithPort(testCustomPort),
 		WithDatabase("test_db"),
-		WithConnectTimeout(3*time.Second),
+		WithConnectTimeout(testTimeout3s),
 		WithServerSelectionTimeout(2*time.Second),
-		WithSocketTimeout(4*time.Second),
+		WithSocketTimeout(testTimeout4s),
 		WithAppName("app-test"),
 		WithPoolLimits(testConfigMaxPool, testConfigMinPool),
 		WithDirectConnection(true),
@@ -64,9 +64,9 @@ func TestBuildClientOptions_Configuration(t *testing.T) {
 
 	driverOpts := BuildClientOptions(opts, extra)
 	require.NotNil(t, driverOpts)
-	assert.Equal(t, 3*time.Second, *driverOpts.ConnectTimeout)
+	assert.Equal(t, testTimeout3s, *driverOpts.ConnectTimeout)
 	assert.Equal(t, 2*time.Second, *driverOpts.ServerSelectionTimeout)
-	assert.Equal(t, 4*time.Second, *driverOpts.Timeout)
+	assert.Equal(t, testTimeout4s, *driverOpts.Timeout)
 	assert.Equal(t, "app-test", *driverOpts.AppName)
 	assert.True(t, *driverOpts.Direct)
 	assert.Equal(t, testMaxPoolLimit, *driverOpts.MaxPoolSize)

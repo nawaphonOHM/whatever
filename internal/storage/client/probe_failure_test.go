@@ -18,6 +18,7 @@ import (
 const (
 	shortPingTimeout = 100 * time.Millisecond
 	generousTimeout  = 30 * time.Second
+	maxProbeWait     = 5 * time.Second
 	listTypeParam    = "list-type"
 )
 
@@ -48,7 +49,7 @@ func TestPing_UsesPingTimeoutNotRequestTimeout(t *testing.T) {
 	err := c.Ping(t.Context())
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
-	assert.Less(t, time.Since(start), 5*time.Second)
+	assert.Less(t, time.Since(start), maxProbeWait)
 }
 
 func TestPing_DeniedHeadBucketFallsBackToList(t *testing.T) {

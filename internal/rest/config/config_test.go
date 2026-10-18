@@ -28,6 +28,9 @@ const (
 	dotEnvPort     = 3000
 	precedencePort = 4000
 	missingPort    = 5000
+	testTimeout5s  = 5 * time.Second
+	testTimeout10s = 10 * time.Second
+	testTimeout15s = 15 * time.Second
 )
 
 // TestConfig represents a test configuration structure with struct tags.
@@ -61,7 +64,7 @@ func verifyDefaultConfig(t *testing.T, cfg *TestConfig) {
 	assert.Equal(t, defaultPortVal, cfg.Port)
 	assert.Equal(t, localHostStr, cfg.Host)
 	assert.False(t, cfg.Debug)
-	assert.Equal(t, 5*time.Second, cfg.Timeout)
+	assert.Equal(t, testTimeout5s, cfg.Timeout)
 	assert.Equal(t, "", cfg.DatabaseURL)
 	assert.Equal(t, defaultOptVal, cfg.OptionalVal)
 }
@@ -85,7 +88,7 @@ func verifyOverrideConfig(t *testing.T, cfg *TestConfig) {
 	assert.Equal(t, overridePort, cfg.Port)
 	assert.Equal(t, "0.0.0.0", cfg.Host)
 	assert.True(t, cfg.Debug)
-	assert.Equal(t, 10*time.Second, cfg.Timeout)
+	assert.Equal(t, testTimeout10s, cfg.Timeout)
 	assert.Equal(t, postgresURL, cfg.DatabaseURL)
 	assert.Equal(t, customOptVal, cfg.OptionalVal)
 }

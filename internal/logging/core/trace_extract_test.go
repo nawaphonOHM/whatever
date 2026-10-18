@@ -36,8 +36,8 @@ func TestTraceHandler_TextHandler_FallbackKeys(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := slog.New(NewTraceHandler(slog.NewTextHandler(buf, nil)))
 
-	ctx := withStringKey(context.Background(), "trace_id", "trace-text-999")
-	ctx = withStringKey(ctx, "span_id", "span-text-888")
+	ctx := withStringKey(context.Background(), testKeyTraceID, "trace-text-999")
+	ctx = withStringKey(ctx, testKeySpanID, "span-text-888")
 
 	logger.InfoContext(ctx, "text fallback message")
 
@@ -56,8 +56,8 @@ func TestFallbackTraceAttrs_AlternateKeys(t *testing.T) {
 	logger.InfoContext(ctx, "alt keys message")
 
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "trace-alt-1", logMap["trace_id"])
-	assert.Equal(t, "span-alt-2", logMap["span_id"])
+	assert.Equal(t, "trace-alt-1", logMap[testKeyTraceID])
+	assert.Equal(t, "span-alt-2", logMap[testKeySpanID])
 }
 
 func TestFallbackTraceAttrs_CamelCaseAndInvalidValues(t *testing.T) {
@@ -66,12 +66,12 @@ func TestFallbackTraceAttrs_CamelCaseAndInvalidValues(t *testing.T) {
 
 	ctx := withStringKey(context.Background(), "traceId", "trace-camel-1")
 	ctx = withStringKey(ctx, "spanId", "span-camel-2")
-	ctx = withStringKey(ctx, "trace_id", testInvalidTraceIDNumber)
-	ctx = withStringKey(ctx, "span_id", "")
+	ctx = withStringKey(ctx, testKeyTraceID, testInvalidTraceIDNumber)
+	ctx = withStringKey(ctx, testKeySpanID, "")
 
 	logger.InfoContext(ctx, "camel keys message")
 
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "trace-camel-1", logMap["trace_id"])
-	assert.Equal(t, "span-camel-2", logMap["span_id"])
+	assert.Equal(t, "trace-camel-1", logMap[testKeyTraceID])
+	assert.Equal(t, "span-camel-2", logMap[testKeySpanID])
 }

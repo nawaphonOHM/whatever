@@ -8,11 +8,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testDefaultConnectTimeout = 10 * time.Second
+	testDefaultRequestTimeout = 30 * time.Second
+	testDefaultPingTimeout    = 5 * time.Second
+	testDefaultPresignExpiry  = 15 * time.Minute
+)
+
 func assertDefaultTimeouts(t *testing.T, cfg *Config) {
-	assert.Equal(t, 10*time.Second, cfg.ConnectTimeout)
-	assert.Equal(t, 30*time.Second, cfg.RequestTimeout)
-	assert.Equal(t, 5*time.Second, cfg.PingTimeout)
-	assert.Equal(t, 15*time.Minute, cfg.PresignExpiry)
+	assert.Equal(t, testDefaultConnectTimeout, cfg.ConnectTimeout)
+	assert.Equal(t, testDefaultRequestTimeout, cfg.RequestTimeout)
+	assert.Equal(t, testDefaultPingTimeout, cfg.PingTimeout)
+	assert.Equal(t, testDefaultPresignExpiry, cfg.PresignExpiry)
 }
 
 func assertDefaultEndpoints(t *testing.T, cfg *Config) {

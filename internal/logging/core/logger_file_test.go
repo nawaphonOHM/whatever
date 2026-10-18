@@ -19,12 +19,12 @@ func verifyParsedLogPair(t *testing.T, line1, line2 string) {
 	log1 := parseJSONLog(t, []byte(line1))
 	assert.Equal(t, "log message", log1[testMsg])
 	assert.Equal(t, "v1", log1["k1"])
-	assert.Equal(t, "INFO", log1["level"])
+	assert.Equal(t, "INFO", log1[testKeyLevel])
 
 	log2 := parseJSONLog(t, []byte(line2))
 	assert.Equal(t, "log attrs message", log2[testMsg])
 	assert.Equal(t, "v2", log2["k2"])
-	assert.Equal(t, "WARN", log2["level"])
+	assert.Equal(t, "WARN", log2[testKeyLevel])
 }
 
 func TestLogger_LogAndLogAttrs(t *testing.T) {

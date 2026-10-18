@@ -38,14 +38,14 @@ func emitContextLogs(ctx context.Context) {
 func verifyContextEntries(t *testing.T, entries []map[string]any) {
 	require.Len(t, entries, testCountFive)
 	for _, entry := range entries {
-		assert.Equal(t, testTraceIDHex, entry["trace_id"])
-		assert.Equal(t, testSpanIDHex, entry["span_id"])
+		assert.Equal(t, testTraceIDHex, entry[testKeyTraceID])
+		assert.Equal(t, testSpanIDHex, entry[testKeySpanID])
 	}
-	assert.Equal(t, testLevelTrace, entries[0]["level"])
-	assert.Equal(t, testLevelDebug, entries[1]["level"])
-	assert.Equal(t, testLevelInfo, entries[2]["level"])
-	assert.Equal(t, testLevelWarn, entries[3]["level"])
-	assert.Equal(t, testLevelError, entries[4]["level"])
+	assert.Equal(t, testLevelTrace, entries[0][testKeyLevel])
+	assert.Equal(t, testLevelDebug, entries[1][testKeyLevel])
+	assert.Equal(t, testLevelInfo, entries[2][testKeyLevel])
+	assert.Equal(t, testLevelWarn, entries[testIndexThree][testKeyLevel])
+	assert.Equal(t, testLevelError, entries[testIndexFour][testKeyLevel])
 }
 
 func TestLogging_ContextFunctions(t *testing.T) {
