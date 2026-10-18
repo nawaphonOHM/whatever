@@ -5,6 +5,8 @@ package mongodb
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/v2/mongo"
+
 	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/client"
 	"github.com/nawaphonOHM/whatever/v3/internal/mongodb/config"
 )
@@ -13,10 +15,14 @@ import (
 // collection access.
 type Client = client.Client
 
-// Sentinel errors for MongoDB client operations.
+// Collection is an alias for the MongoDB driver's collection type.
+type Collection = mongo.Collection
+
+// Sentinel errors for MongoDB operations.
 var (
-	ErrNilClient = client.ErrNilClient
-	ErrNilConfig = config.ErrNilConfig
+	ErrNilClient   = client.ErrNilClient
+	ErrNilConfig   = config.ErrNilConfig
+	ErrNoDocuments = mongo.ErrNoDocuments
 )
 
 // SetExitFunc overrides the process exit hook used during connection failures.

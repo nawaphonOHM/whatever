@@ -2,11 +2,14 @@ package mongodb_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 )
@@ -92,4 +95,18 @@ func TestConnect_CanceledContext(t *testing.T) {
 	assert.Contains(t, err.Error(), errPingSubstring)
 	assert.Nil(t, client)
 	assert.True(t, *exitCalled)
+}
+
+// TestCollectionCompatibility verifies Collection type alias and ErrNoDocuments matching.
+func TestCollectionCompatibility(t *testing.T) {
+	var driverColl *mongo.Collection
+	var publicColl *mongodb.Collection
+	assert.Nil(t, driverColl)
+	publicColl = driverColl
+	assert.Nil(t, publicColl)
+
+	assert.True(t, errors.Is(mongodb.ErrNoDocuments, mongo.ErrNoDocuments))
+	wrappedErr := fmt.Errorf("failed query: %w", mongodb.ErrNoDocuments)
+	assert.True(t, errors.Is(wrappedErr, mongodb.ErrNoDocuments))
+	assert.True(t, errors.Is(wrappedErr, mongo.ErrNoDocuments))
 }

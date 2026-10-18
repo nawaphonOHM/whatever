@@ -2,9 +2,11 @@ package mongodb_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 )
@@ -38,4 +40,15 @@ func TestSentinelErrors(t *testing.T) {
 	assert.Equal(t, expectedNilClientErr, mongodb.ErrNilClient.Error())
 	assert.NotNil(t, mongodb.ErrNilConfig)
 	assert.Equal(t, expectedNilConfigErr, mongodb.ErrNilConfig.Error())
+	assert.NotNil(t, mongodb.ErrNoDocuments)
+	assert.True(t, errors.Is(mongodb.ErrNoDocuments, mongo.ErrNoDocuments))
+}
+
+// TestClientCollectionReturnType verifies the public collection return type.
+func TestClientCollectionReturnType(t *testing.T) {
+	var client *mongodb.Client
+	var coll *mongodb.Collection
+	assert.Nil(t, client)
+	coll = client.Collection(testNilCollUsers)
+	assert.Nil(t, coll)
 }
