@@ -32,6 +32,10 @@ const (
 	testDefaultTimeoutSec         = 10
 	testDefaultSelectSec          = 5
 	testDefaultIdleMin            = 10
+	testCustomConnectSec          = 15
+	testCustomSelectSec           = 3
+	testCustomSocketSec           = 20
+	testCustomIdleMin             = 5
 )
 
 // setupEmptyEnv clears all mongodb environment variable overrides.

@@ -12,12 +12,14 @@ import (
 
 // Constants for fixed timestamp fields and integer payload.
 const (
-	testYear   = 2026
-	testMonth  = 9
-	testDay    = 17
-	testHour   = 2
-	testMinute = 30
-	testIntVal = 123
+	testYear       = 2026
+	testMonth      = 9
+	testDay        = 17
+	testHour       = 2
+	testMinute     = 30
+	testIntVal     = 123
+	testMessageOK  = "ok"
+	testPayloadStr = "payload"
 )
 
 // getFixedTime returns a deterministic UTC timestamp for serialization tests.
@@ -30,7 +32,7 @@ func getFixedTime() time.Time {
 // TestSuccessResponse_ShapeSerialization tests JSON envelope serialization.
 func TestSuccessResponse_ShapeSerialization(t *testing.T) {
 	fixedTime := getFixedTime()
-	resp := newSuccessResponse("payload", "ok").withTimestamp(fixedTime)
+	resp := newSuccessResponse(testPayloadStr, testMessageOK).withTimestamp(fixedTime)
 
 	data, err := json.Marshal(resp)
 	require.NoError(t, err)
@@ -39,8 +41,8 @@ func TestSuccessResponse_ShapeSerialization(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &raw))
 
 	assert.Equal(t, true, raw["success"])
-	assert.Equal(t, "ok", raw["message"])
-	assert.Equal(t, "payload", raw["data"])
+	assert.Equal(t, testMessageOK, raw["message"])
+	assert.Equal(t, testPayloadStr, raw["data"])
 	assert.Equal(t, "2026-09-17T02:30:00Z", raw["timestamp"])
 }
 
@@ -49,8 +51,8 @@ func assertDTOFields(t *testing.T, data []byte, fixedTime time.Time) {
 	var dto SuccessResponse[string]
 	require.NoError(t, json.Unmarshal(data, &dto))
 	assert.True(t, dto.Success)
-	assert.Equal(t, "ok", dto.Message)
-	assert.Equal(t, "payload", dto.Data)
+	assert.Equal(t, testMessageOK, dto.Message)
+	assert.Equal(t, testPayloadStr, dto.Data)
 	assert.Equal(t, fixedTime, dto.Timestamp)
 }
 
@@ -59,8 +61,8 @@ func assertEnvelopeFields(t *testing.T, data []byte, fixedTime time.Time) {
 	var env Envelope[string]
 	require.NoError(t, json.Unmarshal(data, &env))
 	assert.True(t, env.Success)
-	assert.Equal(t, "ok", env.Message)
-	assert.Equal(t, "payload", env.Data)
+	assert.Equal(t, testMessageOK, env.Message)
+	assert.Equal(t, testPayloadStr, env.Data)
 	assert.Equal(t, fixedTime, env.Timestamp)
 }
 
@@ -68,7 +70,7 @@ func assertEnvelopeFields(t *testing.T, data []byte, fixedTime time.Time) {
 // into the public SuccessResponse and Envelope DTO contracts.
 func TestSuccessResponse_DTOUnmarshaling(t *testing.T) {
 	fixedTime := getFixedTime()
-	resp := newSuccessResponse("payload", "ok").withTimestamp(fixedTime)
+	resp := newSuccessResponse(testPayloadStr, testMessageOK).withTimestamp(fixedTime)
 	data, err := json.Marshal(resp)
 	require.NoError(t, err)
 

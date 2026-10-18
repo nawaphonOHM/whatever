@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testShutdownTimeout = 20 * time.Millisecond
+
 func createSlowServer(t *testing.T, started, block chan struct{}) (*Server, int) {
 	t.Helper()
 	port := getFreePort(t)
@@ -19,7 +21,7 @@ func createSlowServer(t *testing.T, started, block chan struct{}) (*Server, int)
 		Host:            testHost,
 		Port:            port,
 		Mode:            gin.TestMode,
-		ShutdownTimeout: 20 * time.Millisecond,
+		ShutdownTimeout: testShutdownTimeout,
 	})
 	require.NoError(t, err)
 

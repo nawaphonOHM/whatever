@@ -9,13 +9,14 @@ import (
 const (
 	testStandardURIPort = 27017
 	testRemoteURIPort   = 27018
+	testLocalhost       = "localhost"
 )
 
 // TestConfig_BuildURI tests MongoDB URI construction for various configs and TLS settings.
 func TestConfig_BuildURI(t *testing.T) {
 	t.Run("standard mongodb scheme with TLS false", func(t *testing.T) {
 		cfg := &Config{
-			Host:               "localhost",
+			Host:               testLocalhost,
 			Port:               testStandardURIPort,
 			Username:           "admin",
 			Password:           "secret",
@@ -55,7 +56,7 @@ func TestConfig_BuildURI(t *testing.T) {
 
 	t.Run("special characters in credentials are URL escaped", func(t *testing.T) {
 		cfg := &Config{
-			Host:               "localhost",
+			Host:               testLocalhost,
 			Port:               testStandardURIPort,
 			Username:           "user@domain.com",
 			Password:           "p@ss:word#1",
@@ -69,7 +70,7 @@ func TestConfig_BuildURI(t *testing.T) {
 
 	t.Run("defaults applied when protocol and uuid representation empty", func(t *testing.T) {
 		cfg := &Config{
-			Host:     "localhost",
+			Host:     testLocalhost,
 			Port:     testStandardURIPort,
 			Username: "user",
 			Password: "pass",
@@ -80,7 +81,7 @@ func TestConfig_BuildURI(t *testing.T) {
 
 	t.Run("unauthenticated connection without credentials", func(t *testing.T) {
 		cfg := &Config{
-			Host:               "localhost",
+			Host:               testLocalhost,
 			Port:               testStandardURIPort,
 			Protocol:           ProtocolMongoDB,
 			UUIDRepresentation: UUIDRepresentationStandard,

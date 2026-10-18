@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -44,16 +45,19 @@ func buildRawClientForTest(httpClient *http.Client) *s3.Client {
 }
 
 const (
-	testAccessKey       = "AKIAIOSFODNN7EXAMPLE"
-	testSecretKey       = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-	testBucket          = "mybucket"
-	testObjectKey       = "k"
-	testVirtualPath     = "/k"
-	testPathStylePath   = "/mybucket/k"
-	testAWSRegionSE     = "ap-southeast-1"
-	testAWSRegionalHost = "mybucket.s3.ap-southeast-1.amazonaws.com"
-	testAWSVirtualHost  = "mybucket.s3.us-east-1.amazonaws.com"
-	testMinioPort       = 9000
-	testMinioHost       = "localhost:9000"
-	sigV4Algorithm      = "AWS4-HMAC-SHA256"
+	testAccessKey        = "AKIAIOSFODNN7EXAMPLE"
+	testSecretKey        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+	testBucket           = "mybucket"
+	testObjectKey        = "k"
+	testVirtualPath      = "/k"
+	testPathStylePath    = "/mybucket/k"
+	testAWSRegionSE      = "ap-southeast-1"
+	testAWSRegionalHost  = "mybucket.s3.ap-southeast-1.amazonaws.com"
+	testAWSVirtualHost   = "mybucket.s3.us-east-1.amazonaws.com"
+	testMinioPort        = 9000
+	testMinioHost        = "localhost:9000"
+	sigV4Algorithm       = "AWS4-HMAC-SHA256"
+	testPresignExpiry5m  = 5 * time.Minute
+	testPresignExpiry15m = 15 * time.Minute
+	testPresignExpiry20m = 20 * time.Minute
 )

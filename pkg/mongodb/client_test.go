@@ -24,6 +24,7 @@ const (
 	testUser         = "testuser"
 	testPassword     = "testpass"
 	errPingSubstring = "failed to ping mongodb"
+	testPingTimeout  = 100 * time.Millisecond
 )
 
 // setupPingFailureEnv configures environment variables for invalid target port.
@@ -67,7 +68,7 @@ func TestConnect_PingFailure(t *testing.T) {
 	exitCalled, cleanup := setupExitCapture()
 	defer cleanup()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), testPingTimeout)
 	defer cancel()
 
 	client, err := mongodb.Connect(ctx)

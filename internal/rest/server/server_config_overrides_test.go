@@ -7,7 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const overrideSampleRate = 0.5
+const (
+	overrideSampleRate         = 0.5
+	overrideTimeout15s         = 15 * time.Second
+	overrideIdleTimeout90s     = 90 * time.Second
+	overrideShutdownTimeout20s = 20 * time.Second
+	overrideHeaderTimeout8s    = 8 * time.Second
+)
 
 func TestConfig_EnvironmentOverrides(t *testing.T) {
 	clearServerConfigEnv(t)
@@ -26,10 +32,10 @@ func assertOverrideBase(t *testing.T, cfg *Config) {
 	assert.Equal(t, "test", cfg.Mode)
 	assert.Equal(t, "2.0.0", cfg.AppVersion)
 	assert.Equal(t, "custom-app", cfg.DisplayName)
-	assert.Equal(t, 15*time.Second, cfg.ReadTimeout)
-	assert.Equal(t, 15*time.Second, cfg.WriteTimeout)
-	assert.Equal(t, 90*time.Second, cfg.IdleTimeout)
-	assert.Equal(t, 20*time.Second, cfg.ShutdownTimeout)
+	assert.Equal(t, overrideTimeout15s, cfg.ReadTimeout)
+	assert.Equal(t, overrideTimeout15s, cfg.WriteTimeout)
+	assert.Equal(t, overrideIdleTimeout90s, cfg.IdleTimeout)
+	assert.Equal(t, overrideShutdownTimeout20s, cfg.ShutdownTimeout)
 }
 
 func assertOverrideProxy(t *testing.T, cfg *Config) {
@@ -50,7 +56,7 @@ func assertOverrideHTTP(t *testing.T, cfg *Config) {
 
 func assertOverrideResource(t *testing.T, cfg *Config) {
 	assert.Equal(t, int64(overrideBodySize), cfg.MaxBodySize)
-	assert.Equal(t, 8*time.Second, cfg.ReadHeaderTimeout)
+	assert.Equal(t, overrideHeaderTimeout8s, cfg.ReadHeaderTimeout)
 	assert.Equal(t, overrideHeaders, cfg.MaxHeaderBytes)
 }
 

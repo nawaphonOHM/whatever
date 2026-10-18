@@ -10,14 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const logLevelError = "ERROR"
+const (
+	logLevelError = "ERROR"
+	logKeyLevel   = "level"
+)
 
 func assertFailedStartLog(t *testing.T, data []byte) {
 	t.Helper()
 	entries := parseJSONLogs(data)
 	failEntry := findLogEntry(entries, "REST server failed to start")
 	require.NotNil(t, failEntry, "expected 'REST server failed to start' log entry")
-	assert.Equal(t, logLevelError, failEntry["level"])
+	assert.Equal(t, logLevelError, failEntry[logKeyLevel])
 	assert.NotEmpty(t, failEntry["error"])
 }
 
@@ -47,7 +50,7 @@ func testNilBlueprintLog(t *testing.T) {
 	entries := parseJSONLogs(buf.Bytes())
 	nilEntry := findLogEntry(entries, "failed to initialize REST server: blueprint is nil")
 	require.NotNil(t, nilEntry)
-	assert.Equal(t, logLevelError, nilEntry["level"])
+	assert.Equal(t, logLevelError, nilEntry[logKeyLevel])
 }
 
 func assertConfigLoadErrorLog(t *testing.T, data []byte) {
@@ -55,7 +58,7 @@ func assertConfigLoadErrorLog(t *testing.T, data []byte) {
 	entries := parseJSONLogs(data)
 	cfgEntry := findLogEntry(entries, "failed to load REST server config")
 	require.NotNil(t, cfgEntry)
-	assert.Equal(t, logLevelError, cfgEntry["level"])
+	assert.Equal(t, logLevelError, cfgEntry[logKeyLevel])
 	assert.NotEmpty(t, cfgEntry["error"])
 }
 
@@ -86,7 +89,7 @@ func assertRouteRegErrorLog(t *testing.T, data []byte) {
 	entries := parseJSONLogs(data)
 	routeEntry := findLogEntry(entries, "failed to register REST routes")
 	require.NotNil(t, routeEntry)
-	assert.Equal(t, logLevelError, routeEntry["level"])
+	assert.Equal(t, logLevelError, routeEntry[logKeyLevel])
 	assert.NotEmpty(t, routeEntry["error"])
 }
 

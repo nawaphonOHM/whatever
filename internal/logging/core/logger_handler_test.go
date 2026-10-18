@@ -21,7 +21,7 @@ func TestNewWithHandler(t *testing.T) {
 
 		l.Info("message via custom handler")
 		logMap := parseJSONLog(t, buf.Bytes())
-		assert.Equal(t, "message via custom handler", logMap["msg"])
+		assert.Equal(t, "message via custom handler", logMap[testMsg])
 	})
 
 	t.Run("nil handler defaults safely", func(t *testing.T) {

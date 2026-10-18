@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+const testErrInvalidEndpoint = "invalid endpoint"
+
 // TestConfig_Validate_EndpointValid tests valid endpoint formats.
 func TestConfig_Validate_EndpointValid(t *testing.T) {
 	endpoints := []string{
@@ -47,37 +49,37 @@ func TestConfig_Validate_EndpointInvalid(t *testing.T) {
 		{
 			cfg:         createEndpointConfig("localhost: 4317"),
 			name:        "whitespace endpoint",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 		{
 			cfg:         createEndpointConfig("localhost:99999"),
 			name:        "port above 65535",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 		{
 			cfg:         createEndpointConfig("localhost:0"),
 			name:        "port zero",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 		{
 			cfg:         createEndpointConfig("localhost:invalid"),
 			name:        "non-numeric port",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 		{
 			cfg:         createEndpointConfig(":4317"),
 			name:        "empty host with port",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 		{
 			cfg:         createEndpointConfig("http://"),
 			name:        "URL missing target",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 		{
 			cfg:         createEndpointConfig("http://localhost:99999"),
 			name:        "URL port out of range",
-			expectedErr: "invalid endpoint",
+			expectedErr: testErrInvalidEndpoint,
 		},
 	})
 }

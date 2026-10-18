@@ -8,6 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testDefaultTimeout       = 10 * time.Second
+	testDefaultIdleTimeout   = 60 * time.Second
+	testDefaultHeaderTimeout = 5 * time.Second
+)
+
 func TestConfig_DefaultValues(t *testing.T) {
 	clearServerConfigEnv(t)
 	cfg := loadServerConfig(t)
@@ -24,10 +30,10 @@ func assertBaseDefaults(t *testing.T, cfg *Config) {
 	assert.Equal(t, gin.ReleaseMode, cfg.Mode)
 	assert.Empty(t, cfg.AppVersion)
 	assert.Equal(t, "application", cfg.DisplayName)
-	assert.Equal(t, 10*time.Second, cfg.ReadTimeout)
-	assert.Equal(t, 10*time.Second, cfg.WriteTimeout)
-	assert.Equal(t, 60*time.Second, cfg.IdleTimeout)
-	assert.Equal(t, 10*time.Second, cfg.ShutdownTimeout)
+	assert.Equal(t, testDefaultTimeout, cfg.ReadTimeout)
+	assert.Equal(t, testDefaultTimeout, cfg.WriteTimeout)
+	assert.Equal(t, testDefaultIdleTimeout, cfg.IdleTimeout)
+	assert.Equal(t, testDefaultTimeout, cfg.ShutdownTimeout)
 }
 
 func assertProxyDefaults(t *testing.T, cfg *Config) {
@@ -48,7 +54,7 @@ func assertHTTPDefaults(t *testing.T, cfg *Config) {
 
 func assertResourceDefaults(t *testing.T, cfg *Config) {
 	assert.Equal(t, int64(defaultMaxBodySize), cfg.MaxBodySize)
-	assert.Equal(t, 5*time.Second, cfg.ReadHeaderTimeout)
+	assert.Equal(t, testDefaultHeaderTimeout, cfg.ReadHeaderTimeout)
 	assert.Equal(t, defaultMaxHeaderBytes, cfg.MaxHeaderBytes)
 }
 

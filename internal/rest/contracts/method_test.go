@@ -7,6 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testInvalidMethod999 = 999
+	testInvalidMethod99  = 99
+)
+
 type methodCase struct {
 	name   string
 	method HTTPMethod
@@ -36,7 +41,7 @@ func TestHTTPMethodGetNameValid(t *testing.T) {
 
 func TestHTTPMethodGetNamePanic(t *testing.T) {
 	assert.Panics(t, func() {
-		HTTPMethod(999).GetName()
+		HTTPMethod(testInvalidMethod999).GetName()
 	})
 }
 
@@ -47,7 +52,7 @@ func TestHTTPMethodString(t *testing.T) {
 		})
 	}
 	t.Run("unknown", func(t *testing.T) {
-		assert.Equal(t, "UNKNOWN(999)", HTTPMethod(999).String())
+		assert.Equal(t, "UNKNOWN(999)", HTTPMethod(testInvalidMethod999).String())
 	})
 }
 
@@ -55,5 +60,5 @@ func TestHTTPMethodIsValid(t *testing.T) {
 	assert.True(t, GET.IsValid())
 	assert.True(t, TRACE.IsValid())
 	assert.False(t, HTTPMethod(-1).IsValid())
-	assert.False(t, HTTPMethod(99).IsValid())
+	assert.False(t, HTTPMethod(testInvalidMethod99).IsValid())
 }

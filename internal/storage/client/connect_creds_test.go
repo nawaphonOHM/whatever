@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +58,7 @@ func TestConnect_DefaultCredentialChain_Presign(t *testing.T) {
 	out, err := c.PresignPutObject(context.Background(), contracts.PresignPutObjectInput{
 		Key:         "upload.png",
 		ContentType: "image/png",
-		ExpiresIn:   15 * time.Minute,
+		ExpiresIn:   testPresignExpiry15m,
 	})
 	require.NoError(t, err)
 	assert.Contains(t, out.URL, "upload.png")

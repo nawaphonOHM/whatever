@@ -13,6 +13,8 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/config"
 )
 
+const testSampleRateHalf = 0.5
+
 func captureProviderLogs(t *testing.T, fn func()) string {
 	t.Helper()
 	previous := core.Default()
@@ -51,7 +53,7 @@ func TestInitTracerProvider_LogsActiveChoices(t *testing.T) {
 			ServiceName: "lifecycle-service",
 			Endpoint:    "127.0.0.1:4317",
 			Protocol:    config.ProtocolGRPC,
-			SampleRate:  0.5,
+			SampleRate:  testSampleRateHalf,
 			Enabled:     true,
 			Insecure:    true,
 		})

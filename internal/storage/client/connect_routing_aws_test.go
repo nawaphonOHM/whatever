@@ -37,7 +37,7 @@ func TestConnect_Routing_AWSRegionConflict(t *testing.T) {
 	cfg.Region = "us-west-2"
 	cfg.Endpoint = "https://s3.ap-southeast-1.amazonaws.com"
 	httpClient := newMockHTTPClient(func(*http.Request) (*http.Response, error) {
-		return newHTTPResponse(200, "", nil), nil
+		return newHTTPResponse(http.StatusOK, "", nil), nil
 	})
 	_, err := client.ConnectWithConfig(
 		context.Background(),

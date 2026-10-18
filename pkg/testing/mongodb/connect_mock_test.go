@@ -13,6 +13,11 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/pkg/testing/mongodb"
 )
 
+const (
+	testOverrideDB  = "override_db"
+	testTimeout50ms = 50 * time.Millisecond
+)
+
 func TestSetMockProbe_OverridesAndRestores(t *testing.T) {
 	t.Cleanup(mongodb.SetMockPing(func(context.Context, *mongo.Client) error {
 		return nil
@@ -23,12 +28,12 @@ func TestSetMockProbe_OverridesAndRestores(t *testing.T) {
 		restore := mongodb.SetMockProbe(func(ctx context.Context, c *mongodb.Client, db string) error {
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, c)
-			assert.Equal(t, "override_db", db)
+			assert.Equal(t, testOverrideDB, db)
 			return customErr
 		})
 		defer restore()
 
-		client, err := mongodb.Connect(context.Background(), mongodb.WithDatabase("override_db"))
+		client, err := mongodb.Connect(context.Background(), mongodb.WithDatabase(testOverrideDB))
 		assert.Nil(t, client)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "custom mock probe failure")
@@ -45,12 +50,12 @@ func TestSetMockProbe_OverridesAndRestores(t *testing.T) {
 			successProbeCalled = true
 			assert.NotNil(t, ctx)
 			assert.NotNil(t, c)
-			assert.Equal(t, "override_db", db)
+			assert.Equal(t, testOverrideDB, db)
 			return nil
 		})
 		defer restoreSuccess()
 
-		client, err := mongodb.Connect(context.Background(), mongodb.WithDatabase("override_db"))
+		client, err := mongodb.Connect(context.Background(), mongodb.WithDatabase(testOverrideDB))
 		require.NoError(t, err)
 		assert.True(t, successProbeCalled)
 		require.NoError(t, client.Close())
@@ -74,8 +79,8 @@ func TestSetMockProbe_NilRestoresDefault(t *testing.T) {
 	ctx := context.Background()
 	client, err := mongodb.Connect(ctx,
 		mongodb.WithPort(testUnreachablePort),
-		mongodb.WithServerSelectionTimeout(50*time.Millisecond),
-		mongodb.WithConnectTimeout(50*time.Millisecond),
+		mongodb.WithServerSelectionTimeout(testTimeout50ms),
+		mongodb.WithConnectTimeout(testTimeout50ms),
 	)
 	assert.Nil(t, client)
 	require.Error(t, err)

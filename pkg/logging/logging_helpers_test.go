@@ -26,6 +26,14 @@ const (
 	testNumFour    = 4
 	testNumFive    = 5
 
+	testIndexThree = 3
+	testIndexFour  = 4
+
+	testKeyLevel   = "level"
+	testKeyMsg     = "msg"
+	testKeyTraceID = "trace_id"
+	testKeySpanID  = "span_id"
+
 	testLevelTrace = "TRACE"
 	testLevelDebug = "DEBUG"
 	testLevelInfo  = "INFO"

@@ -8,6 +8,7 @@ import (
 const (
 	testSampleRateBelowZero = -0.01
 	testSampleRateAboveOne  = 1.0001
+	testErrSampleRateRange  = "sample rate must be between 0.0 and 1.0"
 )
 
 // TestConfig_Validate_SampleRateValid tests valid boundary and interior sample rates.
@@ -43,9 +44,9 @@ func TestConfig_Validate_SampleRateInvalid(t *testing.T) {
 	infCfg.SampleRate = math.Inf(1)
 
 	runValidateCases(t, []*configValidateCase{
-		{cfg: negCfg, name: "negative rate", expectedErr: "sample rate must be between 0.0 and 1.0"},
-		{cfg: highCfg, name: "rate above 1.0", expectedErr: "sample rate must be between 0.0 and 1.0"},
-		{cfg: nanCfg, name: "NaN rate", expectedErr: "sample rate must be between 0.0 and 1.0"},
-		{cfg: infCfg, name: "+Inf rate", expectedErr: "sample rate must be between 0.0 and 1.0"},
+		{cfg: negCfg, name: "negative rate", expectedErr: testErrSampleRateRange},
+		{cfg: highCfg, name: "rate above 1.0", expectedErr: testErrSampleRateRange},
+		{cfg: nanCfg, name: "NaN rate", expectedErr: testErrSampleRateRange},
+		{cfg: infCfg, name: "+Inf rate", expectedErr: testErrSampleRateRange},
 	})
 }

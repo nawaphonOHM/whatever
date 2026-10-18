@@ -25,8 +25,8 @@ func createFatalTestLogger(buf *bytes.Buffer, exitCode *int, called *bool) func(
 func verifyFatalEntry(t *testing.T, data []byte) {
 	t.Helper()
 	entry := parseJSONLog(t, data)
-	assert.Equal(t, testLevelFatal, entry["level"])
-	assert.Equal(t, "fatal error occurred", entry["msg"])
+	assert.Equal(t, testLevelFatal, entry[testKeyLevel])
+	assert.Equal(t, "fatal error occurred", entry[testKeyMsg])
 	assert.Equal(t, "disk full", entry["reason"])
 }
 
@@ -62,11 +62,11 @@ func createFatalSpanContext(t *testing.T) context.Context {
 func verifyFatalContextEntry(t *testing.T, data []byte) {
 	t.Helper()
 	entry := parseJSONLog(t, data)
-	assert.Equal(t, testLevelFatal, entry["level"])
-	assert.Equal(t, "fatal with context", entry["msg"])
+	assert.Equal(t, testLevelFatal, entry[testKeyLevel])
+	assert.Equal(t, "fatal with context", entry[testKeyMsg])
 	assert.Equal(t, "fatal err", entry["err"])
-	assert.Equal(t, testFatalTraceIDHex, entry["trace_id"])
-	assert.Equal(t, testFatalSpanIDHex, entry["span_id"])
+	assert.Equal(t, testFatalTraceIDHex, entry[testKeyTraceID])
+	assert.Equal(t, testFatalSpanIDHex, entry[testKeySpanID])
 }
 
 func TestLogging_FatalContext(t *testing.T) {

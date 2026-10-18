@@ -45,28 +45,28 @@ func emitSeverityLogs() {
 
 func verifyTraceDebugInfo(t *testing.T, entries []map[string]any) {
 	t.Helper()
-	assert.Equal(t, testLevelTrace, entries[0]["level"])
-	assert.Equal(t, "trace message", entries[0]["msg"])
+	assert.Equal(t, testLevelTrace, entries[0][testKeyLevel])
+	assert.Equal(t, "trace message", entries[0][testKeyMsg])
 	assert.Equal(t, "val_t", entries[0]["key_t"])
 
-	assert.Equal(t, testLevelDebug, entries[1]["level"])
-	assert.Equal(t, "debug message", entries[1]["msg"])
+	assert.Equal(t, testLevelDebug, entries[1][testKeyLevel])
+	assert.Equal(t, "debug message", entries[1][testKeyMsg])
 	assert.Equal(t, "val_d", entries[1]["key_d"])
 
-	assert.Equal(t, testLevelInfo, entries[2]["level"])
-	assert.Equal(t, "info message", entries[2]["msg"])
+	assert.Equal(t, testLevelInfo, entries[2][testKeyLevel])
+	assert.Equal(t, "info message", entries[2][testKeyMsg])
 	assert.Equal(t, "val_i", entries[2]["key_i"])
 }
 
 func verifyWarnError(t *testing.T, entries []map[string]any) {
 	t.Helper()
-	assert.Equal(t, testLevelWarn, entries[3]["level"])
-	assert.Equal(t, "warn message", entries[3]["msg"])
-	assert.Equal(t, "val_w", entries[3]["key_w"])
+	assert.Equal(t, testLevelWarn, entries[testIndexThree][testKeyLevel])
+	assert.Equal(t, "warn message", entries[testIndexThree][testKeyMsg])
+	assert.Equal(t, "val_w", entries[testIndexThree]["key_w"])
 
-	assert.Equal(t, testLevelError, entries[4]["level"])
-	assert.Equal(t, "error message", entries[4]["msg"])
-	assert.Equal(t, "val_e", entries[4]["key_e"])
+	assert.Equal(t, testLevelError, entries[testIndexFour][testKeyLevel])
+	assert.Equal(t, "error message", entries[testIndexFour][testKeyMsg])
+	assert.Equal(t, "val_e", entries[testIndexFour]["key_e"])
 }
 
 func verifySeverityEntries(t *testing.T, entries []map[string]any) {
@@ -94,6 +94,6 @@ func TestLogging_Flush(t *testing.T) {
 
 	entries := parseJSONLogs(t, buf.Bytes())
 	require.Len(t, entries, 1)
-	assert.Equal(t, "test flush message", entries[0]["msg"])
+	assert.Equal(t, "test flush message", entries[0][testKeyMsg])
 	assert.Equal(t, "val_f", entries[0]["key_f"])
 }

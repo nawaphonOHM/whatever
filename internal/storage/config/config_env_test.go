@@ -9,8 +9,12 @@ import (
 )
 
 const (
-	testPort    = 9000
-	testPortStr = "9000"
+	testPort              = 9000
+	testPortStr           = "9000"
+	testEnvConnectTimeout = 15 * time.Second
+	testEnvRequestTimeout = 45 * time.Second
+	testEnvPingTimeout    = 8 * time.Second
+	testEnvPresignExpiry  = 20 * time.Minute
 )
 
 func setupFullAuthEnv(t *testing.T) {
@@ -49,10 +53,10 @@ func assertLoadedNetworkFields(t *testing.T, cfg *Config) {
 	assert.True(t, cfg.UsePathStyle)
 	assert.True(t, cfg.Insecure)
 	assert.True(t, cfg.DisableSSL)
-	assert.Equal(t, 15*time.Second, cfg.ConnectTimeout)
-	assert.Equal(t, 45*time.Second, cfg.RequestTimeout)
-	assert.Equal(t, 8*time.Second, cfg.PingTimeout)
-	assert.Equal(t, 20*time.Minute, cfg.PresignExpiry)
+	assert.Equal(t, testEnvConnectTimeout, cfg.ConnectTimeout)
+	assert.Equal(t, testEnvRequestTimeout, cfg.RequestTimeout)
+	assert.Equal(t, testEnvPingTimeout, cfg.PingTimeout)
+	assert.Equal(t, testEnvPresignExpiry, cfg.PresignExpiry)
 }
 
 // TestConfig_Load_FullEnv verifies loading all environment variables.

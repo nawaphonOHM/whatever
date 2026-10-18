@@ -19,10 +19,10 @@ func TestTraceHandler_WithActiveSpan(t *testing.T) {
 	logger.InfoContext(ctx, "span correlated message", "foo", "bar")
 
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "span correlated message", logMap["msg"])
+	assert.Equal(t, "span correlated message", logMap[testMsg])
 	assert.Equal(t, "bar", logMap["foo"])
-	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", logMap["trace_id"])
-	assert.Equal(t, "00f067aa0ba902b7", logMap["span_id"])
+	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", logMap[testKeyTraceID])
+	assert.Equal(t, "00f067aa0ba902b7", logMap[testKeySpanID])
 }
 
 func TestTraceHandler_WithStringContextKeys(t *testing.T) {
@@ -35,9 +35,9 @@ func TestTraceHandler_WithStringContextKeys(t *testing.T) {
 	logger.InfoContext(ctx, "custom key message")
 
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "custom key message", logMap["msg"])
-	assert.Equal(t, "custom-trace-123", logMap["trace_id"])
-	assert.Equal(t, "custom-span-456", logMap["span_id"])
+	assert.Equal(t, "custom key message", logMap[testMsg])
+	assert.Equal(t, "custom-trace-123", logMap[testKeyTraceID])
+	assert.Equal(t, "custom-span-456", logMap[testKeySpanID])
 }
 
 func TestTraceHandler_TextHandler(t *testing.T) {
@@ -59,8 +59,8 @@ func TestTraceHandler_NoSpanOrNilContext(t *testing.T) {
 	logger.Info("no span message")
 
 	logMap := parseJSONLog(t, buf.Bytes())
-	assert.Equal(t, "no span message", logMap["msg"])
-	assert.Nil(t, logMap["trace_id"])
+	assert.Equal(t, "no span message", logMap[testMsg])
+	assert.Nil(t, logMap[testKeyTraceID])
 }
 
 func verifyGroupLog(t *testing.T, data []byte) {
@@ -69,7 +69,7 @@ func verifyGroupLog(t *testing.T, data []byte) {
 	assert.Equal(t, "auth", logMap["component"])
 	meta, ok := logMap["meta"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", meta["trace_id"])
+	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", meta[testKeyTraceID])
 }
 
 func TestTraceHandler_WithAttrsAndGroup(t *testing.T) {

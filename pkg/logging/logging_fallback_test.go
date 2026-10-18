@@ -15,11 +15,11 @@ import (
 func verifyLogAndLogAttrsEntries(t *testing.T, entries []map[string]any) {
 	t.Helper()
 	require.Len(t, entries, 2)
-	assert.Equal(t, testLevelWarn, entries[0]["level"])
-	assert.Equal(t, "generic log warn", entries[0]["msg"])
+	assert.Equal(t, testLevelWarn, entries[0][testKeyLevel])
+	assert.Equal(t, "generic log warn", entries[0][testKeyMsg])
 	assert.Equal(t, "v1", entries[0]["k1"])
-	assert.Equal(t, testLevelError, entries[1]["level"])
-	assert.Equal(t, "generic log attrs", entries[1]["msg"])
+	assert.Equal(t, testLevelError, entries[1][testKeyLevel])
+	assert.Equal(t, "generic log attrs", entries[1][testKeyMsg])
 	assert.Equal(t, "attr_v", entries[1]["attr_k"])
 }
 
@@ -38,10 +38,10 @@ func TestLogging_LogAndLogAttrs(t *testing.T) {
 func verifyFallbackEntries(t *testing.T, entries []map[string]any) {
 	t.Helper()
 	require.Len(t, entries, 2)
-	assert.Equal(t, testLevelInfo, entries[0]["level"])
-	assert.Equal(t, "fallback message", entries[0]["msg"])
-	assert.Equal(t, testLevelInfo, entries[1]["level"])
-	assert.Equal(t, "fallback attrs", entries[1]["msg"])
+	assert.Equal(t, testLevelInfo, entries[0][testKeyLevel])
+	assert.Equal(t, "fallback message", entries[0][testKeyMsg])
+	assert.Equal(t, testLevelInfo, entries[1][testKeyLevel])
+	assert.Equal(t, "fallback attrs", entries[1][testKeyMsg])
 	assert.Equal(t, float64(testAnswerInt), entries[1]["n"])
 }
 

@@ -17,8 +17,8 @@ func verifySpanLogLines(t *testing.T, data string) {
 	require.Len(t, lines, 2)
 	for _, line := range lines {
 		logMap := parseJSONLog(t, []byte(line))
-		assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", logMap["trace_id"])
-		assert.Equal(t, "00f067aa0ba902b7", logMap["span_id"])
+		assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", logMap[testKeyTraceID])
+		assert.Equal(t, "00f067aa0ba902b7", logMap[testKeySpanID])
 	}
 }
 
@@ -48,8 +48,8 @@ func TestLogger_DisableTraceCorrelation(t *testing.T) {
 
 	logMap := parseJSONLog(t, buf.Bytes())
 	assert.Equal(t, "hello without trace correlation", logMap[testMsg])
-	assert.Nil(t, logMap["trace_id"])
-	assert.Nil(t, logMap["span_id"])
+	assert.Nil(t, logMap[testKeyTraceID])
+	assert.Nil(t, logMap[testKeySpanID])
 }
 
 func emitPackageLevelLogs(ctx context.Context) {

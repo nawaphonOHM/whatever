@@ -16,6 +16,9 @@ const (
 	testMsg           = "msg"
 	testNewline       = "\n"
 	testFiveCount     = 5
+	testKeyTraceID    = "trace_id"
+	testKeySpanID     = "span_id"
+	testKeyLevel      = "level"
 )
 
 func createTestSpanContext(t *testing.T) context.Context {

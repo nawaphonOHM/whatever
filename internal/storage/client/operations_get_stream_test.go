@@ -17,6 +17,7 @@ import (
 const (
 	shortRequestTimeout = 100 * time.Millisecond
 	slowBodyDelay       = 300 * time.Millisecond
+	maxStreamWait       = 5 * time.Second
 )
 
 // ctxBody emulates a network body: each Read waits delay unless the request context ends first.
@@ -86,7 +87,7 @@ func TestGetObject_HeaderTimeout(t *testing.T) {
 	out, err := c.GetObject(t.Context(), contracts.GetObjectInput{Key: testObjectKey})
 	assert.Nil(t, out)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
-	assert.Less(t, time.Since(start), 5*time.Second)
+	assert.Less(t, time.Since(start), maxStreamWait)
 }
 
 func TestGetObject_CallerCancelAbortsBody(t *testing.T) {
