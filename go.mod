@@ -1,6 +1,6 @@
 module github.com/nawaphonOHM/whatever/v3
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.3

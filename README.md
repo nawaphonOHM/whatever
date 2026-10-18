@@ -1,7 +1,7 @@
 # whatever
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27.2-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever)
 
@@ -122,7 +122,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
 
 ### Prerequisites
 
-- **Go**: Version `1.27.1` or higher (tested with Go `1.27+`)
+- **Go**: Version `1.27.2` or higher (tested with Go `1.27+`)
 
 ### Installation
 
@@ -183,7 +183,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   └── workflows/
 │       └── ci.yml             # Continuous integration pipeline
 ├── Makefile                   # Local development, test, and build targets
-├── go.mod                     # Go module definition (Go 1.27.1+)
+├── go.mod                     # Go module definition (Go 1.27.2+)
 ├── go.sum                     # Go module checksums
 └── README.md                  # Project documentation
 ```
