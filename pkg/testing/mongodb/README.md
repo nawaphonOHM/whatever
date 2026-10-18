@@ -43,7 +43,6 @@ import (
 
 	tcmongo "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
 	testmongo "github.com/nawaphonOHM/whatever/v3/pkg/testing/mongodb"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestUserRepository(t *testing.T) {
@@ -71,7 +70,7 @@ func TestUserRepository(t *testing.T) {
 
 	// 4. Perform database operations
 	users := client.Collection("users")
-	_, err = users.InsertOne(ctx, bson.M{"username": "johndoe", "email": "john@example.com"})
+	_, err = users.InsertOne(ctx, testmongo.M{"username": "johndoe", "email": "john@example.com"})
 	if err != nil {
 		t.Fatalf("Failed to insert user: %v", err)
 	}
@@ -187,7 +186,7 @@ func TestParallelOperations(t *testing.T) {
 
 			// Execute test logic isolated to tt.db
 			coll := client.Collection("items")
-			_, err := coll.InsertOne(ctx, bson.M{"test": tt.name})
+			_, err := coll.InsertOne(ctx, testmongo.M{"test": tt.name})
 			if err != nil {
 				t.Fatalf("Insert failed: %v", err)
 			}
@@ -233,35 +232,64 @@ func TestService_ProbeFailure(t *testing.T) {
 
 Passing `nil` to `SetMockProbe(nil)` or executing the returned restore function immediately reverts probe behavior to `defaultProbeClient`.
 
-### 7. BSON Serialization and Empty Query Assertions
+### 7. BSON Document Construction, Serialization, and Empty Query Assertions
 
-Test authors can encode/decode test fixtures and assert empty query outcomes directly through `pkg/testing/mongodb` without importing official driver packages:
+Test authors can construct ordered documents (`D`), elements (`E`), maps (`M`), arrays (`A`), encode/decode test fixtures, and assert empty query outcomes directly through `pkg/testing/mongodb` without importing official MongoDB driver packages:
 
 ```go
 func TestPayloadEncodingAndNotFound(t *testing.T) {
 	ctx := context.Background()
-	client := testmongo.NewTestClient(t, testmongo.WithDatabase("test_db"))
+	client := testmongo.NewTestClient(t, testmongo.WithDatabase("test_bson_db"))
+
+	// 1. Reset accounts collection before test execution to ensure repeatable test isolation:
+	if err := client.TruncateCollections(ctx, "accounts"); err != nil {
+		t.Fatalf("Failed to truncate accounts collection: %v", err)
+	}
+	coll := client.Collection("accounts")
 
 	type Account struct {
-		ID   string `bson:"_id"`
-		Plan string `bson:"plan"`
+		ID    string   `bson:"_id"`
+		Plan  string   `bson:"plan"`
+		Roles []string `bson:"roles"`
 	}
 
-	// 1. Marshal test payload into BSON bytes:
-	data, err := testmongo.Marshal(Account{ID: "acc_123", Plan: "pro"})
+	// 2. Construct ordered BSON document (D), elements (E), and array (A) with constructors:
+	accountDoc := testmongo.NewD(
+		testmongo.NewE("_id", "acc_123"),
+		testmongo.NewE("plan", "pro"),
+		testmongo.NewE("roles", testmongo.NewA("admin", "billing")),
+	)
+	if _, err := coll.InsertOne(ctx, accountDoc); err != nil {
+		t.Fatalf("InsertOne failed: %v", err)
+	}
+
+	// 3. Construct unordered BSON map (M) filter via NewM:
+	notFoundFilter := testmongo.NewM()
+	notFoundFilter["_id"] = "nonexistent"
+
+	// 4. Marshal test payload struct into BSON bytes:
+	expected := Account{
+		ID:    "acc_456",
+		Plan:  "enterprise",
+		Roles: []string{"viewer"},
+	}
+	data, err := testmongo.Marshal(expected)
 	if err != nil {
 		t.Fatalf("Marshal failed: %v", err)
 	}
 
-	// 2. Unmarshal BSON bytes into target struct:
+	// 5. Unmarshal BSON bytes into target struct and assert payload:
 	var decoded Account
 	if err := testmongo.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal failed: %v", err)
 	}
+	if decoded.ID != expected.ID || decoded.Plan != expected.Plan || len(decoded.Roles) != len(expected.Roles) || decoded.Roles[0] != expected.Roles[0] {
+		t.Fatalf("Decoded struct mismatch: got %+v, want %+v", decoded, expected)
+	}
 
-	// 3. Assert document not found using test sentinel error:
+	// 6. Assert document not found using test sentinel error with M filter:
 	var result Account
-	err = client.Collection("accounts").FindOne(ctx, map[string]any{"_id": "nonexistent"}).Decode(&result)
+	err = coll.FindOne(ctx, notFoundFilter).Decode(&result)
 	if !errors.Is(err, testmongo.ErrNoDocuments) {
 		t.Fatalf("Expected ErrNoDocuments, got: %v", err)
 	}
@@ -280,6 +308,10 @@ func TestPayloadEncodingAndNotFound(t *testing.T) {
 | `TestClient` | `mongodb.TestClient` (`internal/testing/mongodb.TestClient`) | MongoDB client with testing, fixture, and lifecycle helpers |
 | `Option` | `mongodb.Option` | Functional option configuring test connections |
 | `Options` | `mongodb.Options` | Configuration settings for test connections |
+| `D` | `bson.D` (`go.mongodb.org/mongo-driver/v2/bson.D`) | Ordered representation of a BSON document |
+| `E` | `bson.E` (`go.mongodb.org/mongo-driver/v2/bson.E`) | Single BSON element within an ordered `D` document |
+| `M` | `bson.M` (`go.mongodb.org/mongo-driver/v2/bson.M`) | Unordered representation of a BSON document as a map |
+| `A` | `bson.A` (`go.mongodb.org/mongo-driver/v2/bson.A`) | Representation of a BSON array |
 
 ### Constructors & Helpers
 
@@ -292,6 +324,10 @@ func TestPayloadEncodingAndNotFound(t *testing.T) {
 | `NewClient` | `NewClient(rawClient *mongo.Client, defaultDatabase string) *TestClient` | Wraps an existing official `*mongo.Client` with `TestClient` fixture utilities |
 | `DefaultOptions` | `DefaultOptions() *Options` | Returns an `Options` struct initialized with recommended test defaults |
 | `NewOptions` | `NewOptions(opts ...Option) *Options` | Evaluates functional options over test defaults and returns the resulting `*Options` |
+| `NewD` | `NewD(elements ...E) D` | Constructs an ordered BSON document from elements; returns a non-nil empty document (`D{}`) when no elements are supplied |
+| `NewE` | `NewE(key string, value any) E` | Constructs a single BSON element with the provided key and value |
+| `NewM` | `NewM() M` | Constructs an initialized empty unordered BSON map (`make(M)`) |
+| `NewA` | `NewA(values ...any) A` | Constructs a BSON array from values; returns a non-nil empty array (`A{}`) when no values are supplied |
 | `Marshal` | `Marshal(val any) ([]byte, error)` | Serializes a Go struct, map, or document into BSON wire format bytes (`bson.Marshal`) |
 | `Unmarshal` | `Unmarshal(data []byte, val any) error` | Deserializes BSON wire format bytes into destination pointer (`bson.Unmarshal`) |
 
