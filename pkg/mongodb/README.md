@@ -92,3 +92,45 @@ When connecting to Google Cloud Firestore with MongoDB compatibility (where `OHM
 The public client exposes `Database`, `Collection`, `RawClient`, `Ping`,
 `IsFirestore`, and `Disconnect` methods. `Ping` can be used by readiness probes to verify
 connectivity on demand. The process exit hook can be intercepted during testing via `SetExitFunc`.
+
+### BSON Helpers & Document Construction
+
+`pkg/mongodb` exports first-class BSON document type aliases and constructor helpers so consuming applications can construct queries, filters, projections, and aggregation pipelines without importing `go.mongodb.org/mongo-driver/v2/bson`:
+
+- **Type Aliases**:
+  - `mongodb.D`: Ordered BSON document (`type D = bson.D`).
+  - `mongodb.E`: Single BSON element in a `D` document (`type E = bson.E`).
+  - `mongodb.M`: Unordered BSON map (`type M = bson.M`).
+  - `mongodb.A`: BSON array (`type A = bson.A`).
+
+- **Constructor Helpers**:
+  - `mongodb.NewD(elements ...E) D`: Constructs an ordered BSON document; no arguments produce a non-nil empty document (`{}`).
+  - `mongodb.NewE(key string, value any) E`: Constructs a single BSON element with key and value.
+  - `mongodb.NewM() M`: Constructs an empty unordered BSON map.
+  - `mongodb.NewA(values ...any) A`: Constructs a BSON array; no arguments produce a non-nil empty array (`[]`).
+
+#### Example: Building Queries & Aggregations
+
+```go
+import (
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
+)
+
+// Assume client and ctx have been initialized as in the Usage example above.
+// Construct an ordered query filter:
+filter := mongodb.NewD(
+	mongodb.NewE("status", "active"),
+	mongodb.NewE("age", mongodb.NewD(mongodb.NewE("$gte", 18))),
+	mongodb.NewE("tags", mongodb.NewD(mongodb.NewE("$in", mongodb.NewA("golang", "database")))),
+)
+
+// Construct an aggregation pipeline:
+pipeline := mongodb.NewA(
+	mongodb.NewD(mongodb.NewE("$match", filter)),
+	mongodb.NewD(mongodb.NewE("$sort", mongodb.NewD(mongodb.NewE("created_at", -1)))),
+	mongodb.NewD(mongodb.NewE("$limit", 10)),
+)
+
+// Use directly with collection operations:
+cursor, err := client.Collection("users").Aggregate(ctx, pipeline)
+```
