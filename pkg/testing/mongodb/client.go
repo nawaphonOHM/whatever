@@ -51,6 +51,8 @@ var (
 	ErrInvalidPort = mongodb.ErrInvalidPort
 	// ErrNilTestingTB is returned when a testing helper receives a nil testing.TB instance.
 	ErrNilTestingTB = mongodb.ErrNilTestingTB
+	// ErrNoDocuments is returned when a MongoDB query returns no documents.
+	ErrNoDocuments = mongo.ErrNoDocuments
 )
 
 // NewClient creates a new TestClient wrapping an official mongo.Client.

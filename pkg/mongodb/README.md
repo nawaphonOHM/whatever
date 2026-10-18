@@ -89,9 +89,16 @@ When connecting to Google Cloud Firestore with MongoDB compatibility (where `OHM
 
 ### Public API
 
-The public client exposes `Database`, `Collection`, `RawClient`, `Ping`,
-`IsFirestore`, and `Disconnect` methods. `Ping` can be used by readiness probes to verify
-connectivity on demand. The process exit hook can be intercepted during testing via `SetExitFunc`.
+The `pkg/mongodb` package provides full MongoDB operational handles without requiring direct imports of official MongoDB Go driver packages (`go.mongodb.org/mongo-driver/v2/mongo` or `go.mongodb.org/mongo-driver/v2/bson`):
+
+- **Types & Aliases**:
+  - `mongodb.Client`: Managed client (`type Client = client.Client`) wrapping connection pooling, database resolution, and lifecycle methods (`Database`, `Collection`, `RawClient`, `Ping`, `IsFirestore`, `Disconnect`).
+  - `mongodb.Collection`: Collection type alias (`type Collection = mongo.Collection`) exposing collection operations (such as `Find`, `FindOne`, `InsertOne`, `UpdateOne`, `DeleteOne`, `Aggregate`).
+- **Sentinel Errors**:
+  - `mongodb.ErrNilClient`: Returned when attempting operations on an uninitialized client instance.
+  - `mongodb.ErrNilConfig`: Returned when internal configuration resolving is nil.
+  - `mongodb.ErrNoDocuments`: Sentinel error alias (`var ErrNoDocuments = mongo.ErrNoDocuments`) returned when a query produces no documents; supports `errors.Is(err, mongodb.ErrNoDocuments)` checks.
+- **Process Exit Hook**: Intercepted during testing via `mongodb.SetExitFunc`.
 
 ### BSON Helpers & Document Construction
 
@@ -133,4 +140,43 @@ pipeline := mongodb.NewA(
 
 // Use directly with collection operations:
 cursor, err := client.Collection("users").Aggregate(ctx, pipeline)
+```
+
+#### Example: Document Querying & Error Handling
+
+```go
+package repository
+
+import (
+	"context"
+	"errors"
+
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
+)
+
+type User struct {
+	ID    string `bson:"_id,omitempty"`
+	Email string `bson:"email"`
+	Name  string `bson:"name"`
+}
+
+type UserRepository struct {
+	coll *mongodb.Collection
+}
+
+func NewUserRepository(client *mongodb.Client) *UserRepository {
+	return &UserRepository{coll: client.Collection("users")}
+}
+
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
+	var user User
+	err := r.coll.FindOne(ctx, mongodb.M{"email": email}).Decode(&user)
+	if err != nil {
+		if errors.Is(err, mongodb.ErrNoDocuments) {
+			return nil, nil // Document not found
+		}
+		return nil, err
+	}
+	return &user, nil
+}
 ```
