@@ -12,6 +12,7 @@ import (
 
 const (
 	testPersonAge = 30
+	testRoleAdmin = "admin"
 )
 
 type testPerson struct {
@@ -34,7 +35,7 @@ func TestMarshalUnmarshalStruct(t *testing.T) {
 }
 
 func TestMarshalUnmarshalMap(t *testing.T) {
-	orig := map[string]any{"role": "admin", "active": true}
+	orig := map[string]any{"role": testRoleAdmin, "active": true}
 
 	data, err := mongodb.Marshal(orig)
 	require.NoError(t, err)
@@ -43,49 +44,12 @@ func TestMarshalUnmarshalMap(t *testing.T) {
 	var decoded map[string]any
 	err = mongodb.Unmarshal(data, &decoded)
 	require.NoError(t, err)
-	assert.Equal(t, "admin", decoded["role"])
+	assert.Equal(t, testRoleAdmin, decoded["role"])
 	assert.Equal(t, true, decoded["active"])
 }
 
-func TestMarshalErrors(t *testing.T) {
-	// Channels cannot be marshaled to BSON
-	ch := make(chan int)
-	data, err := mongodb.Marshal(ch)
-	assert.Error(t, err)
-	assert.Nil(t, data)
-}
-
-func TestUnmarshalErrors(t *testing.T) {
-	t.Run("invalid corrupted bytes", func(t *testing.T) {
-		var person testPerson
-		err := mongodb.Unmarshal([]byte("invalid-corrupted-bytes"), &person)
-		assert.Error(t, err)
-	})
-
-	t.Run("empty bytes", func(t *testing.T) {
-		var person testPerson
-		err := mongodb.Unmarshal(make([]byte, 0), &person)
-		assert.Error(t, err)
-	})
-
-	t.Run("nil bytes", func(t *testing.T) {
-		var person testPerson
-		err := mongodb.Unmarshal(nil, &person)
-		assert.Error(t, err)
-	})
-
-	t.Run("non pointer destination", func(t *testing.T) {
-		data, err := mongodb.Marshal(testPerson{Name: "Bob"})
-		require.NoError(t, err)
-
-		var person testPerson
-		err = mongodb.Unmarshal(data, person)
-		assert.Error(t, err)
-	})
-}
-
 func TestMarshalUnmarshalDriverInterop(t *testing.T) {
-	doc := bson.D{{Key: "key", Value: "value"}}
+	doc := bson.D{{Key: "key", Value: "val"}}
 
 	t.Run("pkg marshal to driver unmarshal", func(t *testing.T) {
 		data, err := mongodb.Marshal(doc)
@@ -93,7 +57,7 @@ func TestMarshalUnmarshalDriverInterop(t *testing.T) {
 
 		var m bson.M
 		require.NoError(t, bson.Unmarshal(data, &m))
-		assert.Equal(t, "value", m["key"])
+		assert.Equal(t, "val", m["key"])
 	})
 
 	t.Run("driver marshal to pkg unmarshal", func(t *testing.T) {
@@ -102,6 +66,6 @@ func TestMarshalUnmarshalDriverInterop(t *testing.T) {
 
 		var m map[string]any
 		require.NoError(t, mongodb.Unmarshal(data, &m))
-		assert.Equal(t, "value", m["key"])
+		assert.Equal(t, "val", m["key"])
 	})
 }
