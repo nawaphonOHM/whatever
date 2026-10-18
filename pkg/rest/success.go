@@ -1,10 +1,13 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 )
 
 // SuccessResponse represents the standard JSON API response envelope DTO
@@ -22,6 +25,7 @@ type Envelope[T any] = SuccessResponse[T]
 // successResponse represents the internal response renderer implementing
 // rest.Response.
 type successResponse[T any] struct {
+	headers   map[string]string
 	Data      T         `json:"data,omitempty"`
 	Timestamp time.Time `json:"timestamp"`
 	Message   string    `json:"message,omitempty"`
@@ -40,8 +44,42 @@ func (r *successResponse[T]) StatusCode() int {
 // Write writes the JSON response envelope to the Gin context.
 func (r *successResponse[T]) Write(c *gin.Context) {
 	if c != nil && r != nil {
+		contracts.WriteHeaders(c, r.headers)
 		c.JSON(r.StatusCode(), r)
 	}
+}
+
+// WithHeader attaches a custom key-value header to the response.
+func (r *successResponse[T]) WithHeader(key, value string) contracts.Response {
+	if r == nil {
+		return r
+	}
+	contracts.SetHeader(&r.headers, key, value)
+	return r
+}
+
+// WithHeaderInt attaches a custom header whose integer value is converted to string.
+func (r *successResponse[T]) WithHeaderInt(key string, value int) contracts.Response {
+	if r == nil {
+		return r
+	}
+	return r.WithHeader(key, strconv.Itoa(value))
+}
+
+// WithHeaderStringer attaches a custom header whose value is obtained from fmt.Stringer.
+func (r *successResponse[T]) WithHeaderStringer(key string, value fmt.Stringer) contracts.Response {
+	if r == nil {
+		return r
+	}
+	return applySuccessHeaderStringer(r, key, value)
+}
+
+func applySuccessHeaderStringer(r contracts.Response, key string, value fmt.Stringer) contracts.Response {
+	str, ok := contracts.SafeStringer(value)
+	if !ok {
+		return r
+	}
+	return r.WithHeader(key, str)
 }
 
 // withMessage sets the message on the successResponse and returns it for

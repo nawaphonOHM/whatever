@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,8 +19,9 @@ type testSuccessResponse[T any] struct {
 
 // testResponse is a minimal response fixture for server tests.
 type testResponse struct {
-	body   any
-	status int
+	headers map[string]string
+	body    any
+	status  int
 }
 
 // StatusCode returns the fixture HTTP status code.
@@ -26,13 +29,61 @@ func (r *testResponse) StatusCode() int {
 	return r.status
 }
 
+// WithHeader attaches a custom key-value header to the response.
+func (r *testResponse) WithHeader(key, value string) contracts.Response {
+	if r == nil {
+		return r
+	}
+	contracts.SetHeader(&r.headers, key, value)
+	return r
+}
+
+// WithHeaderInt attaches a custom header whose integer value is converted to string.
+func (r *testResponse) WithHeaderInt(key string, value int) contracts.Response {
+	if r == nil {
+		return r
+	}
+	return r.WithHeader(key, strconv.Itoa(value))
+}
+
+// WithHeaderStringer attaches a custom header whose value is obtained from fmt.Stringer.
+func (r *testResponse) WithHeaderStringer(key string, value fmt.Stringer) contracts.Response {
+	if r == nil {
+		return r
+	}
+	return applyTestHeaderStringer(r, key, value)
+}
+
+func applyTestHeaderStringer(r *testResponse, key string, value fmt.Stringer) contracts.Response {
+	str, ok := contracts.SafeStringer(value)
+	if !ok {
+		return r
+	}
+	return r.WithHeader(key, str)
+}
+
 // Write writes the fixture response to the Gin context.
 func (r *testResponse) Write(c *gin.Context) {
-	if r.body == nil {
-		c.Status(r.status)
+	if !canWriteTestResponse(c, r) {
 		return
 	}
-	c.JSON(r.status, r.body)
+	contracts.WriteHeaders(c, r.headers)
+	writeTestResponseBody(c, r.status, r.body)
+}
+
+func canWriteTestResponse(c *gin.Context, r *testResponse) bool {
+	if c == nil {
+		return false
+	}
+	return r != nil
+}
+
+func writeTestResponseBody(c *gin.Context, status int, body any) {
+	if body == nil {
+		c.Status(status)
+		return
+	}
+	c.JSON(status, body)
 }
 
 func testNoContent() contracts.Response {
