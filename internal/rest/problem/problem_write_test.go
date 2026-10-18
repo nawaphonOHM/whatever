@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const headerContentType = "Content-Type"
+
 func newTestContext() (*gin.Context, *httptest.ResponseRecorder) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -39,7 +41,7 @@ func TestPProblemDetails_WriteDefaults(t *testing.T) {
 	prob.Write(gc)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
-	assert.Equal(t, MediaTypeProblemJSON, w.Header().Get("Content-Type"))
+	assert.Equal(t, MediaTypeProblemJSON, w.Header().Get(headerContentType))
 	assertDecodedFields(t, w.Body.Bytes())
 }
 

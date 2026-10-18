@@ -1,7 +1,9 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
@@ -16,7 +18,9 @@ const MediaTypeProblemJSON = contracts.MediaTypeProblemJSON
 type Response = contracts.Response
 
 // noContentResponse represents an empty HTTP 204 No Content response.
-type noContentResponse struct{}
+type noContentResponse struct {
+	headers map[string]string
+}
 
 // StatusCode returns 204 No Content.
 func (*noContentResponse) StatusCode() int {
@@ -24,10 +28,44 @@ func (*noContentResponse) StatusCode() int {
 }
 
 // Write writes the 204 status header to the Gin context.
-func (*noContentResponse) Write(c *gin.Context) {
-	if c != nil {
+func (r *noContentResponse) Write(c *gin.Context) {
+	if c != nil && r != nil {
+		contracts.WriteHeaders(c, r.headers)
 		c.Status(http.StatusNoContent)
 	}
+}
+
+// WithHeader attaches a custom key-value header to the response.
+func (r *noContentResponse) WithHeader(key, value string) Response {
+	if r == nil {
+		return r
+	}
+	contracts.SetHeader(&r.headers, key, value)
+	return r
+}
+
+// WithHeaderInt attaches a custom header whose integer value is converted to string.
+func (r *noContentResponse) WithHeaderInt(key string, value int) Response {
+	if r == nil {
+		return r
+	}
+	return r.WithHeader(key, strconv.Itoa(value))
+}
+
+// WithHeaderStringer attaches a custom header whose value is obtained from fmt.Stringer.
+func (r *noContentResponse) WithHeaderStringer(key string, value fmt.Stringer) Response {
+	if r == nil {
+		return r
+	}
+	return applyNoContentHeaderStringer(r, key, value)
+}
+
+func applyNoContentHeaderStringer(r *noContentResponse, key string, value fmt.Stringer) Response {
+	str, ok := contracts.SafeStringer(value)
+	if !ok {
+		return r
+	}
+	return r.WithHeader(key, str)
 }
 
 // JSON creates a Response pointer with the given status code and data.
