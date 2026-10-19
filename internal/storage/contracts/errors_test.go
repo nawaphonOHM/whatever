@@ -19,6 +19,15 @@ func TestSentinelErrors_Messages(t *testing.T) {
 	require.Equal(t, "storage config cannot be nil", contracts.ErrNilConfig.Error())
 }
 
+func TestSentinelErrors_AccessAndExpiry(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, "storage access denied", contracts.ErrAccessDenied.Error())
+	require.Equal(t, "storage presign expiry is invalid", contracts.ErrInvalidExpiry.Error())
+	assert.False(t, errors.Is(contracts.ErrAccessDenied, contracts.ErrObjectNotFound))
+	assert.False(t, errors.Is(contracts.ErrInvalidExpiry, contracts.ErrAccessDenied))
+}
+
 func TestSentinelErrors_Distinct(t *testing.T) {
 	t.Parallel()
 

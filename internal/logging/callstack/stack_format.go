@@ -2,6 +2,7 @@ package callstack
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -45,4 +46,50 @@ func formatFrames(frames []*Frame) string {
 		formatSingleFrame(&sb, i, f)
 	}
 	return sb.String()
+}
+
+func applyFuncInfo(fn *runtime.Func, frame *Frame) {
+	pkg, fnName := splitPackageAndFunc(fn.Name())
+	frame.Package = pkg
+	if frame.Function == "" {
+		frame.Function = fnName
+	}
+}
+
+func resolveCallerInfo(pc uintptr, frame *Frame) {
+	if frame == nil {
+		return
+	}
+	if fn := runtime.FuncForPC(pc); fn != nil {
+		applyFuncInfo(fn, frame)
+	}
+}
+
+func captureCallerFrame(name string, skip int) *Frame {
+	frame := &Frame{
+		Function:  name,
+		Timestamp: time.Now(),
+	}
+	pc, file, line, ok := runtime.Caller(skip)
+	if ok {
+		frame.File = file
+		frame.Line = line
+		resolveCallerInfo(pc, frame)
+	}
+	return frame
+}
+
+func splitPackageAndFunc(fullName string) (prefix, rest string) {
+	lastSlash := strings.LastIndex(fullName, "/")
+	prefix = ""
+	rest = fullName
+	if lastSlash >= 0 {
+		prefix = fullName[:lastSlash+1]
+		rest = fullName[lastSlash+1:]
+	}
+	firstDot := strings.Index(rest, ".")
+	if firstDot >= 0 {
+		return prefix + rest[:firstDot], rest[firstDot+1:]
+	}
+	return prefix, rest
 }

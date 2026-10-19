@@ -6,6 +6,14 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 )
 
+// validatedRoute is a fully resolved route ready for engine mount.
+type validatedRoute struct {
+	Handler     contracts.Handler
+	Path        string
+	Method      string
+	Middlewares []contracts.Middleware
+}
+
 // registrationScan holds mutable validation state.
 type registrationScan struct {
 	seen map[string]bool

@@ -1,3 +1,5 @@
+// Package logging provides general-purpose structured logging functions
+// driven by environment variable configuration.
 package logging
 
 import (
@@ -6,6 +8,19 @@ import (
 
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/config"
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/core"
+)
+
+// Level represents supported logging severity levels.
+type Level = config.Level
+
+// Supported log level string constants.
+const (
+	LevelTrace Level = config.LevelTrace
+	LevelDebug Level = config.LevelDebug
+	LevelInfo  Level = config.LevelInfo
+	LevelWarn  Level = config.LevelWarn
+	LevelError Level = config.LevelError
+	LevelFatal Level = config.LevelFatal
 )
 
 // Trace logs a message at TRACE level using the default logger.

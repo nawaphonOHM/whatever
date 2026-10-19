@@ -94,3 +94,30 @@ func TestNewClient_EmptyDefaultDatabase_Accessors(t *testing.T) {
 	require.NotNil(t, client)
 	verifyEmptyDefaultAccessors(t, client)
 }
+
+// verifyNilClientMethods verifies that methods return nil or ErrNilClient
+// safely.
+func verifyNilClientMethods(t *testing.T, c *Client) {
+	ctx := context.Background()
+
+	assert.Nil(t, c.Database())
+	assert.Nil(t, c.Database("test"))
+	assert.Nil(t, c.Collection(testCollUsers))
+	assert.Nil(t, c.Collection(testCollUsers, "test"))
+	assert.Nil(t, c.RawClient())
+	assert.False(t, c.IsFirestore())
+	assert.ErrorIs(t, c.Ping(ctx), ErrNilClient)
+	assert.ErrorIs(t, c.Disconnect(ctx), ErrNilClient)
+}
+
+// TestClient_NilSafety tests method calls on nil and uninitialized clients.
+func TestClient_NilSafety(t *testing.T) {
+	var nilClient *Client
+	verifyNilClientMethods(t, nilClient)
+
+	uninitializedClient := &Client{
+		rawClient:       nil,
+		defaultDatabase: testDefaultDB,
+	}
+	verifyNilClientMethods(t, uninitializedClient)
+}

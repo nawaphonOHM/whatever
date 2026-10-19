@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // Protocol constants for MongoDB connection schemes.
 const (
 	ProtocolMongoDB    = "mongodb"
@@ -15,6 +17,9 @@ const (
 	UUIDRepresentationPythonLegacy = "pythonLegacy"
 )
 
+// dur shortens time.Duration lines for struct tags.
+type dur = time.Duration
+
 // BaseFields defines core connection endpoint, authentication, and application metadata.
 type BaseFields struct {
 	Host               string `env:"OHM9996_MONGODB_HOST"`
@@ -28,9 +33,16 @@ type BaseFields struct {
 	Port               int    `env:"OHM9996_MONGODB_PORT" envDefault:"27017"`
 }
 
-// Config defines configuration options for connecting to MongoDB.
-type Config struct {
-	BaseFields
-	TimeoutFields
-	PoolFields
+// TimeoutFields defines operation and lifecycle timeout settings for MongoDB.
+type TimeoutFields struct {
+	ConnectTimeout         dur `env:"OHM9996_MONGODB_CONNECT_TIMEOUT" envDefault:"10s"`
+	ServerSelectionTimeout dur `env:"OHM9996_MONGODB_SERVER_SELECTION_TIMEOUT" envDefault:"5s"`
+	SocketTimeout          dur `env:"OHM9996_MONGODB_SOCKET_TIMEOUT" envDefault:"10s"`
+	MaxConnIdleTime        dur `env:"OHM9996_MONGODB_MAX_CONN_IDLE_TIME" envDefault:"10m"`
+}
+
+// PoolFields defines connection pooling capacity bounds for MongoDB.
+type PoolFields struct {
+	MaxPoolSize uint64 `env:"OHM9996_MONGODB_MAX_POOL_SIZE" envDefault:"100"`
+	MinPoolSize uint64 `env:"OHM9996_MONGODB_MIN_POOL_SIZE" envDefault:"5"`
 }

@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -62,4 +63,37 @@ func TestNewTestClientURI_Failure(t *testing.T) {
 	assert.Nil(t, client)
 	assert.True(t, mock.fatalfCalled)
 	assert.Contains(t, mock.fatalfMsg, "failed to connect to mongodb uri")
+}
+
+func TestConnectURI_EmptyURI(t *testing.T) {
+	ctx := context.Background()
+	client, err := ConnectURI(ctx, "")
+	require.ErrorIs(t, err, ErrEmptyURI)
+	assert.Nil(t, client)
+
+	client, err = ConnectURI(ctx, "   ")
+	require.ErrorIs(t, err, ErrEmptyURI)
+	assert.Nil(t, client)
+}
+
+func TestConnectURI_ExtractDatabase(t *testing.T) {
+	setMockPingSuccess(t, nil)
+	ctx := context.Background()
+	client, err := ConnectURI(ctx, "mongodb://localhost:27017/extracted_db")
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, "extracted_db", client.Database().Name())
+}
+
+func TestConnectURI_OverrideDatabase(t *testing.T) {
+	setMockPingSuccess(t, nil)
+	ctx := context.Background()
+	client, err := ConnectURI(
+		ctx,
+		"mongodb://localhost:27017/extracted_db",
+		WithDatabase("overridden_db"),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, "overridden_db", client.Database().Name())
 }

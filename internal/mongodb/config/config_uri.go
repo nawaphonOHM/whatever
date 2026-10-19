@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+const (
+	defaultFirestorePort = 443
+)
+
 // buildUserInfo constructs user credentials for connection URI.
 func (c *Config) buildUserInfo() *url.Userinfo {
 	if c.Username != "" || c.Password != "" {
@@ -18,6 +22,14 @@ func (c *Config) buildUserInfo() *url.Userinfo {
 func (c *Config) resolvePort() int {
 	if c.IsFirestore() {
 		return c.resolveFirestorePort()
+	}
+	return c.Port
+}
+
+// resolveFirestorePort returns 443 for default or unspecified ports on Firestore.
+func (c *Config) resolveFirestorePort() int {
+	if c.Port == 0 || c.Port == defaultPort {
+		return defaultFirestorePort
 	}
 	return c.Port
 }
@@ -66,6 +78,29 @@ func (c *Config) buildQuery(enableTLS bool) string {
 	query := fmt.Sprintf("uuidRepresentation=%s&tls=%t", url.QueryEscape(c.resolveUUIDRep()), enableTLS)
 	query = c.appendAuthSourceQuery(query)
 	return c.appendAppNameQuery(query)
+}
+
+// buildFirestoreQuery constructs query string for Firestore connection URI.
+func (c *Config) buildFirestoreQuery() string {
+	query := fmt.Sprintf(
+		"uuidRepresentation=%s&tls=true&loadBalanced=true&retryWrites=false&authMechanism=SCRAM-SHA-256",
+		url.QueryEscape(c.resolveUUIDRep()),
+	)
+	query = c.appendAuthSourceQuery(query)
+	return c.appendAppNameQuery(query)
+}
+
+// IsFirestoreURL reports whether the provided host or URI targets Google Cloud Firestore.
+func IsFirestoreURL(target string) bool {
+	return strings.Contains(strings.ToLower(target), "firestore.goog")
+}
+
+// IsFirestore reports whether the configuration targets Google Cloud Firestore.
+func (c *Config) IsFirestore() bool {
+	if c == nil {
+		return false
+	}
+	return IsFirestoreURL(c.Host)
 }
 
 // buildURIFromFields constructs a standard MongoDB connection URI string based on

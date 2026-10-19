@@ -9,6 +9,40 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+type probeTimeoutKey struct{}
+
+func withProbeTimeout(ctx context.Context, timeout time.Duration) context.Context {
+	if timeout <= 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, probeTimeoutKey{}, timeout)
+}
+
+func probeTimeoutFromContext(ctx context.Context) time.Duration {
+	if v, ok := ctx.Value(probeTimeoutKey{}).(time.Duration); ok && v > 0 {
+		return v
+	}
+	return DefaultSocketTimeout
+}
+
+func resolveProbeTimeout(o *Options) time.Duration {
+	if o == nil || o.SocketTimeout <= 0 {
+		return DefaultSocketTimeout
+	}
+	return o.SocketTimeout
+}
+
+func probeFirestoreCollections(
+	ctx context.Context,
+	db *mongo.Database,
+) ([]string, error) {
+	colls, err := db.ListCollectionNames(context.WithoutCancel(ctx), bson.D{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list collections without maxTimeMS: %w", err)
+	}
+	return colls, nil
+}
+
 func probeListCollectionsWithoutMaxTime(
 	ctx context.Context,
 	db *mongo.Database,

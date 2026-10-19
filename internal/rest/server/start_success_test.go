@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"syscall"
@@ -8,9 +9,15 @@ import (
 	"time"
 
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/health"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// emptyBlueprint returns an empty registration blueprint.
+func emptyBlueprint() *contracts.BluePrint {
+	return contracts.NewBluePrint()
+}
 
 // pingBlueprint returns a versioned /ping blueprint.
 func pingBlueprint() *contracts.BluePrint {
@@ -53,6 +60,24 @@ func assertStatusOK(t *testing.T, url string) {
 	assert.NoError(t, resp.Body.Close())
 }
 
+// fetchHealth decodes the reserved health payload.
+func fetchHealth(
+	t *testing.T,
+	port int,
+) testSuccessResponse[health.Status] {
+	t.Helper()
+	url := fmt.Sprintf(
+		"http://%s:%d%s", testHost, port, ReservedHealthPath,
+	)
+	resp, err := http.Get(url)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, resp.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	var body testSuccessResponse[health.Status]
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	return body
+}
+
 // TestStartREST_Success boots, serves /api/v1/ping, then exits.
 func TestStartREST_Success(t *testing.T) {
 	// Arrange
@@ -67,5 +92,20 @@ func TestStartREST_Success(t *testing.T) {
 	assertStatusOK(t, url)
 
 	// Shutdown via signal
+	signalAndWait(t, errCh)
+}
+
+// TestStartREST_HealthEndpoint serves reserved /health with version.
+func TestStartREST_HealthEndpoint(t *testing.T) {
+	// Arrange
+	port := getFreePort(t)
+	setStartEnv(t, port)
+	errCh := startRESTAsync(emptyBlueprint())
+
+	// Act
+	body := fetchHealth(t, port)
+
+	// Assert
+	assert.Equal(t, appVersionValue, body.Data.Version)
 	signalAndWait(t, errCh)
 }
