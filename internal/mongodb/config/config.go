@@ -25,6 +25,13 @@ const (
 // ErrNilConfig is returned when operations receive a nil configuration.
 var ErrNilConfig = errors.New("mongodb config cannot be nil")
 
+// Config defines configuration options for connecting to MongoDB.
+type Config struct {
+	BaseFields
+	TimeoutFields
+	PoolFields
+}
+
 // SetExitFunc overrides the process exit hook used by the central logger worker
 // and returns the previous hook.
 func SetExitFunc(fn func(int)) func(int) {

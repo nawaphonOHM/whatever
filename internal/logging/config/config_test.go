@@ -69,3 +69,42 @@ func TestLoad_Defaults(t *testing.T) {
 	require.NotNil(t, cfg)
 	verifyDefaultConfig(t, cfg)
 }
+
+func TestLoad_InvalidFormat(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(testEnvFormat, "xml")
+
+	cfg, err := Load()
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.ErrorIs(t, err, ErrInvalidFormat)
+}
+
+func TestLoad_InvalidLevel(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(testEnvLevel, "invalid_level")
+
+	cfg, err := Load()
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.ErrorIs(t, err, ErrInvalidLevel)
+}
+
+func TestLoad_InvalidOutput(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(testEnvOutput, "invalid_dest_name")
+
+	cfg, err := Load()
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.ErrorIs(t, err, ErrInvalidOutput)
+}
+
+func TestLoad_InvalidTypeConversion(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(testEnvAddSource, "not-a-bool")
+
+	cfg, err := Load()
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+}

@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/nawaphonOHM/whatever/v3/internal/logging/core"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,4 +62,25 @@ func parseJSONLogs(t *testing.T, data []byte) []map[string]any {
 		entries = append(entries, entry)
 	}
 	return entries
+}
+
+func verifyTextOutput(t *testing.T, output string) {
+	t.Helper()
+	assert.Contains(t, output, "level=INFO")
+	assert.Contains(t, output, "msg=\"server starting\"")
+	assert.Contains(t, output, "port=8080")
+	assert.Contains(t, output, "level=WARN")
+	assert.Contains(t, output, "msg=\"high latency detected\"")
+	assert.Contains(t, output, "ms=250")
+}
+
+func TestLogging_TextOutput(t *testing.T) {
+	buf := new(bytes.Buffer)
+	cleanup := core.CaptureTextLogs(buf, logging.LevelInfo)
+	defer cleanup()
+
+	logging.Info("server starting", "port", testPort)
+	logging.Warn("high latency detected", "ms", testLatencyMs)
+
+	verifyTextOutput(t, buf.String())
 }

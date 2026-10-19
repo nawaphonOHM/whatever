@@ -17,6 +17,22 @@ func (w *Worker) enqueueValid(event *LogEvent) bool {
 	return w.tryEnqueue(event)
 }
 
+func (w *Worker) shouldProcessDirectly() bool {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.syncMode || !w.started || w.closed
+}
+
+func (w *Worker) tryEnqueue(event *LogEvent) bool {
+	select {
+	case w.ch <- event:
+		return true
+	default:
+		w.processEvent(event)
+		return false
+	}
+}
+
 // Flush blocks until all currently enqueued log events have been processed.
 func (w *Worker) Flush() {
 	if w == nil {
@@ -35,6 +51,12 @@ func (w *Worker) canFlush() bool {
 	return !w.syncMode && w.isRunning()
 }
 
+func (w *Worker) isRunning() bool {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.started && !w.closed
+}
+
 // Stop closes the worker and waits for queued events to finish.
 func (w *Worker) Stop() error {
 	return w.Close()
@@ -49,4 +71,32 @@ func (w *Worker) Close() error {
 		return nil
 	}
 	return w.closeAsync()
+}
+
+func (w *Worker) closeAsync() error {
+	if w.alreadyClosed() {
+		return nil
+	}
+	started := w.markClosed()
+	if started {
+		w.wg.Wait()
+	}
+	return nil
+}
+
+func (w *Worker) alreadyClosed() bool {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.closed
+}
+
+func (w *Worker) markClosed() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.closed = true
+	if !w.started {
+		return false
+	}
+	close(w.stopCh)
+	return true
 }

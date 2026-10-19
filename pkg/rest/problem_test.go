@@ -65,3 +65,10 @@ func TestErrorResponses(t *testing.T) {
 		})
 	}
 }
+
+func TestProblemResponse(t *testing.T) {
+	resp := Error(
+		http.StatusTeapot, "IM_A_TEAPOT", "Short and stout",
+	)
+	assert.Equal(t, http.StatusTeapot, resp.StatusCode())
+}

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,9 +11,12 @@ import (
 )
 
 const (
-	testTLSUser = "tlsuser"
-	testTLSPass = "tlspass"
-	testTLSHost = "cluster.example.com"
+	testTLSUser  = "tlsuser"
+	testTLSPass  = "tlspass"
+	testTLSHost  = "cluster.example.com"
+	testUUIDUser = "uuiduser"
+	testUUIDPass = "uuidpass"
+	testUUIDHost = "uuidhost"
 )
 
 // createTLSTestConfig creates a populated test configuration.
@@ -24,6 +28,18 @@ func createTLSTestConfig(protocol string) *config.Config {
 	cfg.Password = testTLSPass
 	cfg.Protocol = protocol
 	cfg.UUIDRepresentation = config.UUIDRepresentationStandard
+	return cfg
+}
+
+// buildUUIDConfig creates a Config with specified UUID representation.
+func buildUUIDConfig(rep string) *config.Config {
+	cfg := config.DefaultConfig()
+	cfg.Host = testUUIDHost
+	cfg.Port = testOptionsPort
+	cfg.Username = testUUIDUser
+	cfg.Password = testUUIDPass
+	cfg.Protocol = config.ProtocolMongoDB
+	cfg.UUIDRepresentation = rep
 	return cfg
 }
 
@@ -59,4 +75,29 @@ func TestBuildClientOptionsWithTLS_NilConfig(t *testing.T) {
 	clientOpts := BuildClientOptionsWithTLS(nil, true)
 	require.NotNil(t, clientOpts)
 	assert.Equal(t, "mongodb://:27017/?uuidRepresentation=unspecified&tls=true", clientOpts.GetURI())
+}
+
+// TestBuildClientOptions_UUIDRepresentations tests options with all UUID representations.
+func TestBuildClientOptions_UUIDRepresentations(t *testing.T) {
+	testCases := []string{
+		config.UUIDRepresentationUnspecified,
+		config.UUIDRepresentationStandard,
+		config.UUIDRepresentationCSharpLegacy,
+		config.UUIDRepresentationJavaLegacy,
+		config.UUIDRepresentationPythonLegacy,
+	}
+
+	for _, rep := range testCases {
+		t.Run(rep, func(t *testing.T) {
+			cfg := buildUUIDConfig(rep)
+			clientOpts := BuildClientOptions(cfg)
+			require.NotNil(t, clientOpts)
+
+			expected := fmt.Sprintf(
+				"mongodb://%s:%s@%s:%d/?uuidRepresentation=%s&tls=false",
+				testUUIDUser, testUUIDPass, testUUIDHost, testOptionsPort, rep,
+			)
+			assert.Equal(t, expected, clientOpts.GetURI())
+		})
+	}
 }

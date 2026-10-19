@@ -1,5 +1,10 @@
 package central
 
+import (
+	"context"
+	"log/slog"
+)
+
 // processEvent formats and dispatches a single LogEvent to slog.
 func (w *Worker) processEvent(event *LogEvent) {
 	if event == nil {
@@ -14,6 +19,36 @@ func (w *Worker) processEvent(event *LogEvent) {
 	targetLogger := w.eventLogger(event.Logger)
 	targetLogger.LogAttrs(ctx, event.Level, event.Message, attrs...)
 	w.handleExitEvent(ctx, event, targetLogger)
+}
+
+func (w *Worker) handleExitEvent(ctx context.Context, event *LogEvent, logger *slog.Logger) {
+	if event == nil {
+		return
+	}
+	w.dispatchExit(ctx, event, logger)
+}
+
+func (w *Worker) dispatchExit(ctx context.Context, event *LogEvent, logger *slog.Logger) {
+	if event.ExitFlag == ExitAbnormal {
+		w.handleAbnormalExit(ctx, event, logger)
+		return
+	}
+	if event.ExitFlag == ExitGraceful {
+		w.handleGracefulExit()
+	}
+}
+
+func (w *Worker) handleAbnormalExit(ctx context.Context, event *LogEvent, logger *slog.Logger) {
+	logAbnormalStack(ctx, event, logger)
+	flushes := w.drainChannel()
+	w.invokeExit(1)
+	closeFlushChannels(flushes)
+}
+
+func (w *Worker) handleGracefulExit() {
+	flushes := w.drainChannel()
+	w.invokeExit(0)
+	closeFlushChannels(flushes)
 }
 
 func (w *Worker) drainChannel() []chan struct{} {

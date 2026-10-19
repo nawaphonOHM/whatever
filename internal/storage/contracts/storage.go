@@ -4,8 +4,52 @@ package contracts
 
 import (
 	"context"
+	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+)
+
+// Provider represents the cloud object storage provider type.
+type Provider string
+
+const (
+	// ProviderAWS represents native Amazon Web Services S3.
+	ProviderAWS Provider = "aws"
+	// ProviderGCS represents Google Cloud Storage XML API (S3-compatible).
+	ProviderGCS Provider = "gcs"
+	// ProviderS3Compatible represents generic S3-compatible storage providers (e.g. MinIO, LocalStack).
+	ProviderS3Compatible Provider = "s3-compatible"
+)
+
+// String returns the string representation of the Provider.
+func (p Provider) String() string {
+	return string(p)
+}
+
+// IsValid checks if the provider is one of the supported provider types.
+func (p Provider) IsValid() bool {
+	switch p {
+	case ProviderAWS, ProviderGCS, ProviderS3Compatible:
+		return true
+	default:
+		return false
+	}
+}
+
+// Sentinel errors for cloud object storage operations.
+var (
+	// ErrObjectNotFound is returned when the requested object key does not exist.
+	ErrObjectNotFound = errors.New("storage object not found")
+	// ErrBucketNotFound is returned when the target bucket does not exist.
+	ErrBucketNotFound = errors.New("storage bucket not found")
+	// ErrNilClient is returned when an operation is performed on an uninitialized client.
+	ErrNilClient = errors.New("storage client is not initialized")
+	// ErrNilConfig is returned when operations receive a nil configuration.
+	ErrNilConfig = errors.New("storage config cannot be nil")
+	// ErrAccessDenied is returned when the storage service rejects the request (HTTP 403).
+	ErrAccessDenied = errors.New("storage access denied")
+	// ErrInvalidExpiry is returned when a pre-signed URL expiration is negative or exceeds 7 days.
+	ErrInvalidExpiry = errors.New("storage presign expiry is invalid")
 )
 
 // Storage defines the abstract contract interface for cloud object storage operations.

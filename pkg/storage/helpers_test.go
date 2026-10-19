@@ -91,3 +91,19 @@ func TestReadAllBody_NilHandling(t *testing.T) {
 	assert.NoError(t, errNilBody)
 	assert.Nil(t, dataNilBody)
 }
+
+func TestNewPutObjectBytes(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte("payload data")
+	input := storage.NewPutObjectBytes("my-bucket", "my/key.txt", payload, "text/plain")
+
+	assert.Equal(t, "my-bucket", input.Bucket)
+	assert.Equal(t, "my/key.txt", input.Key)
+	assert.Equal(t, "text/plain", input.ContentType)
+	require.NotNil(t, input.Body)
+
+	readData, err := io.ReadAll(input.Body)
+	require.NoError(t, err)
+	assert.Equal(t, payload, readData)
+}

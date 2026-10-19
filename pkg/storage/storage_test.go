@@ -78,3 +78,10 @@ func TestPublicModels_Presign(t *testing.T) {
 	presigned := storage.PresignedURL{URL: testURLString}
 	assert.Equal(t, testURLString, presigned.URL)
 }
+
+func TestPublicSentinelErrors_AccessAndExpiry(t *testing.T) {
+	t.Parallel()
+
+	assert.ErrorIs(t, storage.ErrAccessDenied, contracts.ErrAccessDenied)
+	assert.ErrorIs(t, storage.ErrInvalidExpiry, contracts.ErrInvalidExpiry)
+}

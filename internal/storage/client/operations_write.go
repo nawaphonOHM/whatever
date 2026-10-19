@@ -81,3 +81,27 @@ func (c *Client) PutObject(ctx context.Context, input contracts.PutObjectInput) 
 	}
 	return out, nil
 }
+
+// DeleteObject removes an object by key from the storage bucket.
+func (c *Client) DeleteObject(
+	ctx context.Context,
+	input contracts.DeleteObjectInput,
+) (*contracts.DeleteObjectOutput, error) {
+	if c.isNil() {
+		return nil, contracts.ErrNilClient
+	}
+	reqCtx, cancel := c.requestContext(ctx)
+	defer cancel()
+	bucket := c.resolveBucket(input.Bucket)
+	params := &s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(input.Key),
+	}
+	out, err := c.rawClient.DeleteObject(reqCtx, params)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return &contracts.DeleteObjectOutput{
+		VersionID: aws.ToString(out.VersionId),
+	}, nil
+}

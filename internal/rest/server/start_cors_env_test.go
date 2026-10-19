@@ -12,6 +12,26 @@ import (
 
 const envCORSPathKey = "OHM9996_SERVER_CORS_PATH"
 
+// TestNewFromBluePrint_DefaultCORS verifies disabled CORS when unconfigured.
+func TestNewFromBluePrint_DefaultCORS(t *testing.T) {
+	t.Setenv(envGinMode, gin.TestMode)
+	t.Setenv(envCORSPathKey, "")
+
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(""))
+	require.NoError(t, err)
+
+	preflight := executePreflight(srv, testPingPath, preflightOpts{
+		origin: testAppOrigin,
+		method: http.MethodGet,
+	})
+	assert.NotEqual(t, http.StatusNoContent, preflight.Code)
+	assertNoCORSHeaders(t, preflight)
+
+	getResp := executeGET(srv, testPingPath, testAppOrigin)
+	assert.Equal(t, http.StatusOK, getResp.Code)
+	assertNoCORSHeaders(t, getResp)
+}
+
 // TestNewFromBluePrint_EnvFallback verifies environment variable fallback when Meta.CorsPath is empty.
 func TestNewFromBluePrint_EnvFallback(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)

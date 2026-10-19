@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 )
 
@@ -34,17 +33,6 @@ func (p *PProblemDetails) StatusCode() int {
 		return http.StatusInternalServerError
 	}
 	return p.Status
-}
-
-// Write serializes the PProblemDetails object to the Gin context.
-func (p *PProblemDetails) Write(c *gin.Context) {
-	if c == nil || p == nil {
-		return
-	}
-	p.ensureDefaults(c)
-	contracts.WriteHeaders(c, p.headers)
-	c.Header("Content-Type", MediaTypeProblemJSON)
-	c.JSON(p.StatusCode(), p)
 }
 
 // WithHeader attaches a custom key-value header to the response.
