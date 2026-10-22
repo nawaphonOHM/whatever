@@ -30,6 +30,7 @@ func assertBaseDefaults(t *testing.T, cfg *Config) {
 	assert.Equal(t, gin.ReleaseMode, cfg.Mode)
 	assert.Empty(t, cfg.AppVersion)
 	assert.Equal(t, "application", cfg.DisplayName)
+	assert.Equal(t, "standard", cfg.APIGroup)
 	assert.Equal(t, testDefaultTimeout, cfg.ReadTimeout)
 	assert.Equal(t, testDefaultTimeout, cfg.WriteTimeout)
 	assert.Equal(t, testDefaultIdleTimeout, cfg.IdleTimeout)

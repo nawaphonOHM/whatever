@@ -19,6 +19,7 @@ func setServerConfigOverrides(t *testing.T) {
 		"OHM9996_APP_VERSION":                      "2.0.0",
 		"OHM9996_SERVER_DISPLAY_NAME":              "custom-app",
 		"OHM9996_SERVER_PROFILE_PATH":              "/custom/pprof",
+		"OHM9996_SERVER_API_GROUP":                 "raw",
 		"OHM9996_SERVER_READ_TIMEOUT":              "15s",
 		"OHM9996_SERVER_WRITE_TIMEOUT":             "15s",
 		"OHM9996_SERVER_IDLE_TIMEOUT":              "90s",

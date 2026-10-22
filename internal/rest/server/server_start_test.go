@@ -23,6 +23,7 @@ func assertPingOK(t *testing.T, port int) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.NoError(t, resp.Body.Close())
+	http.DefaultClient.CloseIdleConnections()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "pong", string(body))
 }

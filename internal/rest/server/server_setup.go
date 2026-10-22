@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	otelcfg "github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/config"
 	otelmw "github.com/nawaphonOHM/whatever/v3/internal/opentelemetry/middleware"
-	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/middleware"
 	intprob "github.com/nawaphonOHM/whatever/v3/internal/rest/problem"
 	"github.com/nawaphonOHM/whatever/v3/pkg/logger"
@@ -76,23 +75,4 @@ func (s *Server) SetupDefaultMiddlewares(
 	loggerSkipPaths ...string,
 ) {
 	s.SetupMiddlewares(middleware.DefaultCORSConfig(), loggerSkipPaths...)
-}
-
-// RegisterRoutes mounts registrations without version metadata.
-func (s *Server) RegisterRoutes(
-	registrations []*contracts.RRestAPIRegistration,
-) error {
-	return RegisterRoutesWithVersion(s.Engine, registrations, "")
-}
-
-// RegisterRoutesWithVersion mounts registrations with version.
-func (s *Server) RegisterRoutesWithVersion(
-	registrations []*contracts.RRestAPIRegistration,
-	version string,
-) error {
-	return RegisterRoutesWithVersion(
-		s.Engine,
-		registrations,
-		version,
-	)
 }

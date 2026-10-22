@@ -32,6 +32,7 @@ func assertOverrideBase(t *testing.T, cfg *Config) {
 	assert.Equal(t, "test", cfg.Mode)
 	assert.Equal(t, "2.0.0", cfg.AppVersion)
 	assert.Equal(t, "custom-app", cfg.DisplayName)
+	assert.Equal(t, "raw", cfg.APIGroup)
 	assert.Equal(t, overrideTimeout15s, cfg.ReadTimeout)
 	assert.Equal(t, overrideTimeout15s, cfg.WriteTimeout)
 	assert.Equal(t, overrideIdleTimeout90s, cfg.IdleTimeout)

@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"syscall"
 	"testing"
@@ -51,13 +52,22 @@ func signalAndWait(t *testing.T, errCh <-chan error) {
 	assert.NoError(t, waitErr(t, errCh))
 }
 
+func closeRespBody(t *testing.T, resp *http.Response) {
+	t.Helper()
+	if _, copyErr := io.Copy(io.Discard, resp.Body); copyErr != nil {
+		t.Logf("failed to discard body: %v", copyErr)
+	}
+	assert.NoError(t, resp.Body.Close())
+	http.DefaultClient.CloseIdleConnections()
+}
+
 // assertStatusOK performs GET and asserts status OK.
 func assertStatusOK(t *testing.T, url string) {
 	t.Helper()
 	resp, err := http.Get(url)
 	require.NoError(t, err)
+	defer closeRespBody(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.NoError(t, resp.Body.Close())
 }
 
 // fetchHealth decodes the reserved health payload.
@@ -71,7 +81,7 @@ func fetchHealth(
 	)
 	resp, err := http.Get(url)
 	require.NoError(t, err)
-	defer func() { assert.NoError(t, resp.Body.Close()) }()
+	defer closeRespBody(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	var body testSuccessResponse[health.Status]
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
