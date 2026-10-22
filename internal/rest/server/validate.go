@@ -16,8 +16,11 @@ type validatedRoute struct {
 
 // registrationScan holds mutable validation state.
 type registrationScan struct {
-	seen map[string]bool
-	out  []*validatedRoute
+	firstGroup contracts.APIGroup
+	seen       map[string]bool
+	out        []*validatedRoute
+	firstIdx   int
+	hasGroup   bool
 }
 
 // appendRoute validates one API and appends it when valid.
@@ -68,6 +71,9 @@ func (s *registrationScan) scanRegistration(
 	regIdx int,
 ) error {
 	if err := requireRegistration(reg, regIdx); err != nil {
+		return err
+	}
+	if err := s.checkAPIGroup(reg, regIdx); err != nil {
 		return err
 	}
 	return s.scanAPIs(reg)

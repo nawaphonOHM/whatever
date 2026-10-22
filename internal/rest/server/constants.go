@@ -36,4 +36,16 @@ var (
 	ErrInvalidMethod = errors.New(
 		"invalid HTTP method",
 	)
+	ErrMixedAPIGroups = errors.New(
+		"cannot mix standard and raw API registration groups in blueprint",
+	)
+	ErrAPIGroupMismatch = errors.New(
+		"registration API group does not match OHM9996_SERVER_API_GROUP configuration",
+	)
+	ErrInvalidAPIGroup = errors.New(
+		"invalid OHM9996_SERVER_API_GROUP configuration",
+	)
+	ErrInvalidRegistrationGroup = errors.New(
+		"invalid API registration group",
+	)
 )

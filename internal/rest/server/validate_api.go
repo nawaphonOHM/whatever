@@ -13,37 +13,21 @@ func routeKey(method, path string) string {
 
 // errNilAPIAt formats a nil API validation error.
 func errNilAPIAt(apiIdx int, prefix contracts.Pathz) error {
-	return fmt.Errorf(
-		"%w: API at index %d in prefix %q is nil",
-		ErrNilAPI,
-		apiIdx,
-		prefix,
-	)
+	return fmt.Errorf("%w: API at index %d in prefix %q is nil", ErrNilAPI, apiIdx, prefix)
 }
 
 // errNilHandlerAt formats a nil handler validation error.
 func errNilHandlerAt(apiIdx int, prefix contracts.Pathz) error {
-	return fmt.Errorf(
-		"%w: API at index %d in prefix %q has nil handler",
-		ErrNilHandler,
-		apiIdx,
-		prefix,
-	)
+	return fmt.Errorf("%w: API at index %d in prefix %q has nil handler", ErrNilHandler, apiIdx, prefix)
 }
 
 // errInvalidMethodAt formats an invalid method validation error.
 func errInvalidMethodAt(apiIdx int, method contracts.HTTPMethod) error {
-	return fmt.Errorf(
-		"%w: API at index %d has invalid method code %d",
-		ErrInvalidMethod,
-		apiIdx,
-		method,
-	)
+	return fmt.Errorf("%w: API at index %d has invalid method code %d", ErrInvalidMethod, apiIdx, method)
 }
 
 // checkAPINonNil ensures API and handler pointers exist.
-func checkAPINonNil(api *contracts.ExportableAPI, apiIdx int,
-	prefix contracts.Pathz) error {
+func checkAPINonNil(api *contracts.ExportableAPI, apiIdx int, prefix contracts.Pathz) error {
 	if api == nil {
 		return errNilAPIAt(apiIdx, prefix)
 	}
@@ -54,11 +38,7 @@ func checkAPINonNil(api *contracts.ExportableAPI, apiIdx int,
 }
 
 // validateAPIEntry checks a single exportable API entry.
-func validateAPIEntry(
-	api *contracts.ExportableAPI,
-	apiIdx int,
-	prefix contracts.Pathz,
-) error {
+func validateAPIEntry(api *contracts.ExportableAPI, apiIdx int, prefix contracts.Pathz) error {
 	if err := checkAPINonNil(api, apiIdx, prefix); err != nil {
 		return err
 	}
@@ -68,30 +48,13 @@ func validateAPIEntry(
 	return nil
 }
 
-// checkReservedPath rejects framework-owned probe paths.
-func checkReservedPath(fullPath string) error {
-	if fullPath != ReservedHealthPath && fullPath != ReservedReadyPath {
-		return nil
-	}
-	return fmt.Errorf(
-		"%w: path %q is reserved for framework "+
-			"liveness/readiness probes",
-		ErrReservedPath,
-		fullPath,
-	)
-}
-
 // checkDuplicate marks a route key or reports collision.
 func checkDuplicate(seen map[string]bool, key string) error {
 	if !seen[key] {
 		seen[key] = true
 		return nil
 	}
-	return fmt.Errorf(
-		"%w: %s is registered more than once",
-		ErrDuplicateRoute,
-		key,
-	)
+	return fmt.Errorf("%w: %s is registered more than once", ErrDuplicateRoute, key)
 }
 
 // buildValidatedRoute creates a route and checks collisions.
@@ -100,11 +63,11 @@ func buildValidatedRoute(
 	api *contracts.ExportableAPI,
 	seen map[string]bool,
 ) (*validatedRoute, error) {
-	fullPath := CalculateFullPath(reg.Version, reg.Prefix, api.Path)
-	if err := checkReservedPath(fullPath); err != nil {
+	fullPath := CalculateFullPath(reg.Group, reg.Version, reg.Prefix, api.Path)
+	methodStr := api.Method.GetName()
+	if err := checkReservedPath(methodStr, fullPath); err != nil {
 		return nil, err
 	}
-	methodStr := api.Method.GetName()
 	key := routeKey(methodStr, fullPath)
 	if err := checkDuplicate(seen, key); err != nil {
 		return nil, err

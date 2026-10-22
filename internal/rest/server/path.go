@@ -73,14 +73,18 @@ func isReservedPath(fullPath string) bool {
 	return fullPath == ReservedHealthPath || fullPath == ReservedReadyPath
 }
 
-// CalculateFullPath builds the canonical route path.
+// CalculateFullPath builds the canonical route path according to the API group.
 // Reserved health/readiness endpoints are never version-prefixed or API-prefixed.
 func CalculateFullPath(
+	group contracts.APIGroup,
 	version contracts.APIVersioning,
 	prefix, path contracts.Pathz,
 ) string {
 	fullPath := cleanFullPath(string(prefix), string(path))
 	if isReservedPath(fullPath) {
+		return fullPath
+	}
+	if group == contracts.APIGroupRaw {
 		return fullPath
 	}
 	return applyAPIPrefix(version, fullPath)
