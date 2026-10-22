@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -40,8 +41,37 @@ func newContext(ginCtx *gin.Context) *Context {
 	return ctx
 }
 
+// Context returns the standard request context.Context.
+// If the underlying request is not set, it safely returns context.Background().
+func (c *Context) Context() context.Context {
+	if r := c.request(); r != nil {
+		return r.Context()
+	}
+	return context.Background()
+}
+
+func (c *Context) request() *http.Request {
+	if c == nil {
+		return nil
+	}
+	if c.Request != nil {
+		return c.Request
+	}
+	return c.ginRequest()
+}
+
+func (c *Context) ginRequest() *http.Request {
+	if c.ginCtx != nil {
+		return c.ginCtx.Request
+	}
+	return nil
+}
+
 // SetRequest updates the request on both Context and the Gin context.
 func (c *Context) SetRequest(r *http.Request) {
+	if c == nil {
+		return
+	}
 	c.Request = r
 	if c.ginCtx != nil {
 		c.ginCtx.Request = r
