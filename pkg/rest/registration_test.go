@@ -35,12 +35,19 @@ func TestRestAPIRegistrationStructure(t *testing.T) {
 	reg := &RRestAPIRegistration{
 		Prefix: "/api", Apis: []*ExportableAPI{api},
 		Version: APIVersioning(1),
+		Group:   APIGroupStandard,
 	}
 	assert.Equal(t, Pathz("/api"), reg.Prefix)
 	assert.Equal(t, APIVersioning(1), reg.Version)
+	assert.Equal(t, APIGroupStandard, reg.Group)
 	require.Len(t, reg.Apis, 1)
 	assert.Equal(t, Pathz("/status"), reg.Apis[0].Path)
 	assert.Equal(t, GET, reg.Apis[0].Method)
+}
+
+func TestAPIGroupConstants(t *testing.T) {
+	assert.Equal(t, APIGroup("standard"), APIGroupStandard)
+	assert.Equal(t, APIGroup("raw"), APIGroupRaw)
 }
 
 func TestHandlerAndMiddlewareContracts(t *testing.T) {

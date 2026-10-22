@@ -6,6 +6,16 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 )
 
+// APIGroup represents the API registration group mode.
+type APIGroup = contracts.APIGroup
+
+const (
+	// APIGroupStandard prefixes routes with /api and version segments (/api/v[N]).
+	APIGroupStandard = contracts.APIGroupStandard
+	// APIGroupRaw registers routes directly with prefix and path without /api or version segments.
+	APIGroupRaw = contracts.APIGroupRaw
+)
+
 // ExportableAPI defines a single API route endpoint.
 type ExportableAPI = contracts.ExportableAPI
 
