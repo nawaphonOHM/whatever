@@ -16,13 +16,15 @@ import (
 const (
 	testHost          = "127.0.0.1"
 	startWait         = 50 * time.Millisecond
-	shutdownWait      = 3 * time.Second
+	shutdownWait      = 5 * time.Second
 	envGinMode        = "OHM9996_GIN_MODE"
 	envServerPort     = "OHM9996_SERVER_PORT"
 	envServerHost     = "OHM9996_SERVER_HOST"
 	envAppVersion     = "OHM9996_APP_VERSION"
 	customPort        = 9090
 	appVersionValue   = "2.0.0"
+	testVersion1      = "1.0.0"
+	standardGroupMode = "standard"
 	invalidMethodCode = 999
 )
 

@@ -20,6 +20,14 @@ var (
 	ErrNilHandler = server.ErrNilHandler
 	// ErrInvalidMethod indicates an invalid HTTP method was provided.
 	ErrInvalidMethod = server.ErrInvalidMethod
+	// ErrMixedAPIGroups indicates blueprints contain mixed standard and raw API registration groups.
+	ErrMixedAPIGroups = server.ErrMixedAPIGroups
+	// ErrAPIGroupMismatch indicates registration group does not match configuration.
+	ErrAPIGroupMismatch = server.ErrAPIGroupMismatch
+	// ErrInvalidAPIGroup indicates server configuration has an invalid API group.
+	ErrInvalidAPIGroup = server.ErrInvalidAPIGroup
+	// ErrInvalidRegistrationGroup indicates an invalid API registration group was specified.
+	ErrInvalidRegistrationGroup = server.ErrInvalidRegistrationGroup
 )
 
 // StartREST initializes and runs the HTTP server.

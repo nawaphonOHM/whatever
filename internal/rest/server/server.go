@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/callstack"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 )
 
@@ -42,10 +43,18 @@ func applyGinMode(c *Config) {
 	gin.SetMode(c.Mode)
 }
 
+// ensureAPIGroup defaults empty APIGroup to standard.
+func ensureAPIGroup(c *Config) {
+	if c.APIGroup == "" {
+		c.APIGroup = string(contracts.APIGroupStandard)
+	}
+}
+
 // applyServerDefaults normalizes config before server construction.
 func applyServerDefaults(c *Config) {
 	applyGinMode(c)
 	ensureShutdownTimeout(c)
+	ensureAPIGroup(c)
 }
 
 // buildHTTPServer constructs the net/http server for cfg and engine.
@@ -67,6 +76,9 @@ func New(cfg *Config) (*Server, error) {
 		logging.Info("entering REST server initialization state")
 		c := resolveConfig(cfg)
 		applyServerDefaults(c)
+		if _, err := resolveConfigAPIGroup(c.APIGroup); err != nil {
+			return nil, err
+		}
 		logging.Info("REST server configuration choices",
 			"host", c.Host,
 			"port", c.Port,
@@ -75,6 +87,7 @@ func New(cfg *Config) (*Server, error) {
 			"access_log", c.EnableAccessLog,
 			"metrics", c.EnableMetrics,
 			"profiling", c.EnableProfiling,
+			"api_group", c.APIGroup,
 		)
 		engine := gin.New()
 		if err := applyServerOptions(engine, c); err != nil {

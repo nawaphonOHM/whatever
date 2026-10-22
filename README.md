@@ -456,27 +456,37 @@ The `pkg/rest` package exports typed integer constants for all standard HTTP met
 | `rest.OPTIONS` | `OPTIONS` | Describe communication options for resource |
 | `rest.TRACE` | `TRACE` | Perform message loop-back test |
 
-### API Versioning & Path Resolution
+### API Registration Groups & Path Resolution
 
-Full route paths are computed using a deterministic canonical resolution algorithm:
+Full route paths are computed using a deterministic canonical resolution algorithm based on the registration's `Group`:
 
-$$\text{FullPath} = \text{CalculateFullPath}(\text{Version}, \text{Prefix}, \text{Path})$$
+$$\text{FullPath} = \text{CalculateFullPath}(\text{Group}, \text{Version}, \text{Prefix}, \text{Path})$$
 
-#### Resolution Rules:
-1. **API and Version Prefixes**: Every non-reserved route is resolved as `/api[/v<N>]<prefix><path>`. If `Version > 0`, the version segment `/v<Version>` follows the mandatory `/api` prefix (e.g. `Version: 1` becomes `/api/v1`). If the prefix already starts with `/api` or `/v<Version>`, that leading token is not duplicated.
-2. **Path Normalization**: Leading slashes are added automatically if omitted, trailing slashes are trimmed (except for the root `/`), and redundant duplicate slashes (`//`) are normalized to a single slash (`/`).
-3. **Reserved Route Exemption**: Internal framework health probes (`/health`, `/ready`) are never API- or version-prefixed and remain available at those exact paths.
+#### Supported API Groups:
+1. **Standard Group (`rest.APIGroupStandard` or `""`)**:
+   - Every non-reserved route is resolved as `/api[/v<N>]<prefix><path>`. If `Version > 0`, the version segment `/v<Version>` follows the mandatory `/api` prefix (e.g. `Version: 1` becomes `/api/v1`). If the prefix already starts with `/api` or `/v<Version>`, that leading token is not duplicated.
+   - Default when `Group` is omitted for backward compatibility.
+2. **Raw Group (`rest.APIGroupRaw`)**:
+   - Directly uses `/<prefix><path>` without prepending `/api` and without injecting `/v<Version>` segments.
+   - Useful for webhooks, root-level endpoints, or custom external routing schemes.
+3. **Configuration & Case Sensitivity**: The active group mode is configured via the `OHM9996_SERVER_API_GROUP` environment variable (`"standard"` or `"raw"`, defaulting to `"standard"`). The value is case-sensitive and requires an exact lowercase match; any invalid casing, unrecognized mode, or leading/trailing whitespace causes server startup to fail immediately with `rest.ErrInvalidAPIGroup`.
+4. **Path Normalization**: Leading slashes are added automatically if omitted, trailing slashes are trimmed (except for the root `/`), and redundant duplicate slashes (`//`) are normalized to a single slash (`/`).
+5. **Reserved Route Exemption**: Internal framework health probes (`/health`, `/ready`) are never API- or version-prefixed and remain available at those exact paths across both groups.
 
 #### Path Resolution Examples:
 
-| Version | Prefix | Endpoint Path | Resolved Full Path |
-|---|---|---|---|
-| `1` | `"/items"` | `""` | `/api/v1/items` |
-| `1` | `"/items"` | `"/:id"` | `/api/v1/items/:id` |
-| `2` | `"orders"` | `"summary"` | `/api/v2/orders/summary` |
-| `1` | `"/v1/billing"` | `"/invoices"` | `/api/v1/billing/invoices` |
-| `0` | `"/webhooks"` | `"/stripe"` | `/api/webhooks/stripe` |
-| `0` | `""` | `"/ping"` | `/api/ping` |
+| Group | Version | Prefix | Endpoint Path | Resolved Full Path |
+|---|---|---|---|---|
+| `APIGroupStandard` | `1` | `"/items"` | `""` | `/api/v1/items` |
+| `APIGroupStandard` | `1` | `"/items"` | `"/:id"` | `/api/v1/items/:id` |
+| `APIGroupStandard` | `2` | `"orders"` | `"summary"` | `/api/v2/orders/summary` |
+| `APIGroupStandard` | `1` | `"/v1/billing"` | `"/invoices"` | `/api/v1/billing/invoices` |
+| `APIGroupStandard` | `0` | `"/webhooks"` | `"/stripe"` | `/api/webhooks/stripe` |
+| `APIGroupStandard` | `0` | `""` | `"/ping"` | `/api/ping` |
+| `APIGroupRaw` | `0` | `"/v1/custom"` | `"/hook"` | `/v1/custom/hook` |
+| `APIGroupRaw` | `0` | `"/webhooks"` | `"/events"` | `/webhooks/events` |
+| `APIGroupRaw` | `0` | `""` | `"/metrics-custom"` | `/metrics-custom` |
+| `APIGroupRaw` | `0` | `"/ping"` | `""` | `/ping` |
 
 ### CORS & Blueprint Metadata
 
@@ -572,6 +582,10 @@ When `rest.StartREST(bp)` is invoked, it validates the entire route graph before
 | `rest.ErrInvalidMethod` | An unknown HTTP method constant was provided | Use a valid constant (`rest.GET`, `rest.POST`, etc.) |
 | `rest.ErrReservedPath` | A route conflicts with `/health` or `/ready` | Change the route path; `/health` and `/ready` are reserved for framework health probes |
 | `rest.ErrDuplicateRoute` | Two or more APIs share the same HTTP method and resolved path | Resolve overlapping route paths or methods across registration groups |
+| `rest.ErrMixedAPIGroups` | Blueprint contains registrations mixing `standard` and `raw` groups | Use either `rest.APIGroupStandard` or `rest.APIGroupRaw` consistently across all registrations |
+| `rest.ErrAPIGroupMismatch` | Blueprint API group does not match `OHM9996_SERVER_API_GROUP` | Align registration `Group` with the server environment group setting |
+| `rest.ErrInvalidAPIGroup` | `OHM9996_SERVER_API_GROUP` contains an invalid or unrecognized mode | Set `OHM9996_SERVER_API_GROUP` to `"standard"` or `"raw"` |
+| `rest.ErrInvalidRegistrationGroup` | A registration specifies an invalid `Group` value | Set `Group` to `rest.APIGroupStandard`, `rest.APIGroupRaw`, or leave empty |
 
 ---
 
@@ -1990,6 +2004,7 @@ Configuration values are resolved using the following order of precedence:
 | `OHM9996_GIN_MODE` | `string` | `release` | Gin engine mode (`debug`, `release`, `test`) |
 | `OHM9996_APP_VERSION` | `string` | `""` | Application version reported in `/health` and `/ready` response metadata |
 | `OHM9996_SERVER_DISPLAY_NAME` | `string` | `application` | Service display name used for startup banners and logging |
+| `OHM9996_SERVER_API_GROUP` | `string` | `standard` | Active API registration group mode (exact case-sensitive match: `standard` or `raw`) |
 | `OHM9996_SERVER_ENABLE_ACCESS_LOG` | `bool` | `true` | Enables HTTP request access logging middleware |
 | `OHM9996_SERVER_ENABLE_METRICS` | `bool` | `false` | Enables Prometheus `/metrics` scraping endpoint |
 | `OHM9996_SERVER_ENABLE_PROFILING` | `bool` | `false` | Enables runtime pprof profiling endpoints |

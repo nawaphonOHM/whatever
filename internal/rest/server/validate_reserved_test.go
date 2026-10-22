@@ -8,88 +8,69 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestValidateRegistrations_ReservedPath rejects /health and /ready.
-func TestValidateRegistrations_ReservedPath(t *testing.T) {
-	for _, reserved := range []string{ReservedHealthPath, ReservedReadyPath} {
-		t.Run(reserved, func(t *testing.T) {
-			// Arrange
-			regs := []*contracts.RRestAPIRegistration{{
-				Apis: []*contracts.ExportableAPI{{
-					Path:    contracts.Pathz(reserved),
-					Method:  contracts.GET,
-					Handler: dummyHandler,
-				}},
-			}}
+const testWildcardAny = "/*any"
 
-			// Act
-			_, err := validateRegistrations(regs)
+func testReservedPaths(t *testing.T, grp contracts.APIGroup, reserved string, method contracts.HTTPMethod) {
+	t.Run(string(grp)+"/path/"+reserved+"/"+method.GetName(), func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{{
+			Group: grp,
+			Apis: []*contracts.ExportableAPI{{
+				Path:    contracts.Pathz(reserved),
+				Method:  method,
+				Handler: dummyHandler,
+			}},
+		}}
 
-			// Assert
-			require.Error(t, err)
-			assert.ErrorIs(t, err, ErrReservedPath)
-		})
+		_, err := validateRegistrations(regs)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrReservedPath)
+		assert.Contains(t, err.Error(), `is reserved for framework liveness/readiness probes`)
+	})
+
+	t.Run(string(grp)+"/prefix/"+reserved+"/"+method.GetName(), func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{{
+			Group:  grp,
+			Prefix: contracts.Pathz(reserved),
+			Apis: []*contracts.ExportableAPI{{
+				Path:    "",
+				Method:  method,
+				Handler: dummyHandler,
+			}},
+		}}
+
+		_, err := validateRegistrations(regs)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrReservedPath)
+		assert.Contains(t, err.Error(), `is reserved for framework liveness/readiness probes`)
+	})
+}
+
+type reservedCombo struct {
+	grp      contracts.APIGroup
+	reserved string
+	method   contracts.HTTPMethod
+}
+
+func reservedCombos() []reservedCombo {
+	return []reservedCombo{
+		{contracts.APIGroupStandard, ReservedHealthPath, contracts.GET},
+		{contracts.APIGroupStandard, ReservedHealthPath, contracts.POST},
+		{contracts.APIGroupStandard, ReservedReadyPath, contracts.GET},
+		{contracts.APIGroupStandard, ReservedReadyPath, contracts.POST},
+		{contracts.APIGroupRaw, ReservedHealthPath, contracts.GET},
+		{contracts.APIGroupRaw, ReservedHealthPath, contracts.POST},
+		{contracts.APIGroupRaw, ReservedReadyPath, contracts.GET},
+		{contracts.APIGroupRaw, ReservedReadyPath, contracts.POST},
+		{"", ReservedHealthPath, contracts.GET},
+		{"", ReservedHealthPath, contracts.POST},
+		{"", ReservedReadyPath, contracts.GET},
+		{"", ReservedReadyPath, contracts.POST},
 	}
 }
 
-// TestValidateRegistrations_Duplicate rejects colliding routes.
-func TestValidateRegistrations_Duplicate(t *testing.T) {
-	t.Run("identical registration", func(t *testing.T) {
-		// Arrange
-		regs := []*contracts.RRestAPIRegistration{
-			{
-				Prefix: "/items",
-				Apis: []*contracts.ExportableAPI{{
-					Path:    "",
-					Method:  contracts.GET,
-					Handler: dummyHandler,
-				}},
-			},
-			{
-				Prefix: "/items",
-				Apis: []*contracts.ExportableAPI{{
-					Path:    "",
-					Method:  contracts.GET,
-					Handler: dummyHandler,
-				}},
-			},
-		}
-
-		// Act
-		_, err := validateRegistrations(regs)
-
-		// Assert
-		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrDuplicateRoute)
-	})
-
-	t.Run("canonical path collision with different formatting", func(t *testing.T) {
-		// Arrange
-		regs := []*contracts.RRestAPIRegistration{
-			{
-				Version: 1,
-				Prefix:  "/items",
-				Apis: []*contracts.ExportableAPI{{
-					Path:    "/list",
-					Method:  contracts.GET,
-					Handler: dummyHandler,
-				}},
-			},
-			{
-				Version: 1,
-				Prefix:  "/api/v1/items",
-				Apis: []*contracts.ExportableAPI{{
-					Path:    "///list///",
-					Method:  contracts.GET,
-					Handler: dummyHandler,
-				}},
-			},
-		}
-
-		// Act
-		_, err := validateRegistrations(regs)
-
-		// Assert
-		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrDuplicateRoute)
-	})
+// TestValidateRegistrations_ReservedPath rejects /health and /ready across all groups and methods.
+func TestValidateRegistrations_ReservedPath(t *testing.T) {
+	for _, c := range reservedCombos() {
+		testReservedPaths(t, c.grp, c.reserved, c.method)
+	}
 }

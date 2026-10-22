@@ -32,7 +32,7 @@ func registerBlueprint(
 		return err
 	}
 	srv.SetupMiddlewares(corsCfg)
-	return srv.RegisterRoutesWithVersion(bp.Apis(), cfg.AppVersion)
+	return srv.RegisterRoutesWithConfig(bp.Apis(), cfg)
 }
 
 func newServerFromConfig(
