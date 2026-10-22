@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"context"
 	"time"
 )
 
@@ -8,6 +9,9 @@ import (
 // handlers and middlewares. It provides getter and binding access to the
 // incoming HTTP request without exposing internal mutating operations.
 type Context interface {
+	// Context returns the request context.Context.
+	Context() context.Context
+
 	// ClientIP returns the client's IP address.
 	ClientIP() string
 	// ContentType returns the request Content-Type header.
