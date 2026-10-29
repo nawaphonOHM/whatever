@@ -1,63 +1,67 @@
 package rest
 
 import (
+	"fmt"
 	"testing"
-
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/require"
 )
 
-func testPublicStdEnvRawBlueprint(t *testing.T) {
-	buf, reset := setupTestLogger(t)
-	defer reset()
+const testHostURLFormat = "http://%s:%d"
 
-	t.Setenv(envGinMode, gin.TestMode)
+func testPublicEnvIgnoredRawBlueprint(t *testing.T) {
+	port := getFreePort(t)
+	setStartEnv(t, port)
 	t.Setenv(envAPIGroup, testGroupStd)
-	bp := makeGroupBlueprint(APIGroupRaw, testCustomPath)
 
-	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrAPIGroupMismatch)
-	assertPublicRouteRegError(t, buf.Bytes(), errMismatchSubstr)
+	bp := makeGroupBlueprint(APIGroupRaw, testCustomPath)
+	errCh := startRESTAsync(bp)
+	baseURL := fmt.Sprintf(testHostURLFormat, testHost, port)
+
+	assertStatusOK(t, baseURL+testCustomPath)
+	signalAndWait(t, errCh)
 }
 
-func testPublicRawEnvStdBlueprint(t *testing.T) {
-	buf, reset := setupTestLogger(t)
-	defer reset()
-
-	t.Setenv(envGinMode, gin.TestMode)
+func testPublicEnvIgnoredStdBlueprint(t *testing.T) {
+	port := getFreePort(t)
+	setStartEnv(t, port)
 	t.Setenv(envAPIGroup, testGroupRaw)
+
 	bp := makeGroupBlueprint(APIGroupStandard, testCustomPath)
+	errCh := startRESTAsync(bp)
+	baseURL := fmt.Sprintf(testHostURLFormat, testHost, port)
 
-	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrAPIGroupMismatch)
-	assertPublicRouteRegError(t, buf.Bytes(), errMismatchSubstr)
+	assertStatusOK(t, baseURL+"/api"+testCustomPath)
+	signalAndWait(t, errCh)
 }
 
-func testPublicRawEnvDefaultBlueprint(t *testing.T) {
-	buf, reset := setupTestLogger(t)
-	defer reset()
-
-	t.Setenv(envGinMode, gin.TestMode)
+func testPublicEnvIgnoredDefaultBlueprint(t *testing.T) {
+	port := getFreePort(t)
+	setStartEnv(t, port)
 	t.Setenv(envAPIGroup, testGroupRaw)
+
 	bp := makeGroupBlueprint("", testCustomPath)
+	errCh := startRESTAsync(bp)
+	baseURL := fmt.Sprintf(testHostURLFormat, testHost, port)
 
-	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrAPIGroupMismatch)
-	assertPublicRouteRegError(t, buf.Bytes(), errMismatchSubstr)
+	assertStatusOK(t, baseURL+"/api"+testCustomPath)
+	signalAndWait(t, errCh)
 }
 
-func testPublicDefaultEnvRawBlueprint(t *testing.T) {
-	buf, reset := setupTestLogger(t)
-	defer reset()
+func testPublicEnvIgnoredInvalidEnv(t *testing.T) {
+	port := getFreePort(t)
+	setStartEnv(t, port)
+	t.Setenv(envAPIGroup, "invalid_environment_group")
 
-	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, "")
 	bp := makeGroupBlueprint(APIGroupRaw, testCustomPath)
+	errCh := startRESTAsync(bp)
+	baseURL := fmt.Sprintf(testHostURLFormat, testHost, port)
 
-	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrAPIGroupMismatch)
-	assertPublicRouteRegError(t, buf.Bytes(), errMismatchSubstr)
+	assertStatusOK(t, baseURL+testCustomPath)
+	signalAndWait(t, errCh)
 }
 
-func TestStartREST_GroupMismatchErrors(t *testing.T) {
-	t.Run("StdEnv_RawBlueprint", testPublicStdEnvRawBlueprint)
-	t.Run("RawEnv_StdBlueprint", testPublicRawEnvStdBlueprint)
-	t.Run("RawEnv_DefaultBlueprint", testPublicRawEnvDefaultBlueprint)
-	t.Run("DefaultEnv_RawBlueprint", testPublicDefaultEnvRawBlueprint)
+func TestStartREST_APIGroupEnvIgnored(t *testing.T) {
+	t.Run("StdEnv_RawBlueprint_Ignored", testPublicEnvIgnoredRawBlueprint)
+	t.Run("RawEnv_StdBlueprint_Ignored", testPublicEnvIgnoredStdBlueprint)
+	t.Run("RawEnv_DefaultBlueprint_Ignored", testPublicEnvIgnoredDefaultBlueprint)
+	t.Run("InvalidEnv_Blueprint_Ignored", testPublicEnvIgnoredInvalidEnv)
 }

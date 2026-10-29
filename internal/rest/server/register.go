@@ -34,21 +34,21 @@ func RegisterRoutesWithConfig(
 ) error {
 	decorated := callstack.DecorateErr("server.RegisterRoutesWithConfig", func() error {
 		c := resolveConfig(cfg)
-		validated, err := validateRegistrationsWithConfig(registrations, c)
+		res, err := validateRegistrationsWithResult(registrations)
 		if err != nil {
 			return err
 		}
 		logging.Info("registering REST routes",
-			"route_count", len(validated),
+			"route_count", len(res.routes),
 			"version", c.AppVersion,
-			"api_group", c.APIGroup,
+			"api_group", string(res.group),
 		)
 		mountHealthEndpoints(engine, c.AppVersion)
 		logging.Info("registered reserved health endpoints",
 			"paths", []string{ReservedHealthPath, ReservedReadyPath},
 		)
-		mountvalidatedRoutes(engine, validated)
-		logging.Info("route registration complete", "total_routes", len(validated)+2)
+		mountvalidatedRoutes(engine, res.routes)
+		logging.Info("route registration complete", "total_routes", len(res.routes)+2)
 		return nil
 	})
 	return decorated()

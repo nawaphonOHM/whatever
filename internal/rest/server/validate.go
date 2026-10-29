@@ -79,10 +79,16 @@ func (s *registrationScan) scanRegistration(
 	return s.scanAPIs(reg)
 }
 
-// validateRegistrations validates registrations and returns routes.
-func validateRegistrations(
+// validationResult encapsulates validated routes and resolved API group.
+type validationResult struct {
+	group  contracts.APIGroup
+	routes []*validatedRoute
+}
+
+// validateRegistrationsWithResult validates registrations and returns routes and resolved group.
+func validateRegistrationsWithResult(
 	registrations []*contracts.RRestAPIRegistration,
-) ([]*validatedRoute, error) {
+) (*validationResult, error) {
 	scan := &registrationScan{
 		seen: make(map[string]bool),
 		out:  make([]*validatedRoute, 0),
@@ -92,5 +98,19 @@ func validateRegistrations(
 			return nil, err
 		}
 	}
-	return scan.out, nil
+	return &validationResult{
+		routes: scan.out,
+		group:  scan.effectiveGroup(),
+	}, nil
+}
+
+// validateRegistrations validates registrations and returns routes.
+func validateRegistrations(
+	registrations []*contracts.RRestAPIRegistration,
+) ([]*validatedRoute, error) {
+	res, err := validateRegistrationsWithResult(registrations)
+	if err != nil {
+		return nil, err
+	}
+	return res.routes, nil
 }

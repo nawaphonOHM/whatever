@@ -29,7 +29,6 @@ func TestStartREST_RawSuccess(t *testing.T) {
 	// Arrange
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	t.Setenv("OHM9996_SERVER_API_GROUP", "raw")
 	errCh := startRESTAsync(rawPingBlueprint())
 
 	// Act & Assert business route without /api prefix

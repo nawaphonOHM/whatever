@@ -4,18 +4,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func assertPublicServerCreateError(t *testing.T, data []byte, substr string) {
-	t.Helper()
-	entries := parseJSONLogEntries(data)
-	srvEntry := findLogByMsg(entries, "failed to create REST server")
-	require.NotNil(t, srvEntry)
-	assert.Equal(t, logLevelError, srvEntry[logKeyLevel])
-	assert.Contains(t, srvEntry["error"], substr)
-}
 
 func makeGroupBlueprint(group APIGroup, path Pathz) *BluePrint {
 	api := &ExportableAPI{Path: path, Method: GET, Handler: func(Context) Response { return OK("ok") }}
@@ -50,32 +40,19 @@ func testPublicInvalidRegistrationGroup(t *testing.T) {
 	assertPublicRouteRegError(t, buf.Bytes(), "invalid API registration group")
 }
 
-func testPublicInvalidEnvGroup(t *testing.T) {
+func testPublicNilRegistrationGroup(t *testing.T) {
 	buf, reset := setupTestLogger(t)
 	defer reset()
 
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, "invalid_mode")
+	bp := NewBluePrint().WithAPIs(nil)
 
-	require.ErrorIs(t, startRESTWithTimeout(t, NewBluePrint()), ErrInvalidAPIGroup)
-	assertPublicServerCreateError(t, buf.Bytes(), "invalid OHM9996_SERVER_API_GROUP configuration")
-}
-
-func testPublicInvalidEnvGroupWithRoutes(t *testing.T) {
-	buf, reset := setupTestLogger(t)
-	defer reset()
-
-	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, "invalid_mode")
-	bp := makeGroupBlueprint(APIGroupStandard, "/users")
-
-	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrInvalidAPIGroup)
-	assertPublicServerCreateError(t, buf.Bytes(), "invalid OHM9996_SERVER_API_GROUP configuration")
+	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrNilRegistration)
+	assertPublicRouteRegError(t, buf.Bytes(), "registration cannot be nil")
 }
 
 func TestStartREST_GroupLifecycleErrors(t *testing.T) {
 	t.Run("MixedAPIGroups", testPublicMixedAPIGroups)
 	t.Run("InvalidRegistrationGroup", testPublicInvalidRegistrationGroup)
-	t.Run("InvalidEnvGroup_EmptyBP", testPublicInvalidEnvGroup)
-	t.Run("InvalidEnvGroup_WithRoutes", testPublicInvalidEnvGroupWithRoutes)
+	t.Run("NilRegistrationGroup", testPublicNilRegistrationGroup)
 }

@@ -59,7 +59,6 @@ func assertStandardProbesAndMissingPaths(t *testing.T, baseURL string) {
 func TestStartREST_StandardGroupE2E(t *testing.T) {
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	t.Setenv(envAPIGroup, testGroupStd)
 
 	errCh := startRESTAsync(newStandardE2EBlueprint())
 	baseURL := fmt.Sprintf("http://%s:%d", testHost, port)
