@@ -5,16 +5,17 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestServer_RegisterRoutes_RawSuccess tests route registration on a raw server.
+// TestServer_RegisterRoutes_RawSuccess tests route registration on a server.
 func TestServer_RegisterRoutes_RawSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Server.RegisterRoutes with raw config", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode, AppVersion: "1.0.0"})
+		srv, err := New(&Config{AppVersion: "1.0.0"})
 		require.NoError(t, err)
 		require.NoError(t, srv.RegisterRoutes(rawRegs()))
 
@@ -23,7 +24,7 @@ func TestServer_RegisterRoutes_RawSuccess(t *testing.T) {
 	})
 
 	t.Run("Server.RegisterRoutesWithVersion with raw config", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode})
+		srv, err := New(&Config{})
 		require.NoError(t, err)
 		require.NoError(t, srv.RegisterRoutesWithVersion(rawRegs(), "3.0.0"))
 
@@ -32,7 +33,7 @@ func TestServer_RegisterRoutes_RawSuccess(t *testing.T) {
 	})
 
 	t.Run("Server.RegisterRoutesWithConfig with nil config on raw server", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode})
+		srv, err := New(&Config{})
 		require.NoError(t, err)
 		require.NoError(t, srv.RegisterRoutesWithConfig(rawRegs(), nil))
 
@@ -40,17 +41,8 @@ func TestServer_RegisterRoutes_RawSuccess(t *testing.T) {
 		assert.Equal(t, http.StatusOK, code)
 	})
 
-	t.Run("Server.RegisterRoutesWithConfig matching raw override", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode})
-		require.NoError(t, err)
-		require.NoError(t, srv.RegisterRoutesWithConfig(rawRegs(), &Config{APIGroup: rawGroupMode}))
-
-		code, _ := getJSON(t, srv.Engine, testRawGroupPath)
-		assert.Equal(t, http.StatusOK, code)
-	})
-
-	t.Run("Server.RegisterRoutesWithConfig empty override inherits raw group", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode})
+	t.Run("Server.RegisterRoutesWithConfig custom config", func(t *testing.T) {
+		srv, err := New(&Config{})
 		require.NoError(t, err)
 		require.NoError(t, srv.RegisterRoutesWithConfig(rawRegs(), &Config{AppVersion: "2.0.0"}))
 
@@ -59,33 +51,41 @@ func TestServer_RegisterRoutes_RawSuccess(t *testing.T) {
 	})
 }
 
-// TestServer_RegisterRoutes_RejectConflictingOverride rejects changing APIGroup at runtime.
-func TestServer_RegisterRoutes_RejectConflictingOverride(t *testing.T) {
+// TestServer_RegisterRoutes_RejectInvalidRegistrations tests rejection of invalid or mixed blueprints.
+func TestServer_RegisterRoutes_RejectInvalidRegistrations(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("raw server rejects standard override", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode})
+	t.Run("server rejects mixed group blueprint", func(t *testing.T) {
+		srv, err := New(&Config{})
 		require.NoError(t, err)
-		err = srv.RegisterRoutesWithConfig(stdRegs(), &Config{APIGroup: "standard"})
+		mixed := append(rawRegs(), stdRegs()...)
+		err = srv.RegisterRoutes(mixed)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrAPIGroupMismatch)
-		assert.Contains(t, err.Error(), `config override group "standard" conflicts with server group "raw"`)
+		assert.ErrorIs(t, err, ErrMixedAPIGroups)
 	})
 
-	t.Run("standard server rejects raw override", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: "standard"})
+	t.Run("server rejects invalid registration group", func(t *testing.T) {
+		srv, err := New(&Config{})
 		require.NoError(t, err)
-		err = srv.RegisterRoutesWithConfig(rawRegs(), &Config{APIGroup: rawGroupMode})
+		invalidReg := []*contracts.RRestAPIRegistration{{
+			Group:  "invalid_mode",
+			Prefix: "/invalid",
+			Apis: []*contracts.ExportableAPI{{
+				Path:    "/ping",
+				Method:  contracts.GET,
+				Handler: func(contracts.Context) contracts.Response { return testOK("ok") },
+			}},
+		}}
+		err = srv.RegisterRoutes(invalidReg)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrAPIGroupMismatch)
-		assert.Contains(t, err.Error(), `config override group "raw" conflicts with server group "standard"`)
+		assert.ErrorIs(t, err, ErrInvalidRegistrationGroup)
 	})
 
-	t.Run("server rejects invalid override group", func(t *testing.T) {
-		srv, err := New(&Config{APIGroup: rawGroupMode})
+	t.Run("server rejects nil registration in slice", func(t *testing.T) {
+		srv, err := New(&Config{})
 		require.NoError(t, err)
-		err = srv.RegisterRoutesWithConfig(rawRegs(), &Config{APIGroup: "invalid_override"})
+		err = srv.RegisterRoutes([]*contracts.RRestAPIRegistration{nil})
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrInvalidAPIGroup)
+		assert.ErrorIs(t, err, ErrNilRegistration)
 	})
 }

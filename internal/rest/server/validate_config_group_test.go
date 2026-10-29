@@ -22,67 +22,73 @@ func makeRegWithGroup(group contracts.APIGroup, prefix string) *contracts.RRestA
 	}
 }
 
-// TestValidateRegistrationsWithConfig_Success tests valid standard, raw, and default group configs.
-func TestValidateRegistrationsWithConfig_Success(t *testing.T) {
+// TestValidateRegistrationsWithResult_Success tests valid standard, raw, and default group registrations.
+func TestValidateRegistrationsWithResult_Success(t *testing.T) {
 	tests := []struct {
-		name     string
-		cfgGroup string
-		regGroup contracts.APIGroup
+		name          string
+		expectedPath  string
+		expectedGroup contracts.APIGroup
+		regs          []*contracts.RRestAPIRegistration
 	}{
-		{"standard config with standard reg", "standard", contracts.APIGroupStandard},
-		{"standard config with default empty reg", "standard", ""},
-		{"empty config (default standard) with standard reg", "", contracts.APIGroupStandard},
-		{"raw config with raw reg", "raw", contracts.APIGroupRaw},
+		{
+			name: "standard explicit", expectedPath: "/api/std/ping", expectedGroup: contracts.APIGroupStandard,
+			regs: []*contracts.RRestAPIRegistration{makeRegWithGroup(contracts.APIGroupStandard, "/std")},
+		},
+		{
+			name: "default empty", expectedPath: "/api/default/ping", expectedGroup: contracts.APIGroupStandard,
+			regs: []*contracts.RRestAPIRegistration{makeRegWithGroup("", "/default")},
+		},
+		{
+			name: "raw group", expectedPath: "/raw/ping", expectedGroup: contracts.APIGroupRaw,
+			regs: []*contracts.RRestAPIRegistration{makeRegWithGroup(contracts.APIGroupRaw, "/raw")},
+		},
+		{
+			name: "empty list", expectedGroup: contracts.APIGroupStandard,
+			regs: make([]*contracts.RRestAPIRegistration, 0),
+		},
+		{
+			name: "nil slice", expectedGroup: contracts.APIGroupStandard,
+			regs: nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := &Config{APIGroup: tt.cfgGroup}
-			regs := []*contracts.RRestAPIRegistration{makeRegWithGroup(tt.regGroup, "/v1")}
-			routes, err := validateRegistrationsWithConfig(regs, cfg)
+			res, err := validateRegistrationsWithResult(tt.regs)
 			require.NoError(t, err)
-			assert.NotEmpty(t, routes)
+			require.NotNil(t, res)
+			assert.Equal(t, tt.expectedGroup, res.group)
+			if len(tt.regs) > 0 {
+				require.NotEmpty(t, res.routes)
+				assert.Equal(t, tt.expectedPath, res.routes[0].Path)
+			}
 		})
 	}
 }
 
-// TestValidateRegistrationsWithConfig_Mismatch rejects blueprint group differing from server config.
-func TestValidateRegistrationsWithConfig_Mismatch(t *testing.T) {
-	tests := []struct {
-		name     string
-		cfgGroup string
-		regGroup contracts.APIGroup
-	}{
-		{"standard config with raw reg", "standard", contracts.APIGroupRaw},
-		{"raw config with standard reg", "raw", contracts.APIGroupStandard},
-		{"raw config with default empty reg", "raw", ""},
-	}
+// TestValidateRegistrationsWithResult_Errors tests errors returned by validateRegistrationsWithResult.
+func TestValidateRegistrationsWithResult_Errors(t *testing.T) {
+	t.Run("mixed group returns ErrMixedAPIGroups", func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{
+			makeRegWithGroup(contracts.APIGroupStandard, "/std"),
+			makeRegWithGroup(contracts.APIGroupRaw, "/raw"),
+		}
+		res, err := validateRegistrationsWithResult(regs)
+		require.ErrorIs(t, err, ErrMixedAPIGroups)
+		assert.Nil(t, res)
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &Config{APIGroup: tt.cfgGroup}
-			regs := []*contracts.RRestAPIRegistration{makeRegWithGroup(tt.regGroup, "/v1")}
-			routes, err := validateRegistrationsWithConfig(regs, cfg)
-			require.Error(t, err)
-			assert.Nil(t, routes)
-			assert.ErrorIs(t, err, ErrAPIGroupMismatch)
+	t.Run("invalid group returns ErrInvalidRegistrationGroup", func(t *testing.T) {
+		res, err := validateRegistrationsWithResult([]*contracts.RRestAPIRegistration{
+			makeRegWithGroup("invalid_group", "/invalid"),
 		})
-	}
-}
+		require.ErrorIs(t, err, ErrInvalidRegistrationGroup)
+		assert.Nil(t, res)
+	})
 
-// TestValidateRegistrationsWithConfig_InvalidConfig rejects invalid config group even with no regs.
-func TestValidateRegistrationsWithConfig_InvalidConfig(t *testing.T) {
-	cfg := &Config{APIGroup: "invalid_mode"}
-
-	// with registrations
-	regs := []*contracts.RRestAPIRegistration{makeRegWithGroup(contracts.APIGroupStandard, "/v1")}
-	_, err := validateRegistrationsWithConfig(regs, cfg)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrInvalidAPIGroup)
-	assert.Contains(t, err.Error(), "invalid_mode")
-
-	// with empty registrations
-	_, err = validateRegistrationsWithConfig(nil, cfg)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrInvalidAPIGroup)
+	t.Run("nil registration in slice returns ErrNilRegistration", func(t *testing.T) {
+		res, err := validateRegistrationsWithResult([]*contracts.RRestAPIRegistration{nil})
+		require.ErrorIs(t, err, ErrNilRegistration)
+		assert.Nil(t, res)
+	})
 }

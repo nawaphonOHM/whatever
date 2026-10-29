@@ -34,7 +34,6 @@ type Config struct {
 	AppVersion  string `env:"OHM9996_APP_VERSION" envDefault:""`
 	DisplayName string `env:"OHM9996_SERVER_DISPLAY_NAME" envDefault:"application"`
 	ProfilePath string `env:"OHM9996_SERVER_PROFILE_PATH" envDefault:"/debug/pprof"`
-	APIGroup    string `env:"OHM9996_SERVER_API_GROUP" envDefault:"standard"`
 	HTTPFields
 	ProxyFields
 	ResourceFields
@@ -57,7 +56,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Host: "", Port: defaultServerPort, Mode: gin.ReleaseMode, AppVersion: "", DisplayName: "application",
 		ProfilePath:     "/debug/pprof",
-		APIGroup:        "standard",
 		EnableAccessLog: true, EnableMetrics: false, EnableProfiling: false,
 		ReadTimeout: timeout, WriteTimeout: timeout, IdleTimeout: idle, ShutdownTimeout: timeout,
 		HTTPFields:     defaultHTTPFields(),

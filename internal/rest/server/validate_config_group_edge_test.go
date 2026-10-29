@@ -8,32 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestValidateRegistrationsWithConfig_MixedGroupPriority ensures mixed groups fail before config mismatch.
-func TestValidateRegistrationsWithConfig_MixedGroupPriority(t *testing.T) {
-	mixedRegs := []*contracts.RRestAPIRegistration{
-		makeRegWithGroup(contracts.APIGroupStandard, "/std"),
-		makeRegWithGroup(contracts.APIGroupRaw, "/raw"),
-	}
+const testEmptyPrefix = "/empty"
 
-	t.Run("mixed blueprint with raw server config returns ErrMixedAPIGroups", func(t *testing.T) {
-		cfg := &Config{APIGroup: "raw"}
-		_, err := validateRegistrationsWithConfig(mixedRegs, cfg)
-		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrMixedAPIGroups)
-		assert.NotErrorIs(t, err, ErrAPIGroupMismatch)
-	})
-
-	t.Run("mixed blueprint with standard server config returns ErrMixedAPIGroups", func(t *testing.T) {
-		cfg := &Config{APIGroup: "standard"}
-		_, err := validateRegistrationsWithConfig(mixedRegs, cfg)
-		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrMixedAPIGroups)
-	})
-}
-
-// TestResolveConfigAPIGroup_StrictExactValues verifies rejection of casing and whitespace.
-func TestResolveConfigAPIGroup_StrictExactValues(t *testing.T) {
-	invalidValues := []string{
+// TestResolveAPIGroup_StrictExactValues verifies rejection of casing and whitespace in registration groups.
+func TestResolveAPIGroup_StrictExactValues(t *testing.T) {
+	invalidValues := []contracts.APIGroup{
 		"RAW",
 		" raw ",
 		"raw ",
@@ -46,28 +25,58 @@ func TestResolveConfigAPIGroup_StrictExactValues(t *testing.T) {
 	}
 
 	for _, val := range invalidValues {
-		t.Run(val, func(t *testing.T) {
-			_, err := resolveConfigAPIGroup(val)
+		t.Run(string(val), func(t *testing.T) {
+			_, err := resolveAPIGroup(val, 0)
 			require.Error(t, err)
-			assert.ErrorIs(t, err, ErrInvalidAPIGroup)
-			assert.Contains(t, err.Error(), val)
+			assert.ErrorIs(t, err, ErrInvalidRegistrationGroup)
+			assert.Contains(t, err.Error(), string(val))
 		})
 	}
 }
 
-// TestValidateRegistrationsWithConfig_NilConfig checks nil config fallback to standard.
-func TestValidateRegistrationsWithConfig_NilConfig(t *testing.T) {
-	t.Run("nil config with standard registrations succeeds", func(t *testing.T) {
-		regs := []*contracts.RRestAPIRegistration{makeRegWithGroup(contracts.APIGroupStandard, "/v1")}
-		routes, err := validateRegistrationsWithConfig(regs, nil)
+// TestValidateRegistrationsWithResult_DefaultAndExplicitCombinations tests combinations of empty and explicit groups.
+func TestValidateRegistrationsWithResult_DefaultAndExplicitCombinations(t *testing.T) {
+	t.Run("default empty then explicit standard succeeds", func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{
+			makeRegWithGroup("", testEmptyPrefix),
+			makeRegWithGroup(contracts.APIGroupStandard, "/std"),
+		}
+		res, err := validateRegistrationsWithResult(regs)
 		require.NoError(t, err)
-		assert.NotEmpty(t, routes)
+		assert.Equal(t, contracts.APIGroupStandard, res.group)
+		assert.Len(t, res.routes, 2)
 	})
 
-	t.Run("nil config with raw registrations fails with mismatch", func(t *testing.T) {
-		regs := []*contracts.RRestAPIRegistration{makeRegWithGroup(contracts.APIGroupRaw, "/v1")}
-		_, err := validateRegistrationsWithConfig(regs, nil)
+	t.Run("explicit standard then default empty succeeds", func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{
+			makeRegWithGroup(contracts.APIGroupStandard, "/std"),
+			makeRegWithGroup("", testEmptyPrefix),
+		}
+		res, err := validateRegistrationsWithResult(regs)
+		require.NoError(t, err)
+		assert.Equal(t, contracts.APIGroupStandard, res.group)
+		assert.Len(t, res.routes, 2)
+	})
+
+	t.Run("raw then default empty fails with mixed error", func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{
+			makeRegWithGroup(contracts.APIGroupRaw, "/raw"),
+			makeRegWithGroup("", testEmptyPrefix),
+		}
+		res, err := validateRegistrationsWithResult(regs)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrAPIGroupMismatch)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, ErrMixedAPIGroups)
+	})
+
+	t.Run("default empty then raw fails with mixed error", func(t *testing.T) {
+		regs := []*contracts.RRestAPIRegistration{
+			makeRegWithGroup("", testEmptyPrefix),
+			makeRegWithGroup(contracts.APIGroupRaw, "/raw"),
+		}
+		res, err := validateRegistrationsWithResult(regs)
+		require.Error(t, err)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, ErrMixedAPIGroups)
 	})
 }

@@ -74,7 +74,6 @@ func assertRawProbesAndMissingPaths(t *testing.T, baseURL string) {
 func TestStartREST_RawGroupE2E(t *testing.T) {
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	t.Setenv(envAPIGroup, testGroupRaw)
 
 	errCh := startRESTAsync(newRawE2EBlueprint())
 	baseURL := fmt.Sprintf("http://%s:%d", testHost, port)

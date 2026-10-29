@@ -58,7 +58,7 @@ func assertHealthAndReady(t *testing.T, engine *gin.Engine) {
 func TestRegisterRoutesWithConfig_Raw(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
-	cfg := &Config{APIGroup: rawGroupMode, AppVersion: "2.0.0"}
+	cfg := &Config{AppVersion: "2.0.0"}
 	require.NoError(t, RegisterRoutesWithConfig(engine, rawRegs(), cfg))
 
 	code, body := getJSON(t, engine, testRawGroupPath)
@@ -67,7 +67,7 @@ func TestRegisterRoutesWithConfig_Raw(t *testing.T) {
 	assertHealthAndReady(t, engine)
 }
 
-// TestRegisterRoutesWithConfig_NilConfig defaults to standard group.
+// TestRegisterRoutesWithConfig_NilConfig derives group from registrations with nil config.
 func TestRegisterRoutesWithConfig_NilConfig(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -79,10 +79,12 @@ func TestRegisterRoutesWithConfig_NilConfig(t *testing.T) {
 		assertHealthAndReady(t, engine)
 	})
 
-	t.Run("nil cfg rejects raw routes", func(t *testing.T) {
+	t.Run("nil cfg mounts raw routes", func(t *testing.T) {
 		engine := gin.New()
-		err := RegisterRoutesWithConfig(engine, rawRegs(), nil)
-		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrAPIGroupMismatch)
+		require.NoError(t, RegisterRoutesWithConfig(engine, rawRegs(), nil))
+		code, body := getJSON(t, engine, testRawGroupPath)
+		assert.Equal(t, http.StatusOK, code)
+		assert.Contains(t, string(body), "raw1")
+		assertHealthAndReady(t, engine)
 	})
 }

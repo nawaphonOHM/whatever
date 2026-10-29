@@ -15,7 +15,6 @@ func testPublicRawReservedPath(t *testing.T) {
 	defer reset()
 
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, testGroupRaw)
 	bp := makeGroupBlueprint(APIGroupRaw, "/health")
 
 	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrReservedPath)
@@ -27,7 +26,6 @@ func testPublicRawCatchAllReserved(t *testing.T) {
 	defer reset()
 
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, testGroupRaw)
 	bp := makeGroupBlueprint(APIGroupRaw, "/*any")
 
 	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrReservedPath)
@@ -39,7 +37,6 @@ func testPublicRawDuplicateRoute(t *testing.T) {
 	defer reset()
 
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, testGroupRaw)
 	api1 := &ExportableAPI{Path: "/ping", Method: GET, Handler: func(Context) Response { return OK("1") }}
 	api2 := &ExportableAPI{Path: "/ping", Method: GET, Handler: func(Context) Response { return OK("2") }}
 	bp := NewBluePrint().WithAPIs(&RRestAPIRegistration{Group: APIGroupRaw, Apis: []*ExportableAPI{api1, api2}})
@@ -53,7 +50,6 @@ func testPublicRawPostProbeReserved(t *testing.T) {
 	defer reset()
 
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envAPIGroup, testGroupRaw)
 	apiHealthPost := &ExportableAPI{
 		Path:    "/health",
 		Method:  POST,
@@ -80,7 +76,6 @@ func assertAllowedPostCatchAll(t *testing.T, port int) {
 func testPublicRawAllowedPostCatchAll(t *testing.T) {
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	t.Setenv(envAPIGroup, testGroupRaw)
 
 	apiCatchAllPost := &ExportableAPI{
 		Path:    "/*any",

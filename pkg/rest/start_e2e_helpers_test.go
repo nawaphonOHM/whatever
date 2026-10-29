@@ -15,11 +15,10 @@ import (
 )
 
 const (
-	envAPIGroup       = "OHM9996_SERVER_API_GROUP"
-	testGroupRaw      = "raw"
-	testGroupStd      = "standard"
-	testCustomPath    = "/custom"
-	errMismatchSubstr = "does not match OHM9996_SERVER_API_GROUP"
+	envAPIGroup    = "OHM9996_SERVER_API_GROUP"
+	testGroupRaw   = "raw"
+	testGroupStd   = "standard"
+	testCustomPath = "/custom"
 )
 
 // assertResponseStatus executes a GET request and asserts the HTTP status code.

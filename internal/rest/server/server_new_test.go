@@ -61,7 +61,6 @@ func TestDefaultConfig_Values(t *testing.T) {
 	require.NotNil(t, cfg)
 	assert.Equal(t, defaultServerPort, cfg.Port)
 	assert.Equal(t, gin.ReleaseMode, cfg.Mode)
-	assert.Equal(t, "standard", cfg.APIGroup)
 	assert.Equal(t, defaultTimeoutSec*time.Second, cfg.ReadTimeout)
 	assert.Equal(t, defaultTimeoutSec*time.Second, cfg.WriteTimeout)
 	assert.Equal(t, defaultIdleTimeoutSec*time.Second, cfg.IdleTimeout)

@@ -20,16 +20,6 @@ func TestSentinelErrors(t *testing.T) {
 			message:  "cannot mix standard and raw API registration groups in blueprint",
 		},
 		{
-			err:      ErrAPIGroupMismatch,
-			expected: server.ErrAPIGroupMismatch,
-			message:  "registration API group does not match OHM9996_SERVER_API_GROUP configuration",
-		},
-		{
-			err:      ErrInvalidAPIGroup,
-			expected: server.ErrInvalidAPIGroup,
-			message:  "invalid OHM9996_SERVER_API_GROUP configuration",
-		},
-		{
 			err:      ErrInvalidRegistrationGroup,
 			expected: server.ErrInvalidRegistrationGroup,
 			message:  "invalid API registration group",

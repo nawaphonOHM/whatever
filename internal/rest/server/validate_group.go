@@ -65,6 +65,14 @@ func (s *registrationScan) matchExistingGroup(grp contracts.APIGroup, regIdx int
 	return nil
 }
 
+// effectiveGroup returns the resolved API group of the scan, defaulting to standard.
+func (s *registrationScan) effectiveGroup() contracts.APIGroup {
+	if s.hasGroup {
+		return s.firstGroup
+	}
+	return contracts.APIGroupStandard
+}
+
 // checkAPIGroup verifies that all registrations share the same effective API group.
 func (s *registrationScan) checkAPIGroup(
 	reg *contracts.RRestAPIRegistration,

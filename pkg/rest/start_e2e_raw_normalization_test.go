@@ -65,7 +65,6 @@ func assertRawDelete(t *testing.T, baseURL string) {
 func TestStartREST_RawNormalizationAndMethods(t *testing.T) {
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	t.Setenv(envAPIGroup, testGroupRaw)
 
 	errCh := startRESTAsync(newRawNormalizationBlueprint())
 	baseURL := fmt.Sprintf("http://%s:%d", testHost, port)
