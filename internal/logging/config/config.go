@@ -19,6 +19,11 @@ const (
 // Format represents supported log output formats.
 type Format string
 
+// CloudProviderGCP Supported cloud provider constants.
+const (
+	CloudProviderGCP = "gcp"
+)
+
 // Supported standard output stream destination constants.
 const (
 	OutputStdout  = "stdout"
@@ -33,6 +38,7 @@ const (
 	DefaultFormat                  = "text"
 	DefaultAddSource               = false
 	DefaultDisableTraceCorrelation = false
+	DefaultCloudProvider           = ""
 )
 
 // Sentinel errors for logging configuration validation.
@@ -51,11 +57,12 @@ var (
 )
 
 // Config defines the configuration options for application logging.
-// All environment variable keys use the OHM9996_LOGGING_ prefix.
+// Environment variable keys use the OHM9996_LOGGING_ prefix or OHM9996_CLOUD_PROVIDER.
 type Config struct {
 	Output                  string `env:"OHM9996_LOGGING_OUTPUT" envDefault:"stdout"`
 	Level                   string `env:"OHM9996_LOGGING_LEVEL" envDefault:"info"`
 	Format                  string `env:"OHM9996_LOGGING_FORMAT" envDefault:"text"`
+	CloudProvider           string `env:"OHM9996_CLOUD_PROVIDER" envDefault:""`
 	AddSource               bool   `env:"OHM9996_LOGGING_ADD_SOURCE" envDefault:"false"`
 	DisableTraceCorrelation bool   `env:"OHM9996_LOGGING_DISABLE_TRACE_CORRELATION" envDefault:"false"`
 }
@@ -71,6 +78,7 @@ func DefaultConfig() *Config {
 		Output:                  DefaultOutput,
 		Level:                   DefaultLevel,
 		Format:                  DefaultFormat,
+		CloudProvider:           DefaultCloudProvider,
 		AddSource:               DefaultAddSource,
 		DisableTraceCorrelation: DefaultDisableTraceCorrelation,
 	}
