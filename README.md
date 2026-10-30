@@ -1078,7 +1078,7 @@ engine.Use(logger.Logger())
 engine.Use(logger.WithLogger(slog.Default()))
 
 // Or attach with custom configuration (e.g. skipping noisy health checks)
-engine.Use(logger.WithConfig(logger.Config{
+engine.Use(logger.WithConfig(&logger.Config{
 	Logger:    slog.Default(),
 	SkipPaths: []string{"/health", "/ready", "/metrics"},
 }))
