@@ -13,6 +13,8 @@ const (
 	testEnvFormat                  = "OHM9996_LOGGING_FORMAT"
 	testEnvAddSource               = "OHM9996_LOGGING_ADD_SOURCE"
 	testEnvDisableTraceCorrelation = "OHM9996_LOGGING_DISABLE_TRACE_CORRELATION"
+	testEnvCloudProvider           = "OHM9996_CLOUD_PROVIDER"
+	testEnvOtelEnabled             = "OHM9996_OTEL_ENABLED"
 
 	testDotEnvPerm = 0o600
 
@@ -47,6 +49,8 @@ func clearEnv(t *testing.T) {
 		testEnvFormat,
 		testEnvAddSource,
 		testEnvDisableTraceCorrelation,
+		testEnvCloudProvider,
+		testEnvOtelEnabled,
 	}
 	for _, k := range keys {
 		unsetEnv(t, k)

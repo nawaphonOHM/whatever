@@ -38,6 +38,8 @@ func verifyDefaultConfig(t *testing.T, cfg *Config) {
 	assert.Equal(t, DefaultFormat, cfg.Format)
 	assert.Equal(t, DefaultAddSource, cfg.AddSource)
 	assert.Equal(t, DefaultDisableTraceCorrelation, cfg.DisableTraceCorrelation)
+	assert.Equal(t, DefaultCloudProvider, cfg.CloudProvider)
+	assert.False(t, cfg.IsGCP())
 	verifyDefaultLevel(t, cfg)
 	verifyDefaultOutput(t, cfg)
 }
@@ -56,6 +58,7 @@ func TestSetDefaults(t *testing.T) {
 		Format:                  testJSON,
 		AddSource:               true,
 		DisableTraceCorrelation: true,
+		CloudProvider:           CloudProviderGCP,
 	}
 	cfg.SetDefaults()
 	verifyDefaultConfig(t, cfg)

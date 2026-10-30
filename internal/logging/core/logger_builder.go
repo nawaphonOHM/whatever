@@ -35,31 +35,6 @@ func BuildReplaceAttr(custom ReplaceAttrFunc) ReplaceAttrFunc {
 	}
 }
 
-func isStandardIO(w io.Writer) bool {
-	return w == nil || w == os.Stdout || w == os.Stderr
-}
-
-func isDiscardOrStdin(w io.Writer) bool {
-	return w == os.Stdin || w == io.Discard
-}
-
-func isSpecialStream(w io.Writer) bool {
-	if isStandardIO(w) {
-		return true
-	}
-	return isDiscardOrStdin(w)
-}
-
-func isCloserStream(w io.Writer) io.Closer {
-	if isSpecialStream(w) {
-		return nil
-	}
-	if c, ok := w.(io.Closer); ok {
-		return c
-	}
-	return nil
-}
-
 // BuildHandlerOptions prepares slog.HandlerOptions from config.Config.
 func BuildHandlerOptions(cfg *config.Config, customReplaceAttr ReplaceAttrFunc) *slog.HandlerOptions {
 	slogLevel := config.SlogLevelInfo
@@ -102,10 +77,26 @@ func BuildBaseHandler(cfg *config.Config, out io.Writer, customReplaceAttr Repla
 	return slog.NewTextHandler(targetOut, opts)
 }
 
+func isTraceCorrelationDisabled(cfg *config.Config) bool {
+	return cfg != nil && cfg.DisableTraceCorrelation
+}
+
+func buildGCPHandler(cfg *config.Config, out io.Writer, customReplaceAttr ReplaceAttrFunc) slog.Handler {
+	targetOut := out
+	if targetOut == nil {
+		targetOut = os.Stdout
+	}
+	opts := BuildHandlerOptions(cfg, customReplaceAttr)
+	return NewGCPHandler(targetOut, opts)
+}
+
 // BuildHandler creates the full slog.Handler pipeline including trace handler according to Config.
 func BuildHandler(cfg *config.Config, out io.Writer, customReplaceAttr ReplaceAttrFunc) slog.Handler {
+	if config.IsGCPStructuredLoggingEnabled(cfg) {
+		return buildGCPHandler(cfg, out, customReplaceAttr)
+	}
 	base := BuildBaseHandler(cfg, out, customReplaceAttr)
-	if cfg != nil && cfg.DisableTraceCorrelation {
+	if isTraceCorrelationDisabled(cfg) {
 		return base
 	}
 	return NewTraceHandler(base)
