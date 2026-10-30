@@ -56,27 +56,6 @@ func buildSkipMap(paths []string) map[string]bool {
 	return skipMap
 }
 
-// buildLogAttrs constructs standard log attributes for a request.
-func buildLogAttrs(c *gin.Context, latency time.Duration) []slog.Attr {
-	attrs := []slog.Attr{
-		slog.String("request_id", GetRequestID(c)),
-		slog.String("method", c.Request.Method),
-		slog.String("path", c.Request.URL.Path),
-		slog.String("query", c.Request.URL.RawQuery),
-		slog.Int("status", c.Writer.Status()),
-		slog.Int64("latency_ms", latency.Milliseconds()),
-		slog.Duration("latency", latency),
-		slog.String("client_ip", c.ClientIP()),
-		slog.String("user_agent", c.Request.UserAgent()),
-		slog.Int("bytes_out", c.Writer.Size()),
-	}
-	attrs = append(attrs, traceAttrs(c)...)
-	if len(c.Errors) > 0 {
-		attrs = append(attrs, slog.String("errors", c.Errors.String()))
-	}
-	return attrs
-}
-
 // determineLogLevel returns appropriate slog.Level for given HTTP status.
 func determineLogLevel(status int) slog.Level {
 	if status >= statusServerError {
@@ -124,7 +103,7 @@ func WithConfig(cfg *Config) gin.HandlerFunc {
 		c.Next()
 		latency := time.Since(start)
 
-		attrs := buildLogAttrs(c, latency)
+		attrs := buildLogAttrsForHandler(c, latency, logger.Handler())
 		logRequest(c.Request.Context(), logger, c.Writer.Status(), attrs)
 	}
 }
