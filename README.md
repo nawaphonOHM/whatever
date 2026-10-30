@@ -27,7 +27,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Blueprint & Server Middleware Pipeline](#blueprint--server-middleware-pipeline)
   - [Declarative Registration Model](#declarative-registration-model)
   - [HTTP Methods](#http-methods)
-  - [API Versioning & Path Resolution](#api-versioning--path-resolution)
+  - [API Registration Groups & Path Resolution](#api-registration-groups--path-resolution)
   - [CORS & Blueprint Metadata](#cors--blueprint-metadata)
   - [Middleware Pipeline](#middleware-pipeline)
   - [Preflight Route Validation & Safeguards](#preflight-route-validation--safeguards)
@@ -47,6 +47,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Package-Level Logging API (`pkg/logging`)](#package-level-logging-api-pkglogging)
   - [Log Severity Levels](#log-severity-levels)
   - [Output Formats & Serialization](#output-formats--serialization)
+  - [Google Cloud Logging JSON Format](#google-cloud-logging-json-format)
   - [OpenTelemetry Trace Correlation](#opentelemetry-trace-correlation)
   - [HTTP Access Logging Middleware (`pkg/logger`)](#http-access-logging-middleware-pkglogger)
 - [Distributed Tracing & Observability](#distributed-tracing--observability)
@@ -197,8 +198,8 @@ The toolkit is divided into focused public packages under `pkg/`:
 | Package | Primary Role | Key Types & Functions | Underlying Technology |
 |---|---|---|---|
 | [`pkg/rest`](#pkgrest) | Declarative REST API framework, context, response envelopes, & server lifecycle | `rest.NewBluePrint()`, `rest.ExportableAPI`, `rest.StartREST()`, `rest.OK()`, `rest.BadRequest()` | `gin-gonic/gin`, RFC 9457 |
-| [`pkg/logging`](#pkglogging) | Environment-driven structured logging facade with extended levels & OTel trace injection | `logging.Info()`, `logging.InfoContext()`, `logging.ErrorContext()`, `logging.FatalContext()`, `logging.LogAttrs()` | `log/slog`, `go.opentelemetry.io/otel` |
-| [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
+| [`pkg/logging`](#pkglogging) | Environment-driven structured logging facade with extended levels, GCP Cloud Logging format, & OTel trace injection | `logging.Info()`, `logging.InfoContext()`, `logging.ErrorContext()`, `logging.FatalContext()`, `logging.LogAttrs()` | `log/slog`, `go.opentelemetry.io/otel` |
+| [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation & GCP httpRequest formatting | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
 | [`pkg/storage`](#pkgstorage) | Cloud object storage client for AWS S3, Google Cloud Storage, & S3-compatible endpoints | `storage.Connect()`, `client.PutObject()`, `client.GetObject()`, `client.PresignGetObject()`, `client.Ping()` | `aws/aws-sdk-go-v2/service/s3` |
 | [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore) | Ephemeral Firestore emulator containers for integration tests | `firestore.Run()`, `container.URI()`, `container.Host()`, `container.Port()`, `container.Terminate()` | `testcontainers-go`, Docker |
@@ -219,19 +220,21 @@ The primary REST framework package provides declarative route registration contr
 
 ### `pkg/logging`
 
-Structured logging built on Go standard library `log/slog` with extended severity levels, automated environment configuration, and native OpenTelemetry correlation:
+Structured logging built on Go standard library `log/slog` with extended severity levels, automated environment configuration, Google Cloud Logging JSON formatting, and native OpenTelemetry correlation:
 
 - **Zero-Boilerplate Package API**: Call package-level functions directly (`logging.Info`, `logging.InfoContext`, `logging.Error`, `logging.FatalContext`) without manual instantiation.
-- **Environment-Driven Configuration**: Configured seamlessly via `OHM9996_LOGGING_*` environment variables with safe production defaults (`stdout`, `info`, `text`).
+- **Environment-Driven Configuration**: Configured seamlessly via `OHM9996_LOGGING_*` and `OHM9996_CLOUD_PROVIDER` environment variables with safe production defaults (`stdout`, `info`, `text`).
 - **Extended Severity Levels**: Native support for `TRACE` (level -8) and `FATAL` (level 12) in addition to standard `DEBUG`, `INFO`, `WARN`, `ERROR`.
 - **Flexible Formats & Destinations**: Output to `stdout`, `stderr`, `discard`, or file paths in `text` or `json` format.
-- **Native OpenTelemetry Correlation**: Automatic `trace_id` and `span_id` attribute injection from active context spans into every log record.
+- **Google Cloud Logging Compatibility**: Automatic transformation into Google Cloud Logging LogEntry JSON format (`severity`, `timestamp`, `message`, `httpRequest`) when `OHM9996_CLOUD_PROVIDER=gcp` and OpenTelemetry is disabled.
+- **Native OpenTelemetry Correlation**: Automatic `trace_id` and `span_id` attribute injection from active context spans into every log record (except when GCP container log mode is active).
 
 ### `pkg/logger`
 
 Zero-allocation Gin HTTP access logging middleware designed for production observability:
 
 - **Comprehensive Request Metrics**: Automatically logs request duration/latency, client IP, HTTP method, URL path, query string, response status code, and response payload size in bytes.
+- **Google Cloud Logging Integration**: Automatically shapes HTTP access metrics into top-level Google Cloud Logging `httpRequest` objects when operating under GCP structured logging mode.
 - **Trace Context Extraction**: Automatically extracts active span and trace IDs from the Gin request context or W3C distributed tracing headers.
 - **Status-Based Log Leveling**: Assigns `INFO` for 2xx/3xx responses, `WARN` for 4xx client errors, and `ERROR` for 5xx server errors.
 - **Path Filtering**: Exclude high-frequency health probes or metrics scrapers via configurable `SkipPaths`.
@@ -842,7 +845,7 @@ Content-Type: application/problem+json
 
 ## Structured Logging (`pkg/logging` & `pkg/logger`)
 
-The library provides a two-layer logging architecture: `pkg/logging` provides package-level structured logging on top of standard library `log/slog` driven by `OHM9996_LOGGING_*` environment variables with extended severity levels (`TRACE`, `FATAL`) and automatic OpenTelemetry trace correlation, while `pkg/logger` provides pre-configured Gin HTTP access logging middleware with latency tracking, client IP resolution, and status-based log level escalation.
+The library provides a two-layer logging architecture: `pkg/logging` provides package-level structured logging on top of standard library `log/slog` driven by `OHM9996_LOGGING_*` and `OHM9996_CLOUD_PROVIDER` environment variables with extended severity levels (`TRACE`, `FATAL`), native Google Cloud Logging LogEntry JSON formatting, and automatic OpenTelemetry trace correlation, while `pkg/logger` provides pre-configured Gin HTTP access logging middleware with latency tracking, client IP resolution, GCP `httpRequest` payload formatting, and status-based log level escalation.
 
 ### Package-Level Logging API (`pkg/logging`)
 
@@ -920,6 +923,132 @@ Logging format is controlled by the `OHM9996_LOGGING_FORMAT` environment variabl
   }
   ```
 
+*(Note: When Google Cloud Logging JSON format is active via `OHM9996_CLOUD_PROVIDER=gcp` with OpenTelemetry disabled, `OHM9996_LOGGING_FORMAT` is ignored and logs are always formatted as GCP LogEntry JSON).*
+
+### Google Cloud Logging JSON Format
+
+When running microservices inside Google Cloud Platform (e.g. Cloud Run, Google Kubernetes Engine (GKE), Google Compute Engine) without OpenTelemetry distributed tracing, container logs emitted to standard output/stderr are ingested directly by the Google Cloud Logging agent. The library provides dedicated, zero-configuration Google Cloud Logging `LogEntry` JSON formatting to ensure logs are natively parsed, indexed, and queryable in Google Cloud Logs Explorer.
+
+#### Activation Conditions & Precedence
+
+GCP structured JSON logging is activated automatically when both of the following criteria are met:
+1. **GCP Cloud Provider**: `OHM9996_CLOUD_PROVIDER=gcp` (case-insensitive, whitespace-trimmed, e.g. `gcp` or `GCP`).
+2. **OpenTelemetry Disabled or Inactive**: Evaluated in the following strict order of precedence:
+   - **Trace Correlation Override**: If `OHM9996_LOGGING_DISABLE_TRACE_CORRELATION=true`, trace correlation is disabled and GCP mode is enabled.
+   - **Explicit OTel Flag**: If `OHM9996_OTEL_ENABLED` is set and parseable as a boolean, `false` enables GCP mode, while `true` suppresses GCP mode (even if no SDK tracer provider is registered).
+   - **Initialization-Time Tracer Provider Fallback**: If `OHM9996_OTEL_ENABLED` is unset or unparseable, the detector checks whether an active OpenTelemetry SDK `*sdktrace.TracerProvider` is registered in `otel.GetTracerProvider()` at the moment the logger is first initialized. If no SDK tracer provider is registered at initialization time, OpenTelemetry is considered unconfigured and GCP mode is activated.
+
+*Initialization Timing & Explicit Configuration Note*:
+Logger initialization occurs lazily on the first logging call (e.g. during startup banner logging or REST blueprint assembly). If `OHM9996_CLOUD_PROVIDER=gcp` is set while `OHM9996_OTEL_ENABLED` is unset, GCP mode will activate immediately if logging is invoked before registering an OpenTelemetry SDK tracer provider. To ensure predictable behavior, explicitly configure `OHM9996_OTEL_ENABLED=false` when running in GCP container log mode, or `OHM9996_OTEL_ENABLED=true` when distributed tracing is desired.
+
+*Format Override & Trace Correlation Handling*:
+- **Format Override**: `OHM9996_LOGGING_FORMAT` is ignored; output is always formatted as single-line GCP `LogEntry` JSON.
+- **Trace Correlation Bypass**: In GCP mode, handler execution uses `GCPHandler` directly without wrapping in `TraceHandler`. Consequently, automatic context trace injection via `logging.*Context` calls is bypassed (custom attributes or middleware trace fields passed explicitly remain standard top-level JSON fields).
+
+#### Top-Level Schema Fields
+
+| JSON Field | Type | Description |
+|---|---|---|
+| `severity` | `string` | Standard GCP log severity string (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
+| `timestamp` | `string` | Log timestamp formatted in UTC RFC 3339 / RFC 3339Nano (`2026-10-30T16:45:00.123456789Z`), replacing slog default `time` |
+| `message` | `string` \| `object` \| `array` | Log message payload. Valid JSON strings (`{...}` or `[...]`) are automatically parsed and embedded as native JSON objects/arrays; plain text strings remain strings |
+| `httpRequest` | `object` | Structured HTTP request metadata capturing `requestMethod`, `requestUrl`, `status`, `latency`, `userAgent`, `remoteIp`, `responseSize`, and `protocol`. Populated when the log message is `"HTTP Request"`, `"http_request"`, or `"gin"` (case-insensitive), or when an explicit `httpRequest` / `http_request` group attribute is supplied. Both paths apply only at the root handler level (without `WithGroup`) |
+| `logging.googleapis.com/sourceLocation` | `object` | Source code location (`file`, `line`, `function`) emitted when `OHM9996_LOGGING_ADD_SOURCE=true` |
+| `*` (custom attributes) | `any` | Additional structured attributes passed to log calls are preserved as top-level JSON fields with collision disambiguation |
+
+#### Attribute Collision Disambiguation
+
+Top-level attribute collisions are resolved automatically using deterministic naming conventions:
+- **Reserved Top-Level Keys**: If a custom attribute key collides with a reserved GCP key (`severity`, `timestamp`, `message`, `httpRequest`), it is renamed to `custom_<key>` (e.g. `custom_severity`, `custom_message`). If `custom_<key>` is also occupied, an incrementing index is appended (`custom_<key>_1`, `custom_<key>_2`).
+- **Duplicate Custom Keys**: If duplicate custom attribute keys are provided within record attributes, subsequent occurrences are disambiguated by appending an indexed suffix (`<key>_1`, `<key>_2`, etc.).
+
+#### Severity Mapping
+
+Standard log levels map directly to Google Cloud Logging severities emitted in output logs:
+
+| Application Log Level | GCP Log Severity | Description |
+|---|---|---|
+| `TRACE` (level -8) | `DEBUG` | Fine-grained diagnostic events |
+| `DEBUG` (level -4) | `DEBUG` | Debugging and troubleshooting records |
+| `INFO` (level 0) | `INFO` | Standard operational events |
+| `WARN` / `WARNING` (level 4) | `WARNING` | Non-fatal warnings and recovered errors |
+| `ERROR` (level 8) | `ERROR` | Actionable errors and failures |
+| `FATAL` (level 12) | `CRITICAL` | Critical unrecoverable errors |
+
+#### Automatic JSON Message Detection
+
+Log messages passed as strings are inspected:
+- If a message is a valid JSON object or JSON array, it is parsed and embedded natively as a structured JSON object or array under the `message` field, eliminating double-encoding and escaping.
+- If a message is plain text or invalid JSON, it is rendered as a clean JSON string under `message`.
+
+#### Example Outputs
+
+*(Note: JSON keys in emitted output are serialized according to standard Go JSON map ordering; field ordering below is arranged for readability).*
+
+**1. Operational Event with Plain Text Message:**
+```json
+{
+  "severity": "INFO",
+  "timestamp": "2026-10-30T16:45:00.123456789Z",
+  "message": "User session established",
+  "user_id": "usr_1001",
+  "tenant": "acme-corp"
+}
+```
+
+**2. Structured Event with Embedded JSON Payload:**
+```go
+logging.Info(`{"event": "order_created", "order_id": "ord_9981", "amount": 49.99}`, "environment", "production")
+```
+Emits:
+```json
+{
+  "severity": "INFO",
+  "timestamp": "2026-10-30T16:45:00.123456789Z",
+  "message": {
+    "event": "order_created",
+    "order_id": "ord_9981",
+    "amount": 49.99
+  },
+  "environment": "production"
+}
+```
+
+**3. HTTP Access Log with `httpRequest` Object:**
+```json
+{
+  "severity": "INFO",
+  "timestamp": "2026-10-30T16:45:00.123456789Z",
+  "message": "HTTP Request",
+  "httpRequest": {
+    "requestMethod": "GET",
+    "requestUrl": "/api/v1/items?limit=10",
+    "status": 200,
+    "latency": "0.015s",
+    "userAgent": "Mozilla/5.0 (compatible; Googlebot/2.1)",
+    "remoteIp": "192.168.1.50",
+    "responseSize": 1024,
+    "protocol": "HTTP/1.1"
+  },
+  "request_id": "c1f7a2d4-3e91-4d7a-8b60-845189f76a5e"
+}
+```
+
+**4. Error Log with Source Location (`OHM9996_LOGGING_ADD_SOURCE=true`):**
+```json
+{
+  "severity": "ERROR",
+  "timestamp": "2026-10-30T16:45:00.123456789Z",
+  "message": "Database query failed",
+  "error": "connection refused",
+  "logging.googleapis.com/sourceLocation": {
+    "file": "/app/internal/store/db.go",
+    "line": "42",
+    "function": "github.com/nawaphonOHM/whatever/v3/internal/store.Query"
+  }
+}
+```
+
 ### OpenTelemetry Trace Correlation
 
 When using any `*Context` logging function (`logging.InfoContext`, `logging.ErrorContext`, etc.), trace metadata is extracted and appended automatically:
@@ -927,6 +1056,8 @@ When using any `*Context` logging function (`logging.InfoContext`, `logging.Erro
 - **Active OTel Span Context**: Extracts `trace_id` and `span_id` from `trace.SpanFromContext(ctx)` when a valid OpenTelemetry span exists.
 - **Context Fallback Keys**: If no active span is found, checks for typed context keys (`trace_id`, `span_id`) in context values.
 - **Automatic Enablement**: Enabled by default; can be disabled across the application by setting `OHM9996_LOGGING_DISABLE_TRACE_CORRELATION=true`.
+
+*(Note: Automatic trace correlation via `TraceHandler` is bypassed when Google Cloud Logging JSON format is active (`OHM9996_CLOUD_PROVIDER=gcp` with OpenTelemetry disabled). In GCP mode, trace attributes provided explicitly by HTTP middleware or caller attributes are emitted as plain top-level JSON fields).*
 
 ### HTTP Access Logging Middleware (`pkg/logger`)
 
@@ -981,6 +1112,19 @@ engine.GET("/ping", func(c *gin.Context) {
 - **`5xx` Server Errors** $\rightarrow$ Logged at **`slog.LevelError`**
 - **`4xx` Client Errors** $\rightarrow$ Logged at **`slog.LevelWarn`**
 - **`1xx` / `2xx` / `3xx` Success & Redirects** $\rightarrow$ Logged at **`slog.LevelInfo`**
+
+#### Google Cloud Logging Integration
+
+When the application runs in Google Cloud Platform mode (`OHM9996_CLOUD_PROVIDER=gcp` with OpenTelemetry disabled), `pkg/logger` seamlessly adapts to the GCP structured format:
+
+- **Consolidated `httpRequest` Object**: The middleware emits `"HTTP Request"` log records, which automatically consolidates flat HTTP attributes (`method`, `request_url` / `path`, `status`, `latency`, `client_ip`, `user_agent`, `bytes_out`, `protocol`) into the top-level `httpRequest` object conforming to Google Cloud Logging LogEntry expectations.
+- **Explicit `httpRequest` Emission in Application Code**: Custom handlers can also emit structured `httpRequest` objects either by using a recognized log message (`"HTTP Request"`, `"http_request"`, or `"gin"`, case-insensitive) or by supplying an explicit `slog.Group("httpRequest", ...)` / `slog.Group("http_request", ...)` attribute group. Both paths apply only at the root logger level: when the logger has been derived with handler-level `WithGroup`, neither the recognized message nor the explicit group is mapped into `httpRequest`.
+- **Duration Formatting**: Latency is formatted as seconds with fractional precision and trailing `s` (e.g., `"0.015s"`).
+- **Clean JSON Payload**: Redundant flat HTTP attributes are excluded from the outer JSON payload, while contextual attributes like `request_id` and Gin `errors` remain top-level fields.
+- **Severity Alignment**: HTTP status codes map directly to GCP severity levels: `5xx` $\rightarrow$ `ERROR`, `4xx` $\rightarrow$ `WARNING`, and `1xx`/`2xx`/`3xx` $\rightarrow$ `INFO`.
+
+**Middleware Logger Binding & Standalone Usage**:
+The Gin middleware helper `logger.Logger()` (and `logger.WithConfig` when `Logger` is nil) captures `slog.Default()` upon instantiation. If `pkg/logging` has not yet been initialized (e.g. via any public `logging.*` call or REST server setup), `slog.Default()` points to the standard library text logger rather than the GCP handler. When configuring custom Gin engines independently, ensure a public `pkg/logging` function (such as `logging.Info(...)`) is called prior to constructing the middleware, or pass an already-configured logger explicitly via `logger.WithLogger(...)`.
 
 ---
 
@@ -2109,15 +2253,16 @@ When loading configuration via `storage.Connect()` or `config.LoadConfig()`, if 
 
 ### Structured Logger Configuration
 
-Structured logging via `pkg/logging` is configured entirely through `OHM9996_LOGGING_*` environment variables with zero code changes required. In addition, framework-level HTTP access logging in the REST server is toggled via the `OHM9996_SERVER_ENABLE_ACCESS_LOG` environment variable.
+Structured logging via `pkg/logging` is configured entirely through `OHM9996_LOGGING_*` and `OHM9996_CLOUD_PROVIDER` environment variables with zero code changes required. In addition, framework-level HTTP access logging in the REST server is toggled via the `OHM9996_SERVER_ENABLE_ACCESS_LOG` environment variable.
 
 | Environment Variable | Type | Default | Description |
 |---|---|---|---|
 | `OHM9996_LOGGING_OUTPUT` | `string` | `"stdout"` | Output destination (`stdout`, `stderr`, `discard`, or file path) |
 | `OHM9996_LOGGING_LEVEL` | `string` | `"info"` | Minimum log level threshold (`trace`, `debug`, `info`, `warn`/`warning`, `error`, `fatal`/`critical`/`crit`/`panic`) |
-| `OHM9996_LOGGING_FORMAT` | `string` | `"text"` | Log record serialization scheme (`text` or `json`) |
-| `OHM9996_LOGGING_ADD_SOURCE` | `bool` | `false` | When true, includes caller file path and line number in record attributes |
-| `OHM9996_LOGGING_DISABLE_TRACE_CORRELATION` | `bool` | `false` | When true, disables automatic OpenTelemetry `trace_id` and `span_id` extraction |
+| `OHM9996_LOGGING_FORMAT` | `string` | `"text"` | Log record serialization scheme (`text` or `json`). Ignored when GCP structured logging is active (always JSON) |
+| `OHM9996_CLOUD_PROVIDER` | `string` | `""` (empty) | Cloud provider environment identifier. Set to `"gcp"` for Google Cloud Logging `LogEntry` JSON formatting when OpenTelemetry is disabled (ignores `OHM9996_LOGGING_FORMAT`) |
+| `OHM9996_LOGGING_ADD_SOURCE` | `bool` | `false` | When true, includes caller file path and line number in record attributes (or `logging.googleapis.com/sourceLocation` in GCP mode) |
+| `OHM9996_LOGGING_DISABLE_TRACE_CORRELATION` | `bool` | `false` | When true, disables automatic OpenTelemetry `trace_id` and `span_id` extraction (also enables GCP mode when `OHM9996_CLOUD_PROVIDER=gcp`) |
 | `OHM9996_SERVER_ENABLE_ACCESS_LOG` | `bool` | `true` | Environment variable controlling Gin HTTP access logging middleware in REST server |
 
 ---
