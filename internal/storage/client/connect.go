@@ -8,6 +8,7 @@ import (
 
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/callstack"
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/central"
+	_ "github.com/nawaphonOHM/whatever/v3/internal/logging/core" // side-effect: eagerly initialize structured logging
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/config"
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/contracts"
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/detector"

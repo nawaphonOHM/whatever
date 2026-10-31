@@ -19,11 +19,10 @@ const storageConnectionFailureTestError = "storage connection failed"
 func TestHandleConnectionErrorLogsErrorOnlyAsAttribute(t *testing.T) {
 	var output bytes.Buffer
 	worker := central.DefaultWorker()
-	previousLogger := worker.Logger()
 	previousExit := SetExitFunc(func(int) {})
 	worker.SetLogger(slog.New(slog.NewJSONHandler(&output, nil)))
 	t.Cleanup(func() {
-		worker.SetLogger(previousLogger)
+		worker.ResetLogger()
 		SetExitFunc(previousExit)
 	})
 

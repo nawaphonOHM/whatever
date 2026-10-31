@@ -48,7 +48,6 @@ func clientEntryMatchesMessage(entry map[string]any, msg string) bool {
 func setupWorkerLogger(t *testing.T, handler slog.Handler) {
 	t.Helper()
 	worker := central.DefaultWorker()
-	prev := worker.Logger()
 	worker.SetLogger(slog.New(handler))
-	t.Cleanup(func() { worker.SetLogger(prev) })
+	t.Cleanup(func() { worker.ResetLogger() })
 }

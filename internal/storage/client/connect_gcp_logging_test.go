@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nawaphonOHM/whatever/v3/internal/logging/core"
+	"github.com/nawaphonOHM/whatever/v3/internal/storage/config"
 )
 
 func TestHandleConnectionErrorLogsGCP(t *testing.T) {
@@ -25,20 +25,35 @@ func assertStorageConnectionFailureGCP(t *testing.T) {
 func captureStorageConnectionFailureGCP(t *testing.T) map[string]any {
 	t.Helper()
 	var buf bytes.Buffer
-	setStorageTestLogger(t, core.NewGCPHandler(&buf, nil))
+	setupStorageGCPTestLogger(t, &buf)
 	previousExit := SetExitFunc(func(int) {})
 	t.Cleanup(func() { SetExitFunc(previousExit) })
 	testErr := errors.New("storage network timeout")
 	require.ErrorIs(t, handleConnectionError(context.Background(), testErr), testErr)
-	entries := parseStorageLogs(t, buf.Bytes())
-	require.NotEmpty(t, entries)
-	return entries[0]
+	return findStorageLog(parseStorageLogs(t, buf.Bytes()), msgStorageFail)
 }
 
 func assertStorageConnectionFailureEntry(t *testing.T, entry map[string]any) {
 	t.Helper()
-	assert.Equal(t, "ERROR", entry["severity"])
-	assert.Equal(t, "failed to connect to storage; exiting abnormally", entry["message"])
+	require.NotNil(t, entry)
+	assertStorageGCPTimestamp(t, entry)
+	assertStorageGCPSeverity(t, entry, "ERROR")
+	assert.Equal(t, msgStorageFail, entry["message"])
 	assert.Equal(t, "storage network timeout", entry["error"])
 	assert.Equal(t, "ExitAbnormal", entry["exit_flag"])
+}
+
+func captureStorageLifecycleLogsGCP(t *testing.T, cfg *config.Config) []map[string]any {
+	t.Helper()
+	var buf bytes.Buffer
+	setupStorageGCPTestLogger(t, &buf)
+	_, err := ConnectWithConfig(context.Background(), cfg, WithSkipProbe(true))
+	require.NoError(t, err)
+	return parseStorageLogs(t, buf.Bytes())
+}
+
+func TestStorageLifecycleLogsGCP(t *testing.T) {
+	entries := captureStorageLifecycleLogsGCP(t, gcpStorageTestConfig())
+	assertStorageInitEntryGCP(t, findStorageLog(entries, msgStorageInit))
+	assertStorageCompleteEntryGCP(t, findStorageLog(entries, msgStorageComplete))
 }
