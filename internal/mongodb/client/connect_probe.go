@@ -34,14 +34,18 @@ func resolveProbeDuration(d, defaultDur time.Duration) time.Duration {
 	return d
 }
 
+func logProbeSuccess(ctx context.Context, coll string) {
+	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
+	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
+	central.DefaultWorker().Logger().InfoContext(ctx, "mongodb probe succeeded", "target_collection", coll)
+}
+
 func probeDocument(ctx context.Context, db *mongo.Database, coll string) error {
 	res := db.Collection(coll).FindOne(ctx, bson.D{})
 	if err := res.Err(); err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return fmt.Errorf("failed to probe document in collection %q: %w", coll, err)
 	}
-	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
-	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
-	central.DefaultWorker().Logger().InfoContext(ctx, "mongodb probe succeeded", "target_collection", coll)
+	logProbeSuccess(ctx, coll)
 	return nil
 }
 

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/central"
@@ -62,7 +61,7 @@ func handleConnectionError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	msg := fmt.Sprintf("failed to connect to mongodb: %v; exiting abnormally", err)
+	msg := "failed to connect to mongodb; exiting abnormally"
 	central.ExitWithAbnormal(ctx, msg, err, nil)
 	return err
 }

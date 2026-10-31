@@ -34,6 +34,11 @@ func TestParseGCPMessageString(t *testing.T) {
 		"{ invalid: json }",
 		"[ invalid array",
 		"",
+		"header: { invalid: json }",
+		`header: {"a": 1} extra text`,
+		"just a {brace} in text",
+		"[bracket] in text",
+		"bad {foo: bar}",
 	}
 	for _, tt := range tests {
 		t.Run(tt, func(t *testing.T) {

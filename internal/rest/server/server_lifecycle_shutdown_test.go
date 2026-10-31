@@ -90,7 +90,7 @@ func assertShutdownTimeoutLog(t *testing.T, data []byte, err error) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "graceful shutdown failed")
 
-	entries := parseJSONLogs(data)
+	entries := parseJSONLogs(t, data)
 	failEntry := findLogEntry(entries, "REST server graceful shutdown failed")
 	require.NotNil(t, failEntry)
 	assert.Equal(t, "ERROR", failEntry["level"])

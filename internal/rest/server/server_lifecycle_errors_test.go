@@ -17,7 +17,7 @@ const (
 
 func assertFailedStartLog(t *testing.T, data []byte) {
 	t.Helper()
-	entries := parseJSONLogs(data)
+	entries := parseJSONLogs(t, data)
 	failEntry := findLogEntry(entries, "REST server failed to start")
 	require.NotNil(t, failEntry, "expected 'REST server failed to start' log entry")
 	assert.Equal(t, logLevelError, failEntry[logKeyLevel])
@@ -47,7 +47,7 @@ func testNilBlueprintLog(t *testing.T) {
 	_, err := NewFromBluePrint(nil)
 	require.ErrorIs(t, err, ErrNilBluePrint)
 
-	entries := parseJSONLogs(buf.Bytes())
+	entries := parseJSONLogs(t, buf.Bytes())
 	nilEntry := findLogEntry(entries, "failed to initialize REST server: blueprint is nil")
 	require.NotNil(t, nilEntry)
 	assert.Equal(t, logLevelError, nilEntry[logKeyLevel])
@@ -55,7 +55,7 @@ func testNilBlueprintLog(t *testing.T) {
 
 func assertConfigLoadErrorLog(t *testing.T, data []byte) {
 	t.Helper()
-	entries := parseJSONLogs(data)
+	entries := parseJSONLogs(t, data)
 	cfgEntry := findLogEntry(entries, "failed to load REST server config")
 	require.NotNil(t, cfgEntry)
 	assert.Equal(t, logLevelError, cfgEntry[logKeyLevel])
@@ -86,7 +86,7 @@ func makeReservedRouteBlueprint() *contracts.BluePrint {
 
 func assertRouteRegErrorLog(t *testing.T, data []byte) {
 	t.Helper()
-	entries := parseJSONLogs(data)
+	entries := parseJSONLogs(t, data)
 	routeEntry := findLogEntry(entries, "failed to register REST routes")
 	require.NotNil(t, routeEntry)
 	assert.Equal(t, logLevelError, routeEntry[logKeyLevel])

@@ -9,6 +9,19 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 )
 
+const (
+	msgMiddlewareFailed = "middleware execution failed"
+	msgHandlerFailed    = "handler execution failed"
+)
+
+// logExecutionFailure emits the standardized ERROR record for a failed middleware or handler execution.
+// The decorated callbacks in wrapMiddleware and invokeHandler currently always return nil and
+// DecorateContext does not convert panics into errors (panics propagate to Recovery), so the failure
+// branches are not reachable at runtime. The helper is covered directly by unit tests.
+func logExecutionFailure(ctx context.Context, msg string, err error) {
+	logging.ErrorContext(ctx, msg, "error", err)
+}
+
 // wrapMiddleware adapts a framework Middleware to gin.HandlerFunc.
 func wrapMiddleware(mw contracts.Middleware) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
@@ -20,7 +33,7 @@ func wrapMiddleware(mw contracts.Middleware) gin.HandlerFunc {
 			return nil
 		})
 		if err := decorated(reqCtx); err != nil {
-			logging.ErrorContext(reqCtx, "middleware execution failed", "err", err)
+			logExecutionFailure(reqCtx, msgMiddlewareFailed, err)
 		}
 	}
 }
@@ -46,7 +59,7 @@ func invokeHandler(ginCtx *gin.Context, h contracts.Handler) {
 		return nil
 	})
 	if err := decorated(reqCtx); err != nil {
-		logging.ErrorContext(reqCtx, "handler execution failed", "err", err)
+		logExecutionFailure(reqCtx, msgHandlerFailed, err)
 	}
 	writeResponse(ginCtx, resp)
 }

@@ -32,7 +32,7 @@ func gracefulShutdown(ctx context.Context, s *Server) error {
 	)
 	defer cancel()
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
-		logging.ErrorContext(ctx, "REST server graceful shutdown failed", "error", err.Error())
+		logging.ErrorContext(ctx, "REST server graceful shutdown failed", "error", err)
 		return fmt.Errorf("graceful shutdown failed: %w", err)
 	}
 	logging.InfoContext(ctx, "REST server shut down successfully")
@@ -44,7 +44,7 @@ func handleServeErr(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	logging.ErrorContext(ctx, "REST server failed to start", "error", err.Error())
+	logging.ErrorContext(ctx, "REST server failed to start", "error", err)
 	return fmt.Errorf("http server failed to start: %w", err)
 }
 

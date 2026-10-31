@@ -76,6 +76,7 @@ func TestWorker_ExitAbnormal_WithCallStack(t *testing.T) {
 
 	assert.Equal(t, int32(1), exitCode.Load())
 	assertAbnormalOutput(t, buf.String())
+	assertCallstackRecord(t, buf.String())
 }
 
 func assertAbnormalOutput(t *testing.T, out string) {

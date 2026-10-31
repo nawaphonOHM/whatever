@@ -15,7 +15,7 @@ const (
 
 func assertPublicRouteRegError(t *testing.T, data []byte, substr string) {
 	t.Helper()
-	entries := parseJSONLogEntries(data)
+	entries := parseJSONLogEntries(t, data)
 	routeEntry := findLogByMsg(entries, "failed to register REST routes")
 	require.NotNil(t, routeEntry)
 	assert.Equal(t, logLevelError, routeEntry[logKeyLevel])
@@ -39,7 +39,7 @@ func testPublicNilBlueprint(t *testing.T) {
 
 	require.ErrorIs(t, StartREST(nil), ErrNilBluePrint)
 
-	entries := parseJSONLogEntries(buf.Bytes())
+	entries := parseJSONLogEntries(t, buf.Bytes())
 	nilEntry := findLogByMsg(entries, "failed to initialize REST server: blueprint is nil")
 	require.NotNil(t, nilEntry)
 	assert.Equal(t, logLevelError, nilEntry[logKeyLevel])
@@ -52,7 +52,7 @@ func testPublicConfigError(t *testing.T) {
 	t.Setenv(envServerPort, "not-a-number")
 	require.Error(t, StartREST(NewBluePrint()))
 
-	entries := parseJSONLogEntries(buf.Bytes())
+	entries := parseJSONLogEntries(t, buf.Bytes())
 	cfgEntry := findLogByMsg(entries, "failed to load REST server config")
 	require.NotNil(t, cfgEntry)
 	assert.Equal(t, logLevelError, cfgEntry[logKeyLevel])
@@ -96,7 +96,7 @@ func TestStartREST_LifecycleLogging_Errors(t *testing.T) {
 
 func assertPublicPortInUseLog(t *testing.T, data []byte) {
 	t.Helper()
-	entries := parseJSONLogEntries(data)
+	entries := parseJSONLogEntries(t, data)
 	failEntry := findLogByMsg(entries, "REST server failed to start")
 	require.NotNil(t, failEntry)
 	assert.Equal(t, logLevelError, failEntry[logKeyLevel])

@@ -9,7 +9,6 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/callstack"
-	"github.com/nawaphonOHM/whatever/v3/internal/logging/central"
 )
 
 // isNotExistError checks if error represents a file non-existence error.
@@ -40,16 +39,14 @@ func tryLoadFile(path string) (bool, error) {
 	return false, nil
 }
 
+// DefaultEnvFiles returns the default environment file paths.
+func DefaultEnvFiles() []string {
+	return []string{".env", "configs/.env"}
+}
+
 // loadDefaultEnv tries loading default .env or configs/.env if present.
 func loadDefaultEnv() error {
-	// False positive: borrowing the central worker singleton for logging is leak-free and safe;
-	// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
-	central.DefaultWorker().Logger().Info(
-		"falling back to default env configuration files",
-		"files",
-		[]string{".env", "configs/.env"},
-	)
-	for _, p := range []string{".env", "configs/.env"} {
+	for _, p := range DefaultEnvFiles() {
 		loaded, err := tryLoadFile(p)
 		if loaded {
 			return err
@@ -83,9 +80,6 @@ func parseTarget[T any](target *T) error {
 // Values precedence: System Environment > .env file > Struct Default Tags.
 func Load[T any](filenames ...string) (*T, error) {
 	decorated := callstack.DecorateFuncErr("rest.config.Load", func() (*T, error) {
-		// False positive: borrowing the central worker singleton for logging is leak-free and safe;
-		// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
-		central.DefaultWorker().Logger().Info("loading REST configuration")
 		if err := loadEnvFiles(filenames); err != nil {
 			return nil, err
 		}
@@ -95,9 +89,6 @@ func Load[T any](filenames ...string) (*T, error) {
 			return nil, fmt.Errorf("failed to parse environment config: %w", err)
 		}
 
-		// False positive: borrowing the central worker singleton for logging is leak-free and safe;
-		// proof: TestDefaultWorker_SingletonResourceProof in worker_singleton_proof_test.go.
-		central.DefaultWorker().Logger().Info("REST configuration loaded successfully")
 		return &target, nil
 	})
 	return decorated()
