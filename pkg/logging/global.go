@@ -23,6 +23,10 @@ const (
 	LevelFatal Level = config.LevelFatal
 )
 
+func init() {
+	core.Default()
+}
+
 // Trace logs a message at TRACE level using the default logger.
 func Trace(msg string, args ...any) {
 	core.Trace(msg, args...)
@@ -104,4 +108,10 @@ func LogAttrs(ctx context.Context, level Level, msg string, attrs ...slog.Attr) 
 // Flush flushes any buffered log entries in the default central logger.
 func Flush() {
 	core.Flush()
+}
+
+// ResetDefault resets and reinitializes the default logger from current environment variables,
+// synchronizing the standard library slog.Default() logger.
+func ResetDefault() {
+	core.ResetDefault()
 }

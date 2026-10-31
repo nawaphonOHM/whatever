@@ -62,7 +62,7 @@ var (
 )
 
 func initDefaultWorker() *Worker {
-	w := New(slog.Default(), DefaultBufferSize, os.Exit)
+	w := New(nil, DefaultBufferSize, os.Exit)
 	w.Start()
 	return w
 }
@@ -84,6 +84,12 @@ func SetDefaultWorker(w *Worker) {
 	if w != nil {
 		defaultWorker.Store(w)
 	}
+}
+
+// ResetDefaultLogger clears any explicit logger on the default central worker,
+// restoring dynamic delegation to slog.Default().
+func ResetDefaultLogger() {
+	DefaultWorker().ResetLogger()
 }
 
 // Dispatch enqueues an event to the default central worker.

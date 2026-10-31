@@ -14,9 +14,8 @@ import (
 func setStorageTestLogger(t *testing.T, handler slog.Handler) {
 	t.Helper()
 	worker := central.DefaultWorker()
-	previous := worker.Logger()
 	worker.SetLogger(slog.New(handler))
-	t.Cleanup(func() { worker.SetLogger(previous) })
+	t.Cleanup(func() { worker.ResetLogger() })
 }
 
 func parseStorageLogs(t *testing.T, data []byte) []map[string]any {

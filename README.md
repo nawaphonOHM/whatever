@@ -854,6 +854,7 @@ The library provides a two-layer logging architecture: `pkg/logging` provides pa
 - **Context-Aware Logging**: `logging.TraceContext`, `logging.DebugContext`, `logging.InfoContext`, `logging.WarnContext`, `logging.ErrorContext`, `logging.FatalContext`
 - **Context-Free Logging**: `logging.Trace`, `logging.Debug`, `logging.Info`, `logging.Warn`, `logging.Error`, `logging.Fatal`
 - **Dynamic & Attr Logging**: `logging.Log(ctx, level, msg, args...)` and `logging.LogAttrs(ctx, level, msg, attrs...)`
+- **Configuration & Reinitialization**: `logging.ResetDefault()`
 
 ```go
 package main
@@ -938,8 +939,20 @@ GCP structured JSON logging is activated automatically when both of the followin
    - **Explicit OTel Flag**: If `OHM9996_OTEL_ENABLED` is set and parseable as a boolean, `false` enables GCP mode, while `true` suppresses GCP mode (even if no SDK tracer provider is registered).
    - **Initialization-Time Tracer Provider Fallback**: If `OHM9996_OTEL_ENABLED` is unset or unparseable, the detector checks whether an active OpenTelemetry SDK `*sdktrace.TracerProvider` is registered in `otel.GetTracerProvider()` at the moment the logger is first initialized. If no SDK tracer provider is registered at initialization time, OpenTelemetry is considered unconfigured and GCP mode is activated.
 
-*Initialization Timing & Explicit Configuration Note*:
-Logger initialization occurs lazily on the first logging call (e.g. during startup banner logging or REST blueprint assembly). If `OHM9996_CLOUD_PROVIDER=gcp` is set while `OHM9996_OTEL_ENABLED` is unset, GCP mode will activate immediately if logging is invoked before registering an OpenTelemetry SDK tracer provider. To ensure predictable behavior, explicitly configure `OHM9996_OTEL_ENABLED=false` when running in GCP container log mode, or `OHM9996_OTEL_ENABLED=true` when distributed tracing is desired.
+*Eager Package Initialization & Client-Only Applications*:
+Logger initialization and `slog.SetDefault()` configuration occur eagerly upon package load (`init()`). Consequently, even client-only applications (e.g., workers or background jobs importing only `pkg/mongodb` or `pkg/storage` without `pkg/rest` or explicit `pkg/logging` calls) immediately configure structured logging and emit pure GCP `LogEntry` JSON records from container startup.
+
+*Dynamic Central Default Delegation*:
+The internal worker engine (`internal/logging/central.DefaultWorker()`) dynamically delegates to Go's standard library `slog.Default()`. All client lifecycle events and diagnostic messages emitted by MongoDB and Storage clients route seamlessly through the configured `GCPHandler`.
+
+*Client Lifecycle & Abnormal Exit Structured Attributes*:
+MongoDB and Storage client initialization events (`initializing mongodb client`, `resolving mongodb connection options`, `mongodb ping succeeded`, `initializing storage client`) and abnormal exits (`failed to connect to storage; exiting abnormally`) emit native top-level structured attribute fields (`host`, `port`, `protocol`, `database`, `auth_source`, `tls`, `uuid_representation`, `provider`, `bucket`, `region`, `endpoint`, `use_path_style`, `error`, `exit_flag: "ExitAbnormal"`) alongside standard GCP `severity` (`INFO`, `ERROR`), UTC RFC3339 `timestamp`, and `message`.
+
+*Runtime Environment Changes*:
+Because environment configuration is loaded eagerly at package initialization, if environment variables (such as `OHM9996_CLOUD_PROVIDER` or `OHM9996_LOGGING_LEVEL`) are modified dynamically in application code at runtime (e.g., inside `main()`), call `logging.ResetDefault()` to re-evaluate the environment and reconfigure `slog.SetDefault()`.
+
+*Client-Only Import Behavior Note*:
+In non-GCP mode, importing client-only packages (`pkg/mongodb`, `pkg/storage`) now eagerly initializes `core.Default()`, installing the configured `OHM9996_LOGGING_*` handler (such as standard structured text or JSON) into `slog.SetDefault()`. This is an intentional behavior update ensuring process-wide consistency across all client libraries, rather than leaving Go's unconfigured standard library text logger active.
 
 *Format Override & Trace Correlation Handling*:
 - **Format Override**: `OHM9996_LOGGING_FORMAT` is ignored; output is always formatted as single-line GCP `LogEntry` JSON.
@@ -1049,6 +1062,30 @@ Emits:
 }
 ```
 
+**5. MongoDB Client Startup Lifecycle Event:**
+```json
+{
+  "severity": "INFO",
+  "timestamp": "2026-10-30T16:45:00.123456789Z",
+  "message": "initializing mongodb client",
+  "host": "localhost",
+  "port": 27017,
+  "protocol": "mongodb",
+  "database": "app_db"
+}
+```
+
+**6. Storage Client Abnormal Termination Event:**
+```json
+{
+  "severity": "ERROR",
+  "timestamp": "2026-10-30T16:45:00.123456789Z",
+  "message": "failed to connect to storage; exiting abnormally",
+  "error": "connection refused",
+  "exit_flag": "ExitAbnormal"
+}
+```
+
 ### OpenTelemetry Trace Correlation
 
 When using any `*Context` logging function (`logging.InfoContext`, `logging.ErrorContext`, etc.), trace metadata is extracted and appended automatically:
@@ -1124,7 +1161,7 @@ When the application runs in Google Cloud Platform mode (`OHM9996_CLOUD_PROVIDER
 - **Severity Alignment**: HTTP status codes map directly to GCP severity levels: `5xx` $\rightarrow$ `ERROR`, `4xx` $\rightarrow$ `WARNING`, and `1xx`/`2xx`/`3xx` $\rightarrow$ `INFO`.
 
 **Middleware Logger Binding & Standalone Usage**:
-The Gin middleware helper `logger.Logger()` (and `logger.WithConfig` when `Logger` is nil) captures `slog.Default()` upon instantiation. If `pkg/logging` has not yet been initialized (e.g. via any public `logging.*` call or REST server setup), `slog.Default()` points to the standard library text logger rather than the GCP handler. When configuring custom Gin engines independently, ensure a public `pkg/logging` function (such as `logging.Info(...)`) is called prior to constructing the middleware, or pass an already-configured logger explicitly via `logger.WithLogger(...)`.
+The Gin middleware helper `logger.Logger()` (and `logger.WithConfig` when `Logger` is nil) binds to `slog.Default()` upon instantiation. Because the logging engine initializes eagerly at package import time, `slog.Default()` is already configured with `GCPHandler` (or the configured `OHM9996_*` handler) when configuring custom Gin engines. If a custom logger is required, pass it explicitly via `logger.WithLogger(...)`.
 
 ---
 

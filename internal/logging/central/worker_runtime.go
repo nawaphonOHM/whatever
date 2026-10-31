@@ -7,10 +7,7 @@ import (
 )
 
 func resolveLogger(logger *slog.Logger) *slog.Logger {
-	if logger != nil {
-		return logger
-	}
-	return slog.Default()
+	return logger
 }
 
 func resolveExitFunc(exitFunc func(int)) func(int) {
@@ -90,7 +87,7 @@ func (w *Worker) eventLogger(logger *slog.Logger) *slog.Logger {
 	if logger != nil {
 		return logger
 	}
-	return w.logger
+	return w.Logger()
 }
 
 func (w *Worker) nextQueuedEvent() (*LogEvent, bool) {
