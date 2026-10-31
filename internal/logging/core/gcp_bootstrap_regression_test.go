@@ -50,24 +50,6 @@ func filterLogJSONLines(output string) []string {
 	return jsonLines
 }
 
-func isBasicEmptyOrPass(s string) bool {
-	if s == "" {
-		return true
-	}
-	return s == "PASS"
-}
-
-func isHarnessPrefix(s string) bool {
-	if strings.HasPrefix(s, "===") {
-		return true
-	}
-	return strings.HasPrefix(s, "---")
-}
-
-func isTestHarnessLine(s string) bool {
-	return isBasicEmptyOrPass(s) || isHarnessPrefix(s)
-}
-
 func assertSingleGCPLine(t *testing.T, trimmed string) {
 	t.Helper()
 	var entry map[string]any
