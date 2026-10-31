@@ -59,7 +59,7 @@ func loadCORSConfig(cfg *Config, bp *contracts.BluePrint) (*middleware.CORSConfi
 	path := resolveCORSPath(cfg, bp)
 	corsCfg, err := LoadAndValidateCORS(path)
 	if err != nil {
-		logging.Error("failed to load CORS configuration", "error", err.Error())
+		logging.Error("failed to load CORS configuration", "error", err)
 		return nil, err
 	}
 	return corsCfg, nil

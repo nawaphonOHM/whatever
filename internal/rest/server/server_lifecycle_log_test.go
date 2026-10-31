@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -11,14 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func parseJSONLogs(data []byte) []map[string]any {
+func parseJSONLogs(t *testing.T, data []byte) []map[string]any {
+	t.Helper()
 	var entries []map[string]any
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	for decoder.More() {
 		var entry map[string]any
-		if err := decoder.Decode(&entry); err != nil {
-			continue
-		}
+		require.NoError(t, decoder.Decode(&entry))
 		entries = append(entries, entry)
 	}
 	return entries
@@ -40,17 +40,29 @@ func findLogEntry(entries []map[string]any, msg string) map[string]any {
 	return nil
 }
 
-func assertStartLog(t *testing.T, srv *Server, port int, entry map[string]any) {
+func assertStartBase(t *testing.T, srv *Server, port int, entry map[string]any) {
 	t.Helper()
 	require.NotNil(t, entry, "expected 'starting REST server' log entry")
 	assert.Equal(t, "INFO", entry["level"])
 	assert.Equal(t, srv.Config.DisplayName, entry["service"])
+	assert.Equal(t, srv.Config.AppVersion, entry["version"])
+	assert.Equal(t, fmt.Sprintf("%s:%d", testHost, port), entry["addr"])
 	assert.Equal(t, testHost, entry["host"])
 	assert.Equal(t, float64(port), entry["port"])
+}
+
+func assertStartFlags(t *testing.T, srv *Server, entry map[string]any) {
+	t.Helper()
 	assert.Equal(t, gin.TestMode, entry["mode"])
 	assert.Equal(t, srv.Config.ShutdownTimeout.String(), entry["shutdown_timeout"])
 	assert.Equal(t, srv.Config.EnableAccessLog, entry["access_log"])
 	assert.Equal(t, srv.Config.EnableMetrics, entry["metrics"])
+}
+
+func assertStartLog(t *testing.T, srv *Server, port int, entry map[string]any) {
+	t.Helper()
+	assertStartBase(t, srv, port, entry)
+	assertStartFlags(t, srv, entry)
 }
 
 func assertShutdownLogs(t *testing.T, srv *Server, entries []map[string]any) {
@@ -76,7 +88,7 @@ func TestServer_LifecycleLogging_StartupAndShutdown(t *testing.T) {
 	cancel()
 	require.NoError(t, waitErr(t, errCh))
 
-	entries := parseJSONLogs(buf.Bytes())
+	entries := parseJSONLogs(t, buf.Bytes())
 	assertStartLog(t, srv, port, findLogEntry(entries, "starting REST server"))
 	assertShutdownLogs(t, srv, entries)
 }

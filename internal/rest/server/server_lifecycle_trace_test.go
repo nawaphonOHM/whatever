@@ -44,7 +44,7 @@ func executeTracedLifecycle(t *testing.T, ctx context.Context, srv *Server, port
 
 func assertTraceLogOutput(t *testing.T, data []byte, span trace.Span) {
 	t.Helper()
-	entries := parseJSONLogs(data)
+	entries := parseJSONLogs(t, data)
 	traceID := span.SpanContext().TraceID().String()
 	spanID := span.SpanContext().SpanID().String()
 	assertLifecycleTraceLogs(t, entries, traceID, spanID)

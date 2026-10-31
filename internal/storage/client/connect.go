@@ -74,7 +74,7 @@ func handleConnectionError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	msg := fmt.Sprintf("failed to connect to storage: %v; exiting abnormally", err)
+	msg := "failed to connect to storage; exiting abnormally"
 	central.ExitWithAbnormal(ctx, msg, err, nil)
 	return err
 }

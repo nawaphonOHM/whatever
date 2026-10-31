@@ -12,14 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func parseJSONLogEntries(data []byte) []map[string]any {
+func parseJSONLogEntries(t *testing.T, data []byte) []map[string]any {
+	t.Helper()
 	var entries []map[string]any
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	for decoder.More() {
 		var entry map[string]any
-		if err := decoder.Decode(&entry); err != nil {
-			continue
-		}
+		require.NoError(t, decoder.Decode(&entry))
 		entries = append(entries, entry)
 	}
 	return entries
@@ -47,6 +46,7 @@ func assertPublicStartLog(t *testing.T, port int, entry map[string]any) {
 	assert.Equal(t, "INFO", entry["level"])
 	assert.Equal(t, "application", entry["service"])
 	assert.Equal(t, "1.0.0", entry["version"])
+	assert.Equal(t, fmt.Sprintf("%s:%d", testHost, port), entry["addr"])
 	assert.Equal(t, testHost, entry["host"])
 	assert.Equal(t, float64(port), entry["port"])
 	assert.Equal(t, gin.TestMode, entry["mode"])
@@ -76,7 +76,7 @@ func TestStartREST_LifecycleLogging_Success(t *testing.T) {
 	assertStatusOK(t, fmt.Sprintf("http://%s:%d/api/v1/ping", testHost, port))
 	signalAndWait(t, errCh)
 
-	entries := parseJSONLogEntries(buf.Bytes())
+	entries := parseJSONLogEntries(t, buf.Bytes())
 	assertPublicStartLog(t, port, findLogByMsg(entries, "starting REST server"))
 	assertPublicShutdownLogs(t, entries)
 }

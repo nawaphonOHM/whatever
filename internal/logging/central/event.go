@@ -67,7 +67,7 @@ func logAbnormalStack(ctx context.Context, event *LogEvent, logger *slog.Logger)
 	stack := resolveEventStack(event)
 	if hasStackFrames(stack) {
 		stackText := stack.String()
-		logger.LogAttrs(ctx, slog.LevelError, "Call stack snapshot:\n"+stackText,
+		logger.LogAttrs(ctx, slog.LevelError, "Call stack snapshot",
 			slog.String("callstack", stackText))
 	}
 }

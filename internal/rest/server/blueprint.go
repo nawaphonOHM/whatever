@@ -2,25 +2,11 @@ package server
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/callstack"
-	intcfg "github.com/nawaphonOHM/whatever/v3/internal/rest/config"
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 )
-
-func loadConfig() (*Config, error) {
-	cfg, err := intcfg.Load[Config]()
-	if err != nil {
-		logging.Error("failed to load REST server config", "error", err.Error())
-		return nil, fmt.Errorf(
-			"failed to load server config: %w",
-			err,
-		)
-	}
-	return cfg, nil
-}
 
 func registerBlueprint(
 	srv *Server,
@@ -41,11 +27,11 @@ func newServerFromConfig(
 ) (*Server, error) {
 	srv, err := New(cfg)
 	if err != nil {
-		logging.Error("failed to create REST server", "error", err.Error())
+		logging.Error("failed to create REST server", "error", err)
 		return nil, err
 	}
 	if err := registerBlueprint(srv, cfg, bp); err != nil {
-		logging.Error("failed to register REST routes", "error", err.Error())
+		logging.Error("failed to register REST routes", "error", err)
 		return nil, err
 	}
 	return srv, nil
@@ -61,7 +47,7 @@ func NewFromBluePrint(
 			return nil, ErrNilBluePrint
 		}
 		logging.Info("initializing REST server from blueprint")
-		cfg, err := loadConfig()
+		cfg, err := LoadConfig()
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +61,7 @@ func NewFromRegistrations(
 	registrations []*contracts.RRestAPIRegistration,
 ) (*Server, error) {
 	decorated := callstack.DecorateFuncErr("server.NewFromRegistrations", func() (*Server, error) {
-		logging.Info("initializing REST server from registrations", "count", len(registrations))
+		logging.Info("initializing REST server from registrations", "registration_count", len(registrations))
 		bp := contracts.NewBluePrint().WithAPIs(registrations...)
 		return NewFromBluePrint(bp)
 	})
