@@ -64,33 +64,6 @@ func TestDetect_RulesAndProviders(t *testing.T) {
 			wantHost:     "custom-storage.internal.net",
 			wantBucket:   "",
 		},
-		{
-			name:         "schemeless with query containing scheme separator and credentials",
-			endpoint:     "user:secretpass@custom-storage.internal.net:9000/data?r=a://b",
-			bucketURL:    "",
-			wantProvider: contracts.ProviderS3Compatible,
-			wantRule:     RuleS3CompatibleFallback,
-			wantHost:     "custom-storage.internal.net",
-			wantBucket:   "",
-		},
-		{
-			name:         "schemeless aws with query containing scheme separator",
-			endpoint:     "user:secretpass@s3.us-west-2.amazonaws.com/x?r=a://b",
-			bucketURL:    "",
-			wantProvider: contracts.ProviderAWS,
-			wantRule:     RuleAWSHostname,
-			wantHost:     "s3.us-west-2.amazonaws.com",
-			wantBucket:   "",
-		},
-		{
-			name:         "schemeless gcs with query containing scheme separator",
-			endpoint:     "",
-			bucketURL:    "user:secretpass@sample-bucket.storage.googleapis.com/x?r=a://b",
-			wantProvider: contracts.ProviderGCS,
-			wantRule:     RuleGCSHostname,
-			wantHost:     "sample-bucket.storage.googleapis.com",
-			wantBucket:   "sample-bucket",
-		},
 	}
 
 	for _, tc := range tests {

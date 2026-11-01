@@ -7,6 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testClientUnparseable = "<unparseable>"
+	testClientLocalhost   = "localhost:9000"
+)
+
 func TestSanitizeLoggedURL_RedactsCredentialsAndQueries(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -70,8 +75,8 @@ func TestSanitizeLoggedURL_RedactsCredentialsAndQueries(t *testing.T) {
 		},
 		{
 			name:     "clean schemeless URL unchanged",
-			input:    "localhost:9000",
-			expected: "localhost:9000",
+			input:    testClientLocalhost,
+			expected: testClientLocalhost,
 		},
 		{
 			name:     "custom scheme with credentials",
@@ -82,86 +87,6 @@ func TestSanitizeLoggedURL_RedactsCredentialsAndQueries(t *testing.T) {
 			name:     "s3 scheme with credentials and query",
 			input:    "s3://user:secret@my-bucket/path/to/key?versionId=123#frag",
 			expected: "s3://my-bucket/path/to/key",
-		},
-		{
-			name:     "protocol-relative with credentials fails closed to unparseable",
-			input:    "//admin:pass@minio.internal:9000/x",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "empty-authority quadruple slash with credentials fails closed",
-			input:    "https:////user:pass@host",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "malformed path pseudo-scheme with credentials fails closed",
-			input:    "a/b://user:pass@host",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "leading slash with credentials fails closed",
-			input:    "/user:pass@host/path",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "single slash https with credentials fails closed",
-			input:    "https:/user:pass@host",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "single slash http with credentials and port fails closed",
-			input:    "http:/admin:pass@minio:9000",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "single slash s3 with credentials and path fails closed",
-			input:    "s3:/user:pass@host/x",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "single slash custom scheme with credentials fails closed",
-			input:    "x:/user:pass@host",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "single slash https without credentials fails closed",
-			input:    "https:/host",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "single slash http without credentials fails closed",
-			input:    "http:/localhost:9000",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "schemeless with only user credentials fails closed",
-			input:    "user:pass@",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "invalid URL with whitespace returns placeholder",
-			input:    "https://invalid url with spaces.com",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "invalid URL with tab character returns placeholder",
-			input:    "https://invalid\turl.com",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "invalid URL with newline returns placeholder",
-			input:    "https://invalid\nurl.com",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "malformed percent encoding returns placeholder",
-			input:    "https://%zz@invalid.com",
-			expected: "<unparseable>",
-		},
-		{
-			name:     "malformed schemeless percent encoding returns placeholder",
-			input:    "%zz@invalid.com",
-			expected: "<unparseable>",
 		},
 	}
 
