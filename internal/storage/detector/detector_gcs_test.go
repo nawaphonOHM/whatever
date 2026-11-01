@@ -16,6 +16,14 @@ func TestDetectProvider_GCS(t *testing.T) {
 		"stroage.googleapis",
 		"https://s3-backup.storage.googleapis.com",
 		"https://storage.googleapis.com/mybucket/s3-data",
+		"https://commondatastorage.googleapis.com",
+		"https://mybucket.commondatastorage.googleapis.com",
+		"https://storage.cloud.google.com",
+		"https://storage.us-central1.rep.googleapis.com",
+		"https://mybucket.storage.us-central1.rep.googleapis.com",
+		"https://storage.p.googleapis.com",
+		"https://storage-custom.p.googleapis.com",
+		"https://mybucket.storage-psc.p.googleapis.com",
 	}
 
 	for _, ep := range endpoints {

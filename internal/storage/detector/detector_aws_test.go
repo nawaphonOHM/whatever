@@ -18,6 +18,16 @@ func TestDetectProvider_AWS(t *testing.T) {
 		"https://s3-fips.us-east-1.amazonaws.com",
 		"s3.dualstack.us-east-1.amazonaws.com",
 		"https://s3.cn-north-1.amazonaws.com.cn",
+		"https://mybucket.s3.cn-northwest-1.amazonaws.com.cn",
+		"https://s3.dualstack.us-east-1.api.aws",
+		"https://s3-accesspoint.us-east-1.amazonaws.com",
+		"https://s3-outposts.us-east-1.amazonaws.com",
+		"https://s3-object-lambda.us-east-1.amazonaws.com",
+		"https://s3-control.us-east-1.amazonaws.com",
+		"https://s3-website.us-east-1.amazonaws.com",
+		"https://s3express-use1-az4.us-east-1.amazonaws.com",
+		"https://mybucket--use1-az4--x-s3.s3express-use1-az4.us-east-1.amazonaws.com",
+		"https://bucket.vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com",
 	}
 
 	for _, ep := range endpoints {
