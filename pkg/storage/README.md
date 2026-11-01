@@ -10,10 +10,11 @@ It follows the same modular library pattern as `pkg/mongodb` and `pkg/rest`: con
 
 - **Unified Storage Contract**: Clean interface (`Storage`) for object lifecycle operations (`PutObject`, `GetObject`, `DeleteObject`, `HeadObject`, `ListObjects`, `Exists`, `PresignGetObject`, `PresignPutObject`, and `Ping`).
 - **Zero-Boilerplate Configuration**: Automated configuration parsing and strict validation from `OHM9996_STORAGE_*` environment variables (with fallback to `.env` / `configs/.env`).
-- **Automatic Cloud Provider Detection**: Detects Google Cloud Storage XML API, AWS S3, or S3-compatible providers from endpoint/bucket URL patterns with endpoint precedence.
+- **Structured Cloud Provider Detection**: Detects Google Cloud Storage XML API, AWS S3, or S3-compatible providers from endpoint/bucket URL patterns with structured detection metadata (`Provider`, `Host`, `Rule`, `Bucket`).
+- **Diagnostic URL & Credential Sanitization**: Best-effort redaction of sensitive basic auth credentials, session tokens, query strings, and URL fragments from diagnostic log records.
 - **Pre-signed URLs**: Generates pre-signed GET and PUT URLs with configurable expiration durations (up to 7 days, falling back to default if 0).
 - **Stream Handling & Multipart Uploads**: Efficiently handles seekable streams, buffers non-seekable streams, and automatically coordinates multipart uploads for large payloads.
-- **Startup Connectivity Probing**: Non-destructive bucket reachability probe (`HeadBucket` with fallback to single-key `ListObjectsV2`) with diagnostic logging and process exit hooks.
+- **Startup Connectivity Probing**: Non-destructive bucket reachability probe (`HeadBucket` with fallback to single-key `ListObjectsV2` on `AccessDenied`/`Forbidden`/HTTP 403) with diagnostic logging and process exit hooks.
 - **Defensive Error Handling**: Safe receiver checks on all operations returning standardized sentinel errors (`ErrObjectNotFound`, `ErrBucketNotFound`, `ErrAccessDenied`, `ErrNilClient`, `ErrNilConfig`, `ErrInvalidExpiry`).
 
 ---
@@ -44,39 +45,202 @@ The client loads and validates configuration from environment variables when ini
 
 ---
 
-## Provider Detection & Endpoint Routing
+## Provider Detection & Endpoint Routing (Internal Architecture)
 
-When resolving target endpoints, `OHM9996_STORAGE_ENDPOINT` takes precedence over `OHM9996_STORAGE_BUCKET_URL`. URLs without an explicit scheme default to `https://`. Hostnames are normalized (lowercased, trailing dots trimmed), and provider classification is evaluated in the following order:
+When resolving target endpoints during client connection, `OHM9996_STORAGE_ENDPOINT` takes precedence over `OHM9996_STORAGE_BUCKET_URL`. URLs without an explicit scheme default to `https://`. Hostnames are normalized (lowercased, trailing dots trimmed), and provider classification is evaluated internally via `detector.Detect(endpoint, bucketURL)` returning structured `detector.Detection` metadata:
 
-1. **Google Cloud Storage (`ProviderGCS` / `"gcs"`)**:
-   - Matches when the hostname equals or ends with `.storage.googleapis.com`, `.storage.googleapis`, `.stroage.googleapis.com`, or `.stroage.googleapis` (e.g., `https://storage.googleapis.com`, `https://mybucket.storage.googleapis.com`).
-   - Connects to Google Cloud Storage via the S3-compatible XML API using HMAC credentials and path-style addressing.
+```go
+type Detection struct {
+	Provider contracts.Provider // contracts.ProviderAWS, ProviderGCS, or ProviderS3Compatible
+	Host     string             // Normalized inspected hostname
+	Rule     string             // Deterministic classification rule matched
+	Bucket   string             // Extracted virtual-hosted bucket subdomain (if present)
+}
+```
 
-2. **AWS S3 (`ProviderAWS` / `"aws"`)**:
-   - Matches when any dot-separated hostname label equals `s3` or starts with `s3-` (e.g., `s3.amazonaws.com`, `bucket.s3.us-east-1.amazonaws.com`, `s3.local:9000`), or when the host equals or ends with `.amazonaws.com` / `amazonaws.com`.
-   - Also used as the default provider when neither endpoint nor bucket URL is specified.
-   - Uses native AWS SDK v2 defaults. By default, native `amazonaws.com` / `amazonaws.com.cn` endpoints use the SDK's virtual-hosted routing; non-Amazon target hosts (including AWS-classified `s3.local:9000`) use path-style addressing. `OHM9996_STORAGE_USE_PATH_STYLE=true` forces path-style addressing for any provider.
+### Detection Rules & Provider Classification
 
-3. **S3-Compatible Storage (`ProviderS3Compatible` / `"s3-compatible"`)**:
-   - Matches any other custom endpoint or bucket URL (e.g., `http://localhost:9000` for MinIO, `http://localhost:4566` for LocalStack, `https://minio.internal.net`, `https://mys3bucket.example.com`).
-   - Automatically enables path-style bucket addressing and custom base endpoint routing.
+Endpoints are evaluated deterministically in the following priority order:
+
+| Rule Constant | Rule Identifier | Matched Provider | Target Pattern & Behavior |
+| --- | --- | --- | --- |
+| `RuleDefaultAWS` | `"default_aws"` | `ProviderAWS` (`"aws"`) | Triggered when both `Endpoint` and `BucketURL` are empty strings. Uses AWS SDK v2 default regional endpoints. |
+| `RuleGCSHostname` | `"gcs_hostname"` | `ProviderGCS` (`"gcs"`) | Matches Google Cloud Storage XML API hostnames ending with or matching standard suffixes (`storage.googleapis.com`, `storage.googleapis`, `stroage.googleapis.com`, `stroage.googleapis`, `commondatastorage.googleapis.com`, `storage.cloud.google.com`), regional pattern `[<bucket>.]storage.<region>.rep.googleapis.com`, or Private Service Connect pattern `[<bucket>.]storage[-<name>].p.googleapis.com` (including `stroage` typo variants). Configures S3 XML interoperability mode with HMAC credentials and path-style addressing. Unrelated Google Cloud hostnames (e.g., `logging.rep.googleapis.com`, `compute.p.googleapis.com`, `bigquery.googleapis.com`) fall back to `s3_compatible_fallback`. |
+| `RuleAWSHostname` | `"aws_hostname"` | `ProviderAWS` (`"aws"`) | Matches native AWS S3 endpoints where **both** criteria are met: (1) hostname ends with an AWS domain suffix (`.amazonaws.com`, `.amazonaws.com.cn`, or `.api.aws`), and (2) contains an S3 service label (`s3`, `s3-*`, or `s3express-*`) preceding the AWS suffix, with only permitted tail labels (`dualstack`, `fips`, `vpce`, or a standard AWS region pattern like `us-east-1`) allowed between them. Uses default AWS SDK virtual-hosted addressing (`OHM9996_STORAGE_USE_PATH_STYLE=true` forces path-style). Non-S3 AWS service hostnames (e.g., EC2, ELB, API Gateway) fall back to `s3_compatible_fallback`. |
+| `RuleS3CompatibleFallback` | `"s3_compatible_fallback"` | `ProviderS3Compatible` (`"s3-compatible"`) | Fallback rule matched for all other custom endpoints and bucket URLs (e.g., MinIO, LocalStack, Wasabi, Cloudflare R2, Ceph, custom internal endpoints, or non-S3 AWS/GCS service endpoints). Automatically enforces path-style addressing and custom endpoint routing. |
+
+### Virtual-Hosted Bucket Subdomain Extraction
+
+When connecting to multi-tenant cloud providers (AWS S3 and GCS), the internal helper `detector.BucketSubdomain(host)` extracts the virtual-hosted bucket prefix from the hostname if present:
+- **AWS S3**: Extracts bucket prefix preceding the S3 service label (e.g., `https://mybucket.s3.us-east-1.amazonaws.com` -> bucket `"mybucket"`, `https://mybucket.s3express-use1-az4.us-east-1.amazonaws.com` -> bucket `"mybucket"`, `https://mybucket.bucket.vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com` -> bucket `"mybucket"`). Base service endpoints (e.g., `s3.amazonaws.com`, `vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com`) return an empty bucket string.
+- **Google Cloud Storage**: Extracts bucket prefix preceding standard suffixes, regional suffixes, or PSC suffixes (e.g., `https://mybucket.storage.googleapis.com` -> bucket `"mybucket"`, `https://mybucket.storage.us-central1.rep.googleapis.com` -> bucket `"mybucket"`, `https://mybucket.storage-psc.p.googleapis.com` -> bucket `"mybucket"`). Base endpoints (e.g., `storage.googleapis.com`, `storage.us-central1.rep.googleapis.com`) return an empty bucket string.
+
+### Internal Detector Functions
+
+The internal package `internal/storage/detector` provides:
+- `detector.Detect(endpoint, bucketURL) (Detection, error)`: Computes full structured detection metadata.
+- `detector.DetectProvider(endpoint, bucketURL) (contracts.Provider, error)`: Backward-compatibility wrapper returning the provider enum.
 
 ---
 
-## Connection Lifecycle & Startup Probing
+## URL Sanitization & Credential Redaction (Internal Helpers)
+
+To safeguard against accidental credential leakage in diagnostic logs and observability pipelines, `internal/storage/urlutil` (wrapped via `internal/storage/client/url_sanitize.go`) provides shared URL scheme validation and best-effort URL sanitization routines used during client initialization and diagnostic logging:
+
+- **`sanitizeLoggedURL(raw string) string`**:
+  - **Best-Effort Userinfo Redaction**: Redacts embedded basic authentication credentials (`user:secretpass@` -> stripped) on valid absolute URLs and standard/complex schemeless hosts (including inputs containing `://` in query parameters or fragments, e.g. `user:pass@host:9000/x?r=a://b` -> `host:9000/x`).
+  - **Strips Query Parameters**: Removes all URL query parameters (`?token=secret...` -> stripped) to prevent leaking temporary SAS tokens, signature parameters, or auth keys.
+  - **Strips URL Fragments**: Removes fragment identifiers (`#section` -> stripped).
+  - **Preserves URL Structure**: Maintains protocol scheme, hostname, port, and path hierarchy (`https://user:pass@minio.internal:9000/bucket?token=123#frag` -> `https://minio.internal:9000/bucket`).
+  - **Schemeless URL Support**: Safely scrubs standard and complex schemeless endpoint strings without prepending unwanted schemes (`admin:secret@minio.corp:9000/data?key=val` -> `minio.corp:9000/data`).
+  - **Fail-Closed Security on Ambiguous / Malformed Inputs**: Ambiguous or malformed inputs—including single-slash schemes (`https:/user:pass@host`), protocol-relative URLs (`//user:pass@host`), empty-authority strings (`https:////user:pass@host`), path pseudo-schemes (`a/b://user:pass@host`), or invalid whitespace—fail safely and return `<unparseable>`. Empty inputs return `""`.
+  - **Sanitized Error Messaging**: Configuration validation and detection errors never echo userinfo, query strings, fragments, or non-numeric port text (e.g., `invalid URL format`, `invalid scheme format`, `invalid port in URL: must be numeric`). They may still name the offending scheme of an unsupported-scheme error (`unsupported URL scheme "ftp"`) or a numeric out-of-range port.
+  - **Compatibility Note (Malformed URL Rejection)**: Endpoint and bucket URL validation rejects malformed input shapes (such as single-slash schemes like `https:/host`, bare `http`/`https` hosts, colon-terminated hosts, and nested `scheme://userinfo@host` inside a path). IPv6 literals (`[::1]:9000`) and `@` / `%40` inside URL paths remain valid. The log sanitizer may print `<unparseable>` for URLs with a literal `@` in the path.
+- **`formatLoggedEndpoint(ep *string) string`**:
+  - Safely handles pointer endpoints, returning `""` when `ep` is `nil` and `sanitizeLoggedURL(*ep)` otherwise.
+
+### Known Limitations & Security Considerations
+
+- **Path-Based Secrets**: Secrets or authentication tokens embedded directly within URL path segments or non-standard token formats outside standard URL userinfo and query parameters are not recognized by URL parsers and are not redacted.
+
+---
+
+## Testing & Verification
+
+The internal storage provider detector and URL sanitization components are validated with unit and matrix test suites:
+
+- **`detector_detect_test.go`**:
+  - `TestDetect_RulesAndProviders`: Verifies deterministic rule classification, provider mapping, hostname inspection, and bucket extraction across default AWS, GCS base/virtual-hosted, AWS base, and custom S3-compatible endpoints.
+- **`url_sanitize_test.go`**:
+  - `TestSanitizeLoggedURL_RedactsCredentialsAndQueries`: Validates credential removal, query string stripping, fragment removal, clean URL preservation, schemeless URL preservation, whitespace error handling (`<unparseable>`), and empty string handling.
+  - `TestFormatLoggedEndpoint`: Validates nil-safety and pointer endpoint formatting.
+- **Matrix Suites**:
+  - `detector_aws_test.go`: Validates AWS S3 endpoint classification (standard endpoints, regional formats, dualstack, FIPS, VPC endpoints, S3 Express, and China regions) and virtual-hosted bucket subdomain extraction.
+  - `detector_gcs_test.go`: Validates Google Cloud Storage XML API endpoint classification (standard domains, regional `rep.googleapis.com`, and PSC `p.googleapis.com`) and bucket subdomain extraction.
+  - `detector_custom_test.go`: Validates fallback to `s3_compatible_fallback` for custom endpoints and ensures non-S3 Google Cloud and AWS service endpoints (e.g., BigQuery, Compute, EC2, ELB, API Gateway) correctly classify as S3-compatible rather than AWS/GCS.
+  - `detector_precedence_test.go`: Validates that `Endpoint` takes precedence over `BucketURL`.
+  - `detector_normalize_test.go`: Validates hostname case insensitivity and trailing root dot normalization.
+  - `detector_invalid_test.go`: Validates rejection of unsupported schemes (`ftp://`, `postgres://`), out-of-range ports, and whitespace.
+
+---
+
+## Connection Lifecycle, Diagnostics & Startup Probing
+
+### Modular Connection Pipeline (Internal Architecture)
+
+Storage client initialization decomposes connection handling into specialized, single-purpose components in `internal/storage/client/`:
+
+- **`connect.go`**: Top-level coordinator for `storage.Connect` (which loads environment configuration via `config.LoadConfig`) and `storage.ConnectWithConfig`. Coordinates provider detection, configuration validation, SDK client construction, diagnostic/lifecycle logging, and startup probing.
+- **`connect_validate.go`**: Validates configuration parameters (`cfg.Validate()`), resolves effective region and endpoint settings, and formats structured lifecycle logs (`initializing storage client` and `storage client initialization complete` at `Info` level).
+- **`connect_log_diagnostic.go`**: Emits pre-connection detection diagnostics (`evaluating storage provider detection` at `Debug` level) containing sanitized raw and normalized endpoints, inspected hostname, matched rule, detected provider, and extracted bucket subdomains.
+- **`connect_log_compat.go` & `connect_log_compat_format.go`**: Evaluates and logs S3 compatibility settings (`storage client compatibility configuration` at `Debug` level) detailing checksum calculation policies, path-style addressing behaviors, authentication modes, and driver overrides.
+- **`connect_probe.go`**: Manages startup bucket reachability probing (`HeadBucket` falling back to `ListObjectsV2`) and process exit hooks (`SetExitFunc`). On probe failure, dispatches abnormal process termination via `central.ExitWithAbnormal`.
+- **`connect_client.go`**: Constructs the underlying AWS SDK v2 `s3.Client` and `s3.PresignClient`, binding base endpoints, credentials (static vs. default chain), HTTP transports, and custom functional options.
+
+```
+storage.Connect / ConnectWithConfig
+  │
+  ├── 1. detector.Detect() ────────────────► connect_log_diagnostic.go (Debug: "evaluating storage provider detection")
+  ├── 2. validateConfig() ─────────────────► connect_validate.go
+  ├── 3. buildClientInstance() ────────────► connect_client.go
+  ├── 4. logClientInitAndCompat() ─────────► connect_validate.go (Info: "initializing storage client")
+  │                                           connect_log_compat.go (Debug: "storage client compatibility configuration")
+  ├── 5. maybeProbeStartup() ──────────────► connect_probe.go (HeadBucket -> ListObjectsV2)
+  │                                           (On failure: central.ExitWithAbnormal -> LevelError + exitFunc(1))
+  └── 6. logStartupComplete() ─────────────► connect_validate.go (Info: "storage client initialization complete")
+```
+
+### Execution Lifecycle
 
 Calling `storage.Connect(ctx, opts...)` executes the following lifecycle:
 
-1. **Configuration Resolution**: Loads environment variables with `OHM9996_STORAGE_*` prefix (with fallback to `.env`/`configs/.env` via `rest/config.Load`) and applies defaults.
-2. **Provider Detection**: Classifies provider type (`gcs`, `aws`, `s3-compatible`) from endpoint/bucket URL patterns (with `Endpoint` taking precedence over `BucketURL`).
-3. **Client Initialization**: Builds the underlying AWS SDK v2 `s3.Client` and `s3.PresignClient`.
-4. **Connectivity Probe**: Unless disabled via `storage.WithSkipProbe(true)`, executes a non-mutating probe against the configured default bucket:
-   - Issues a `HeadBucket` request bounded by `PingTimeout`.
-   - If `HeadBucket` returns `ErrAccessDenied` (HTTP 403), transparently falls back to `ListObjectsV2` with `MaxKeys: 1` to accommodate restrictive IAM policies.
-5. **Error & Exit Handling**:
-   - **Missing mandatory configuration** (`OHM9996_STORAGE_BUCKET` when loading via `storage.Connect` / `config.LoadConfig`) logs a diagnostic message and triggers **graceful termination (`exitFunc(0)`)**.
-   - **Startup connectivity probe failure** (when probing is enabled) logs diagnostic details with a call stack snapshot and triggers **abnormal termination (`exitFunc(1)`)**.
-   - **Configuration validation errors** (e.g., invalid URLs, invalid timeouts, port out of bounds) and client construction errors passed to `storage.ConnectWithConfig` return an error directly and **do not trigger any exit hook**.
+1. **Configuration Resolution**: Loads environment variables with `OHM9996_STORAGE_*` prefix (with fallback to `.env`/`configs/.env` via `rest/config.Load`) and validates parameter bounds.
+2. **Provider Detection & Diagnostic Evaluation**: Classifies provider type (`aws`, `gcs`, `s3-compatible`) from endpoint/bucket URL patterns (with `Endpoint` taking precedence over `BucketURL`) and emits pre-connection debug diagnostics (`evaluating storage provider detection`).
+3. **Configuration Validation**: Resolves effective region and endpoint URL, returning validation errors directly if parameters are invalid.
+4. **Client Initialization**: Builds the underlying AWS SDK v2 `s3.Client` and `s3.PresignClient`, binding transport options, authentication mode, path style, and flexible checksums.
+5. **Lifecycle & Compatibility Diagnostics**: Emits `initializing storage client` (`Info`) and `storage client compatibility configuration` (`Debug`).
+6. **Connectivity Probe**: Unless disabled via `storage.WithSkipProbe(true)`, executes a non-destructive reachability probe against the configured default bucket:
+   - Issues a `HeadBucket` request bounded by `PingTimeout` (default `5s`).
+   - If `HeadBucket` returns `ErrAccessDenied` (mapped from Smithy/SDK API error codes `AccessDenied`, `Forbidden`, or `403`, as well as HTTP 403 status codes), transparently falls back to `ListObjectsV2` with `MaxKeys: 1` to accommodate restrictive IAM policies that grant object listing without bucket metadata read permissions.
+7. **Initialization Complete**: Emits `storage client initialization complete` (`Info`) and returns the ready `*Client`.
+
+### Structured Diagnostic & Compatibility Logging Schemas
+
+When structured logging is enabled, storage client initialization emits structured log records at `Info` and `Debug` levels.
+
+#### 1. Provider Detection Evaluation (`Debug` Level)
+
+Emitted by `connect_log_diagnostic.go` with message `"evaluating storage provider detection"` when the logger has `Debug` level enabled:
+
+| Field | Type | Description | Example |
+| --- | --- | --- | --- |
+| `raw_endpoint` | `string` | Configured endpoint sanitized via `sanitizeLoggedURL` | `"https://storage.googleapis.com"` |
+| `raw_bucket_url` | `string` | Configured bucket URL sanitized via `sanitizeLoggedURL` | `""` |
+| `inspected_host` | `string` | Normalized hostname inspected for classification | `"storage.googleapis.com"` |
+| `detected_provider` | `string` | Classified provider identifier (`"aws"`, `"gcs"`, `"s3-compatible"`) | `"gcs"` |
+| `detection_rule` | `string` | Classification rule matched (`"default_aws"`, `"aws_hostname"`, `"gcs_hostname"`, `"s3_compatible_fallback"`) | `"gcs_hostname"` |
+| `extracted_bucket` | `string` | Virtual-hosted bucket subdomain (if present in multi-tenant hostnames) | `""` |
+| `normalized_endpoint` | `string` | Fully resolved and sanitized base endpoint URL | `"https://storage.googleapis.com"` |
+
+#### 2. Lifecycle Progress (`Info` Level)
+
+Emitted by `connect_validate.go` with messages `"initializing storage client"` and `"storage client initialization complete"`:
+
+| Field | Type | Description | Example |
+| --- | --- | --- | --- |
+| `provider` | `string` | Target cloud provider (`"aws"`, `"gcs"`, `"s3-compatible"`) | `"gcs"` |
+| `bucket` | `string` | Target default bucket name | `"my-app-data"` |
+| `region` | `string` | AWS or S3 region identifier (defaults to `us-east-1` if unset) | `"auto"` (when configured) |
+| `endpoint` | `string` | Sanitized base endpoint URL (empty string `""` for default AWS) | `"https://storage.googleapis.com"` |
+| `use_path_style` | `bool` | Whether path-style addressing is active | `true` |
+| `checksum_mode` | `string` | Formatted checksum mode (`"when_required"` or `"when_supported"`) | `"when_required"` |
+
+#### 3. Compatibility Configuration Diagnostics (`Debug` Level)
+
+Emitted by `connect_log_compat.go` with message `"storage client compatibility configuration"` when `Debug` level is active:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `provider` | `string` | Target cloud provider (`"aws"`, `"gcs"`, `"s3-compatible"`). |
+| `request_checksum_calculation` | `string` | AWS SDK request checksum calculation mode (`"WHEN_REQUIRED"` or `"WHEN_SUPPORTED"`). |
+| `response_checksum_validation` | `string` | AWS SDK response checksum validation mode (`"WHEN_REQUIRED"` or `"WHEN_SUPPORTED"`). |
+| `checksum_behavior_change` | `string` | Behavioral reason comparing effective mode with provider defaults (see constants below). |
+| `use_path_style` | `bool` | Whether path-style addressing is enabled after all options/overrides are evaluated. |
+| `path_style_behavior_change` | `string` | Behavioral reason reflecting effective addressing style and provider (see constants below). |
+| `disable_log_output_checksum_validation_skipped` | `bool` | Internal flag set to `true` to suppress noisy SDK internal checksum skip warnings. |
+| `auth_mode` | `string` | Authentication mode: `"static_credentials"` (when access/secret keys are provided) or `"default_credential_chain"`. |
+| `has_driver_overrides` | `bool` | Boolean flag indicating whether caller supplied custom SDK options via `WithDriverOptions`. |
+
+##### Compatibility Behavior Constants
+
+- **`checksum_behavior_change`**:
+  - `BehaviorChecksumSuppressed` (`"suppress_unsolicited_trailers_for_gcs"`): Default for GCS (`WHEN_REQUIRED`), suppressing unsolicited `aws-chunked` trailing checksum headers that cause GCS S3 XML API signature mismatch errors (`SignatureDoesNotMatch`).
+  - `BehaviorChecksumEnforced` (`"enforce_when_required_for_compat"`): Default for S3-compatible providers (`WHEN_REQUIRED`), preventing trailer checksum mismatches on non-AWS backends.
+  - `BehaviorChecksumStandard` (`"standard_aws_defaults"`): Default for native AWS (`WHEN_SUPPORTED`).
+  - `BehaviorChecksumExplicit` (`"explicit_checksum_configuration"`): Emitted when the effective request checksum calculation mode differs from the provider default (e.g. `WHEN_REQUIRED` on AWS, or any mode other than `WHEN_REQUIRED` on non-AWS backends). Note that `WithDriverOptions` mutators are applied last across all providers and can set arbitrary checksum modes, while the `AWS_REQUEST_CHECKSUM_CALCULATION` environment variable only takes effect on AWS when using the default credential chain (the static credentials path bypasses AWS environment loading, and non-AWS providers unconditionally enforce `WHEN_REQUIRED` during provider compatibility setup). An override that matches the provider default retains the default label.
+- **`path_style_behavior_change`**:
+  - `BehaviorPathStyleStandard` (`"standard_virtual_hosted"`): Effective `UsePathStyle` is `false` (standard AWS virtual-hosted addressing, or non-AWS endpoints where driver options explicitly set `UsePathStyle = false`).
+  - `BehaviorPathStyleConfigured` (`"configured_path_style"`): Effective `UsePathStyle` is `true` on AWS (via `OHM9996_STORAGE_USE_PATH_STYLE=true` or via driver options `WithDriverOptions`).
+  - `BehaviorPathStyleEnforced` (`"enforced_path_style_for_provider"`): Effective `UsePathStyle` is `true` on GCS or S3-compatible backends (standard default for non-AWS backends, unless overridden via driver options).
+
+### Error Handling & Process Exit Semantics
+
+- **Missing Mandatory Configuration**: If required connection settings (e.g. `OHM9996_STORAGE_BUCKET`) are missing when loading via `storage.Connect` / `config.LoadConfig`, the client logs a diagnostic message and dispatches graceful termination (`central.ExitWithGraceful`), invoking `exitFunc(0)` (exit code 0).
+- **Configuration Validation & Build Errors**: Syntax errors, out-of-range ports, invalid timeouts, or unparseable URLs passed to `storage.ConnectWithConfig` return an error directly to the caller and **never trigger any exit hooks**.
+- **Startup Connectivity Probe Failure**: When startup probing is enabled and the probe fails (e.g., `ErrBucketNotFound`, `context.DeadlineExceeded`, or network unreachable), `handleConnectionError` dispatches an abnormal exit event via `central.ExitWithAbnormal(ctx, "failed to connect to storage; exiting abnormally", err, nil)`:
+  - The central logging worker logs the error with severity `slog.LevelError` (exit flag `ExitAbnormal`). *Note: URL sanitization applies specifically to endpoint and bucket URL log attributes; raw error text attached to the abnormal exit record is NOT sanitized and may contain hostnames or URLs embedded by the SDK/network layer.*
+  - When the context carries a call stack (as decorated during `storage.Connect` / `ConnectWithConfig`), the worker logs an additional `"Call stack snapshot"` record at `Error` level containing the stack trace.
+  - The central logging worker flushes all asynchronous log queues.
+  - The worker invokes the configured exit hook `exitFunc(1)` (default `os.Exit(1)`), which terminates the process synchronously.
+  - The underlying error is returned to the caller only if the exit hook is overridden via `SetExitFunc` (or if a custom exit hook returns without terminating the process).
+- **Exit Hook Interception**: Process exit behavior can be intercepted during testing or within supervisor processes using `storage.SetExitFunc`:
+
+```go
+prevExit := storage.SetExitFunc(func(code int) {
+	// Intercept exit code (e.g., 0 for graceful, 1 for abnormal probe failure)
+})
+defer storage.SetExitFunc(prevExit)
+```
 
 ---
 
@@ -109,7 +273,7 @@ Calling `storage.Connect(ctx, opts...)` executes the following lifecycle:
 | `ErrBucketNotFound` | The target bucket does not exist |
 | `ErrNilClient` | Operation attempted on an uninitialized / `nil` client |
 | `ErrNilConfig` | Configuration passed is `nil` |
-| `ErrAccessDenied` | Storage service rejected access (HTTP 403) |
+| `ErrAccessDenied` | Storage service rejected access (mapped from API error codes `AccessDenied`, `Forbidden`, `403` or HTTP 403) |
 | `ErrInvalidExpiry` | Pre-signed URL expiration is negative or exceeds 7 days |
 
 ---

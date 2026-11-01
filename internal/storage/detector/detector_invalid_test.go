@@ -19,6 +19,12 @@ func invalidURLCases() []string {
 		"http://minio:99999",
 		"http://minio:0",
 		"http://minio:-1",
+		"https:/minio:9000",
+		"http:/localhost:9000",
+		"s3:/bucket/x",
+		"x:/host",
+		"/leading/slash",
+		"//admin:pass@host",
 	}
 }
 
@@ -69,4 +75,16 @@ func TestParseTarget_Valid(t *testing.T) {
 	assert.Equal(t, "localhost", u.Hostname())
 	assert.Equal(t, "9000", u.Port())
 	assert.Equal(t, "https", u.Scheme)
+}
+
+// TestParseTarget_RejectsNestedSchemeCredentialsInPath checks ambiguous "a/b://user:pw@host" rejection.
+func TestParseTarget_RejectsNestedSchemeCredentialsInPath(t *testing.T) {
+	for _, bad := range []string{
+		"a/b://user:SECRETPW@host",
+		"https://a/b://user:SECRETPW@host",
+	} {
+		_, err := ParseTarget(bad)
+		require.Error(t, err, bad)
+		assert.NotContains(t, err.Error(), "SECRETPW")
+	}
 }

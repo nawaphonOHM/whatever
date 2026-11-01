@@ -45,6 +45,7 @@ func assertStorageConnectionFailureEntry(t *testing.T, entry map[string]any) {
 
 func captureStorageLifecycleLogsGCP(t *testing.T, cfg *config.Config) []map[string]any {
 	t.Helper()
+	isolateAWSEnv(t)
 	var buf bytes.Buffer
 	setupStorageGCPTestLogger(t, &buf)
 	_, err := ConnectWithConfig(context.Background(), cfg, WithSkipProbe(true))
