@@ -38,7 +38,7 @@ func testConfigWithKeys() *config.Config {
 	return cfg
 }
 
-func headWithConfig(t *testing.T, cfg *config.Config, got *capturedRequest) {
+func headWithConfig(t *testing.T, cfg *config.Config, got *capturedRequest) *client.Client {
 	t.Helper()
 	httpClient := newMockHTTPClient(captureRequest(got))
 	c, err := client.ConnectWithConfig(
@@ -50,6 +50,7 @@ func headWithConfig(t *testing.T, cfg *config.Config, got *capturedRequest) {
 	require.NoError(t, err)
 	_, err = c.HeadObject(context.Background(), contracts.HeadObjectInput{Key: testObjectKey})
 	require.NoError(t, err)
+	return c
 }
 
 func assertSignedRequest(t *testing.T, got capturedRequest, host, path string) {
