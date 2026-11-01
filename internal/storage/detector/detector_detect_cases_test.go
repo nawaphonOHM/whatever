@@ -303,6 +303,21 @@ func TestDetect_ComprehensiveCases(t *testing.T) {
 			endpoint: "https://user:pass@",
 			wantErr:  true,
 		},
+		{
+			name:     "AWS-style credential with slashes and whitespace",
+			endpoint: "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@minio.local:9000 /x",
+			wantErr:  true,
+		},
+		{
+			name:     "Credential with hash and trailing at",
+			endpoint: "https://AKIAKEY:pa#ss@",
+			wantErr:  true,
+		},
+		{
+			name:     "Credential with question mark and trailing at",
+			endpoint: "https://AKIAKEY:pa?ss@",
+			wantErr:  true,
+		},
 	}
 
 	for _, tc := range cases {

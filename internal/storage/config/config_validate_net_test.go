@@ -112,33 +112,100 @@ func TestConfig_Validate_ValidEndpoint_InvalidBucketURL(t *testing.T) {
 
 // TestConfig_Validate_CredentialRedaction verifies that credentials in malformed URLs are redacted from validation error messages.
 func TestConfig_Validate_CredentialRedaction(t *testing.T) {
-	credentialCases := []string{
-		"https://AKIAKEY:supersecret@minio.local:9000 /x",
-		"https://AKIAKEY:supersecret@minio.local/%zz",
-		"https://AKIAKEY:supersecret@",
-		"https://AKIAKEY:supersecret@/s3path",
+	credentialCases := []struct {
+		name      string
+		target    string
+		forbidden []string
+	}{
+		{
+			name:      "alphanumeric credentials with whitespace",
+			target:    "https://AKIAKEY:supersecret@minio.local:9000 /x",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with bad escape",
+			target:    "https://AKIAKEY:supersecret@minio.local/%zz",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with missing host",
+			target:    "https://AKIAKEY:supersecret@",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with missing host and path",
+			target:    "https://AKIAKEY:supersecret@/s3path",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and whitespace",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@minio.local:9000 /x",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and bad escape",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@minio.local/%zz",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and missing host",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and missing host with path",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@/s3path",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and trailing at without host",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG@",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG"},
+		},
+		{
+			name:      "secret containing hash with trailing at",
+			target:    "https://AKIAKEY:hash#secret@",
+			forbidden: []string{"AKIAKEY", "hash#secret", "hash", "secret"},
+		},
+		{
+			name:      "secret containing hash with whitespace",
+			target:    "https://AKIAKEY:hash#secret@minio.local:9000 /x",
+			forbidden: []string{"AKIAKEY", "hash#secret", "hash", "secret"},
+		},
+		{
+			name:      "secret containing question mark with trailing at",
+			target:    "https://AKIAKEY:quest?secret@",
+			forbidden: []string{"AKIAKEY", "quest?secret", "quest", "secret"},
+		},
+		{
+			name:      "secret containing question mark with bad escape",
+			target:    "https://AKIAKEY:quest?secret@minio.local/%zz",
+			forbidden: []string{"AKIAKEY", "quest?secret", "quest", "secret"},
+		},
 	}
 
-	for _, bad := range credentialCases {
-		t.Run("endpoint_"+bad, func(t *testing.T) {
+	for _, tc := range credentialCases {
+		t.Run("endpoint_"+tc.name, func(t *testing.T) {
 			cfg := validBaseConfig()
-			cfg.Endpoint = bad
+			cfg.Endpoint = tc.target
 			err := cfg.Validate()
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid endpoint")
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 		})
 
-		t.Run("bucketURL_"+bad, func(t *testing.T) {
+		t.Run("bucketURL_"+tc.name, func(t *testing.T) {
 			cfg := validBaseConfig()
 			cfg.Endpoint = "https://s3.amazonaws.com"
-			cfg.BucketURL = bad
+			cfg.BucketURL = tc.target
 			err := cfg.Validate()
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid bucket url")
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 		})
 	}
 }

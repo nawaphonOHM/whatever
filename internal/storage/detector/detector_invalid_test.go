@@ -73,48 +73,138 @@ func TestParseTarget_Valid(t *testing.T) {
 
 // TestDetect_CredentialRedaction verifies that credentials in malformed URLs are redacted across detection functions.
 func TestDetect_CredentialRedaction(t *testing.T) {
-	credentialCases := []string{
-		"https://AKIAKEY:supersecret@minio.local:9000 /x",
-		"https://AKIAKEY:supersecret@minio.local/%zz",
-		"https://AKIAKEY:supersecret@",
-		"https://AKIAKEY:supersecret@/s3path",
-		"http://AKIAKEY:supersecret@bad host.com",
-		"ftp://AKIAKEY:supersecret@minio.local",
-		"http://AKIAKEY:supersecret@minio:99999",
-		"http://AKIAKEY:supersecret@minio:-1",
-		"AKIAKEY:supersecret@minio.local:9000 /x",
+	credentialCases := []struct {
+		name      string
+		target    string
+		forbidden []string
+	}{
+		{
+			name:      "alphanumeric credentials with whitespace",
+			target:    "https://AKIAKEY:supersecret@minio.local:9000 /x",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with bad escape",
+			target:    "https://AKIAKEY:supersecret@minio.local/%zz",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with missing host",
+			target:    "https://AKIAKEY:supersecret@",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with missing host and path",
+			target:    "https://AKIAKEY:supersecret@/s3path",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with unsupported scheme",
+			target:    "ftp://AKIAKEY:supersecret@minio.local",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with out-of-range port",
+			target:    "http://AKIAKEY:supersecret@minio:99999",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "alphanumeric credentials with negative port",
+			target:    "http://AKIAKEY:supersecret@minio:-1",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "schemeless credentials with whitespace",
+			target:    "AKIAKEY:supersecret@minio.local:9000 /x",
+			forbidden: []string{"supersecret", "AKIAKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and whitespace",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@minio.local:9000 /x",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and bad escape",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@minio.local/%zz",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and missing host",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and missing host with path",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@/s3path",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			name:      "AWS-style secret with slashes and trailing at without host",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG@",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG"},
+		},
+		{
+			name:      "secret containing hash with trailing at",
+			target:    "https://AKIAKEY:hash#secret@",
+			forbidden: []string{"AKIAKEY", "hash#secret", "hash", "secret"},
+		},
+		{
+			name:      "secret containing hash with whitespace",
+			target:    "https://AKIAKEY:hash#secret@minio.local:9000 /x",
+			forbidden: []string{"AKIAKEY", "hash#secret", "hash", "secret"},
+		},
+		{
+			name:      "secret containing question mark with trailing at",
+			target:    "https://AKIAKEY:quest?secret@",
+			forbidden: []string{"AKIAKEY", "quest?secret", "quest", "secret"},
+		},
+		{
+			name:      "secret containing question mark with bad escape",
+			target:    "https://AKIAKEY:quest?secret@minio.local/%zz",
+			forbidden: []string{"AKIAKEY", "quest?secret", "quest", "secret"},
+		},
+		{
+			name:      "schemeless with credentials and query scheme delimiter with bad port",
+			target:    "AKIAKEY:secret@minio:99999/p?x=://",
+			forbidden: []string{"AKIAKEY", "secret"},
+		},
 	}
 
-	for _, bad := range credentialCases {
-		t.Run("detect_endpoint_"+bad, func(t *testing.T) {
-			_, err := Detect(bad, "")
+	for _, tc := range credentialCases {
+		t.Run("detect_endpoint_"+tc.name, func(t *testing.T) {
+			_, err := Detect(tc.target, "")
 			require.Error(t, err)
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 
-			_, err = DetectProvider(bad, "")
+			_, err = DetectProvider(tc.target, "")
 			require.Error(t, err)
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 		})
 
-		t.Run("detect_bucketURL_"+bad, func(t *testing.T) {
-			_, err := Detect("", bad)
+		t.Run("detect_bucketURL_"+tc.name, func(t *testing.T) {
+			_, err := Detect("", tc.target)
 			require.Error(t, err)
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 
-			_, err = DetectProvider("", bad)
+			_, err = DetectProvider("", tc.target)
 			require.Error(t, err)
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 		})
 
-		t.Run("parseTarget_"+bad, func(t *testing.T) {
-			_, err := ParseTarget(bad)
+		t.Run("parseTarget_"+tc.name, func(t *testing.T) {
+			_, err := ParseTarget(tc.target)
 			require.Error(t, err)
-			assert.NotContains(t, err.Error(), "supersecret")
-			assert.NotContains(t, err.Error(), "AKIAKEY")
+			for _, secret := range tc.forbidden {
+				assert.NotContains(t, err.Error(), secret)
+			}
 		})
 	}
 }
