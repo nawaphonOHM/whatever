@@ -7,6 +7,22 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/contracts"
 )
 
+// Storage provider detection rule constants.
+const (
+	RuleDefaultAWS           = "default_aws"
+	RuleAWSHostname          = "aws_hostname"
+	RuleGCSHostname          = "gcs_hostname"
+	RuleS3CompatibleFallback = "s3_compatible_fallback"
+)
+
+// Detection holds evaluated cloud storage provider and classification reasoning.
+type Detection struct {
+	Provider contracts.Provider
+	Host     string
+	Rule     string
+	Bucket   string
+}
+
 const labelSep = "."
 
 // selectTargetURL returns the primary target URL from endpoint or bucketURL.
@@ -22,55 +38,55 @@ func normalizeHost(host string) string {
 	return strings.ToLower(strings.TrimSuffix(host, labelSep))
 }
 
-// matchesDomainOrSubdomain checks if host equals domain or ends with .domain.
-func matchesDomainOrSubdomain(host, domain string) bool {
-	return host == domain || strings.HasSuffix(host, labelSep+domain)
-}
-
-// prefixLabels returns the dot-separated labels preceding the given domain suffix.
-func prefixLabels(host, domain string) []string {
-	prefix := strings.TrimSuffix(strings.TrimSuffix(host, domain), labelSep)
-	if prefix == "" {
-		return nil
-	}
-	return strings.Split(prefix, labelSep)
-}
-
-// classifyProvider inspects parsed hostname and determines the storage provider.
-func classifyProvider(host string) contracts.Provider {
+// classifyDetection determines the provider, matched rule, and bucket for a normalized host.
+func classifyDetection(host string) Detection {
 	if IsGCSHost(host) {
-		return contracts.ProviderGCS
+		bucket, _ := gcsBucketSubdomain(host)
+		return Detection{
+			Provider: contracts.ProviderGCS,
+			Host:     host,
+			Rule:     RuleGCSHostname,
+			Bucket:   bucket,
+		}
 	}
 	if IsAWSHost(host) {
-		return contracts.ProviderAWS
+		bucket, _ := awsBucketSubdomain(host)
+		return Detection{
+			Provider: contracts.ProviderAWS,
+			Host:     host,
+			Rule:     RuleAWSHostname,
+			Bucket:   bucket,
+		}
 	}
-	return contracts.ProviderS3Compatible
+	return Detection{
+		Provider: contracts.ProviderS3Compatible,
+		Host:     host,
+		Rule:     RuleS3CompatibleFallback,
+	}
+}
+
+// Detect evaluates endpoint and bucket URL, returning full Detection information.
+func Detect(endpoint, bucketURL string) (Detection, error) {
+	target := selectTargetURL(endpoint, bucketURL)
+	if target == "" {
+		return Detection{
+			Provider: contracts.ProviderAWS,
+			Rule:     RuleDefaultAWS,
+		}, nil
+	}
+	u, err := ParseTarget(target)
+	if err != nil {
+		return Detection{}, err
+	}
+	return classifyDetection(normalizeHost(u.Hostname())), nil
 }
 
 // DetectProvider identifies the cloud storage provider based on endpoint and bucket URL patterns.
 // If both arguments are empty, it defaults to AWS S3.
 func DetectProvider(endpoint, bucketURL string) (contracts.Provider, error) {
-	target := selectTargetURL(endpoint, bucketURL)
-	if target == "" {
-		return contracts.ProviderAWS, nil
-	}
-	u, err := ParseTarget(target)
+	d, err := Detect(endpoint, bucketURL)
 	if err != nil {
 		return "", err
 	}
-	return classifyProvider(normalizeHost(u.Hostname())), nil
-}
-
-// BucketSubdomain extracts the virtual-hosted bucket name from a multi-tenant provider hostname
-// (e.g. AWS S3 or Google Cloud Storage) if present. It returns ("", false) if the hostname is a base service
-// endpoint or not a recognized multi-tenant storage host.
-func BucketSubdomain(host string) (string, bool) {
-	h := normalizeHost(host)
-	if IsGCSHost(h) {
-		return gcsBucketSubdomain(h)
-	}
-	if IsAWSHost(h) {
-		return awsBucketSubdomain(h)
-	}
-	return "", false
+	return d.Provider, nil
 }

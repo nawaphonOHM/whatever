@@ -26,6 +26,7 @@ func assertStorageInitEntryGCP(t *testing.T, entry map[string]any) {
 	assert.Equal(t, "ap-southeast-2", entry["region"])
 	assert.Equal(t, "https://storage.example.test", entry["endpoint"])
 	assert.Equal(t, true, entry["use_path_style"])
+	assert.Equal(t, "when_required", entry["checksum_mode"])
 }
 
 func assertStorageCompleteEntryGCP(t *testing.T, entry map[string]any) {
@@ -35,6 +36,10 @@ func assertStorageCompleteEntryGCP(t *testing.T, entry map[string]any) {
 	assertStorageGCPSeverity(t, entry, "INFO")
 	assert.Equal(t, "s3-compatible", entry["provider"])
 	assert.Equal(t, "test-bucket", entry["bucket"])
+	assert.Equal(t, "ap-southeast-2", entry["region"])
+	assert.Equal(t, "https://storage.example.test", entry["endpoint"])
+	assert.Equal(t, true, entry["use_path_style"])
+	assert.Equal(t, "when_required", entry["checksum_mode"])
 }
 
 func gcpStorageTestConfig() *config.Config {

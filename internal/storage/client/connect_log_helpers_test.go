@@ -11,6 +11,18 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/logging/central"
 )
 
+func isolateAWSEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("AWS_CONFIG_FILE", "/nonexistent/path/config")
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/nonexistent/path/credentials")
+	t.Setenv("AWS_PROFILE", "")
+	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+	t.Setenv("AWS_ENDPOINT_URL", "")
+	t.Setenv("AWS_ENDPOINT_URL_S3", "")
+	t.Setenv("AWS_REQUEST_CHECKSUM_CALCULATION", "")
+	t.Setenv("AWS_RESPONSE_CHECKSUM_VALIDATION", "")
+}
+
 func setStorageTestLogger(t *testing.T, handler slog.Handler) {
 	t.Helper()
 	worker := central.DefaultWorker()
