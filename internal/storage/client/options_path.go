@@ -3,8 +3,6 @@
 package client
 
 import (
-	"strings"
-
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/config"
@@ -12,13 +10,8 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/detector"
 )
 
-func isNativeAWSDomain(host, domain string) bool {
-	return host == domain || strings.HasSuffix(host, "."+domain)
-}
-
 func isNativeAWSHost(host string) bool {
-	h := strings.ToLower(host)
-	return isNativeAWSDomain(h, "amazonaws.com") || isNativeAWSDomain(h, "amazonaws.com.cn")
+	return detector.IsAWSHost(host)
 }
 
 func extractTargetFromConfig(cfg *config.Config) string {

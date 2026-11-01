@@ -6,8 +6,10 @@ import (
 )
 
 const (
-	gcsRegionalDomain = "rep.googleapis.com"
-	gcsPSCDomain      = "p.googleapis.com"
+	gcsRegionalDomain    = "rep.googleapis.com"
+	gcsPSCDomain         = "p.googleapis.com"
+	gcsRegionalMinLabels = 3
+	gcsPSCMinLabels      = 2
 )
 
 var gcsSuffixPatterns = []string{
@@ -55,8 +57,58 @@ func isGCSPSCHost(host string) bool {
 	return len(labels) > 0 && isGCSPSCLabel(labels[len(labels)-1])
 }
 
+func firstLabel(labels []string) (string, bool) {
+	if len(labels) == 0 {
+		return "", false
+	}
+	return labels[0], true
+}
+
+func gcsSuffixOf(host string) (string, bool) {
+	idx := slices.IndexFunc(gcsSuffixPatterns, func(suffix string) bool {
+		return matchesDomainOrSubdomain(host, suffix)
+	})
+	if idx < 0 {
+		return "", false
+	}
+	return gcsSuffixPatterns[idx], true
+}
+
+func gcsRegionalBucket(host string) (string, bool) {
+	labels := prefixLabels(host, gcsRegionalDomain)
+	if len(labels) < gcsRegionalMinLabels || !isGCSServiceLabel(labels[len(labels)-2]) {
+		return "", false
+	}
+	return labels[0], true
+}
+
+func gcsPSCBucket(host string) (string, bool) {
+	labels := prefixLabels(host, gcsPSCDomain)
+	if len(labels) < gcsPSCMinLabels || !isGCSPSCLabel(labels[len(labels)-1]) {
+		return "", false
+	}
+	return labels[0], true
+}
+
+func gcsDedicatedBucket(host string) (string, bool) {
+	if matchesDomainOrSubdomain(host, gcsRegionalDomain) {
+		return gcsRegionalBucket(host)
+	}
+	if matchesDomainOrSubdomain(host, gcsPSCDomain) {
+		return gcsPSCBucket(host)
+	}
+	return "", false
+}
+
+func gcsBucketSubdomain(host string) (string, bool) {
+	if suffix, ok := gcsSuffixOf(host); ok {
+		return firstLabel(prefixLabels(host, suffix))
+	}
+	return gcsDedicatedBucket(host)
+}
+
 // IsGCSHost determines if the hostname matches Google Cloud Storage patterns.
 func IsGCSHost(host string) bool {
-	h := strings.ToLower(host)
+	h := normalizeHost(host)
 	return hasGCSSuffix(h) || isGCSRegionalHost(h) || isGCSPSCHost(h)
 }

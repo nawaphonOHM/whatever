@@ -17,6 +17,11 @@ func selectTargetURL(endpoint, bucketURL string) string {
 	return bucketURL
 }
 
+// normalizeHost lowercases host and trims a trailing root-label dot.
+func normalizeHost(host string) string {
+	return strings.ToLower(strings.TrimSuffix(host, labelSep))
+}
+
 // matchesDomainOrSubdomain checks if host equals domain or ends with .domain.
 func matchesDomainOrSubdomain(host, domain string) bool {
 	return host == domain || strings.HasSuffix(host, labelSep+domain)
@@ -53,6 +58,19 @@ func DetectProvider(endpoint, bucketURL string) (contracts.Provider, error) {
 	if err != nil {
 		return "", err
 	}
-	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), labelSep)
-	return classifyProvider(host), nil
+	return classifyProvider(normalizeHost(u.Hostname())), nil
+}
+
+// BucketSubdomain extracts the virtual-hosted bucket name from a multi-tenant provider hostname
+// (e.g. AWS S3 or Google Cloud Storage) if present. It returns ("", false) if the hostname is a base service
+// endpoint or not a recognized multi-tenant storage host.
+func BucketSubdomain(host string) (string, bool) {
+	h := normalizeHost(host)
+	if IsGCSHost(h) {
+		return gcsBucketSubdomain(h)
+	}
+	if IsAWSHost(h) {
+		return awsBucketSubdomain(h)
+	}
+	return "", false
 }

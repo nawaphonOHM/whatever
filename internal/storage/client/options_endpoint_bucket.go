@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/url"
 	"strings"
+
+	"github.com/nawaphonOHM/whatever/v3/internal/storage/detector"
 )
 
 const pathSep = "/"
@@ -18,40 +20,23 @@ func joinHostPort(host, port string) string {
 	return net.JoinHostPort(host, port)
 }
 
-func isExactNonBucketLabel(label string) bool {
-	switch label {
-	case "s3", "storage", "stroage", "bucket":
-		return true
-	default:
-		return false
-	}
-}
-
-func isNonBucketLabel(label string) bool {
-	lower := strings.ToLower(label)
-	if isExactNonBucketLabel(lower) {
-		return true
-	}
-	return strings.HasPrefix(lower, "s3-") || strings.Contains(lower, "vpce")
-}
-
 func isMultiTenantHost(host string) bool {
-	lower := strings.ToLower(host)
-	if strings.Contains(lower, "storage.googleapis") || strings.Contains(lower, "stroage.googleapis") {
-		return true
-	}
-	return isNativeAWSHost(lower)
-}
-
-func isAllowedHostSubdomain(subdomain, bucket string) bool {
-	return subdomain == bucket || isNonBucketLabel(subdomain)
+	return detector.IsGCSHost(host) || detector.IsAWSHost(host)
 }
 
 func checkHostSubdomainMismatch(parts []string, bucket string) error {
-	if len(parts) <= 1 || isAllowedHostSubdomain(parts[0], bucket) {
-		return nil
+	subdomain, hasBucket := detector.BucketSubdomain(strings.Join(parts, "."))
+	if hasBucket && !strings.EqualFold(subdomain, bucket) {
+		return fmt.Errorf("bucket %q in configuration does not match bucket %q in URL", bucket, subdomain)
 	}
-	return fmt.Errorf("bucket %q in configuration does not match bucket %q in URL", bucket, parts[0])
+	return nil
+}
+
+func hasBucketHostPrefix(hostname, prefix string) bool {
+	if len(hostname) <= len(prefix) {
+		return false
+	}
+	return strings.EqualFold(hostname[:len(prefix)], prefix)
 }
 
 func stripBucketSubdomain(u *url.URL, bucket, hostname string) bool {
@@ -59,7 +44,7 @@ func stripBucketSubdomain(u *url.URL, bucket, hostname string) bool {
 		return false
 	}
 	prefix := bucket + "."
-	if !strings.HasPrefix(hostname, prefix) {
+	if !hasBucketHostPrefix(hostname, prefix) {
 		return false
 	}
 	remainder := hostname[len(prefix):]
