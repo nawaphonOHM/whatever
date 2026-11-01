@@ -85,21 +85,22 @@ The internal package `internal/storage/detector` provides:
 
 ## URL Sanitization & Credential Redaction (Internal Helpers)
 
-To safeguard against accidental credential leakage in diagnostic logs and observability pipelines, `internal/storage/client/url_sanitize.go` provides best-effort URL sanitization routines used during client initialization and diagnostic logging:
+To safeguard against accidental credential leakage in diagnostic logs and observability pipelines, `internal/storage/urlutil` (wrapped via `internal/storage/client/url_sanitize.go`) provides shared URL scheme validation and best-effort URL sanitization routines used during client initialization and diagnostic logging:
 
 - **`sanitizeLoggedURL(raw string) string`**:
-  - **Best-Effort Userinfo Redaction**: Redacts embedded basic authentication credentials (`user:secretpass@` -> stripped) on valid absolute URLs and standard schemeless hosts.
+  - **Best-Effort Userinfo Redaction**: Redacts embedded basic authentication credentials (`user:secretpass@` -> stripped) on valid absolute URLs and standard/complex schemeless hosts (including inputs containing `://` in query parameters or fragments, e.g. `user:pass@host:9000/x?r=a://b` -> `host:9000/x`).
   - **Strips Query Parameters**: Removes all URL query parameters (`?token=secret...` -> stripped) to prevent leaking temporary SAS tokens, signature parameters, or auth keys.
   - **Strips URL Fragments**: Removes fragment identifiers (`#section` -> stripped).
   - **Preserves URL Structure**: Maintains protocol scheme, hostname, port, and path hierarchy (`https://user:pass@minio.internal:9000/bucket?token=123#frag` -> `https://minio.internal:9000/bucket`).
-  - **Schemeless URL Support**: Safely scrubs standard schemeless endpoint strings without prepending unwanted schemes (`admin:secret@minio.corp:9000/data?key=val` -> `minio.corp:9000/data`).
-  - **Defensive Error Handling**: Rejects malformed strings or inputs containing invalid whitespace characters (`" \t\r\n"`) by returning `<unparseable>` placeholder without throwing panics. Empty inputs return `""`.
+  - **Schemeless URL Support**: Safely scrubs standard and complex schemeless endpoint strings without prepending unwanted schemes (`admin:secret@minio.corp:9000/data?key=val` -> `minio.corp:9000/data`).
+  - **Fail-Closed Security on Ambiguous / Malformed Inputs**: Ambiguous or malformed inputs—including single-slash schemes (`https:/user:pass@host`), protocol-relative URLs (`//user:pass@host`), empty-authority strings (`https:////user:pass@host`), path pseudo-schemes (`a/b://user:pass@host`), or invalid whitespace—fail safely and return `<unparseable>`. Empty inputs return `""`.
+  - **Sanitized Error Messaging**: Configuration validation and detection errors never echo userinfo, query strings, fragments, or non-numeric port text (e.g., `invalid URL format`, `invalid scheme format`, `invalid port in URL: must be numeric`). They may still name the offending scheme of an unsupported-scheme error (`unsupported URL scheme "ftp"`) or a numeric out-of-range port.
+  - **Compatibility Note (Malformed URL Rejection)**: Endpoint and bucket URL validation rejects malformed input shapes (such as single-slash schemes like `https:/host`, bare `http`/`https` hosts, colon-terminated hosts, and nested `scheme://userinfo@host` inside a path). IPv6 literals (`[::1]:9000`) and `@` / `%40` inside URL paths remain valid. The log sanitizer may print `<unparseable>` for URLs with a literal `@` in the path.
 - **`formatLoggedEndpoint(ep *string) string`**:
   - Safely handles pointer endpoints, returning `""` when `ep` is `nil` and `sanitizeLoggedURL(*ep)` otherwise.
 
 ### Known Limitations & Security Considerations
 
-- **Schemeless URLs Containing `://` in Query**: In the current implementation, if a schemeless input string contains `://` in its query string (e.g., `user:pass@host:9000/x?r=a://b`), Go's standard `url.Parse` misidentifies the username as a scheme and treats the rest of the URL as opaque data without stripping the `user:pass` credentials. This known edge case is scheduled for code remediation and test verification in step 3.
 - **Path-Based Secrets**: Secrets or authentication tokens embedded directly within URL path segments or non-standard token formats outside standard URL userinfo and query parameters are not recognized by URL parsers and are not redacted.
 
 ---

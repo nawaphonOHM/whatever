@@ -50,6 +50,10 @@ func TestConfig_Validate_EndpointInvalid(t *testing.T) {
 		"http://localhost:99999",
 		" http://localhost:9000",
 		"http://localhost:9000 ",
+		"https:/admin:SECRETPW@minio.internal:9000",
+		"//admin:SECRETPW@minio.internal:9000",
+		"https://admin:SECRETPW@minio.internal:SECRETPW",
+		"minio.local/a/b://user:SECRETPW@host",
 	} {
 		cfg := validBaseConfig()
 		cfg.Endpoint = bad
@@ -64,10 +68,17 @@ func TestConfig_Validate_EndpointValid(t *testing.T) {
 		"https://s3.amazonaws.com",
 		"localhost:9000",
 		"s3.us-east-1.amazonaws.com",
+		"http://[::1]:9000",
+		"[::1]:9000",
+		"https://[::1]/x",
+		"http://[::ffff:127.0.0.1]:9000",
+		"https://minio.local/tenant@team",
+		"https://proxy.example.com/s3/a@b/",
+		"https://minio.local/a%40b",
 	} {
 		cfg := validBaseConfig()
 		cfg.Endpoint = good
-		assert.NoError(t, cfg.Validate())
+		assert.NoError(t, cfg.Validate(), good)
 	}
 }
 
@@ -91,9 +102,11 @@ func TestConfig_Validate_BucketURLValid(t *testing.T) {
 	for _, good := range []string{
 		"https://mybucket.s3.us-east-1.amazonaws.com",
 		"storage.googleapis.com/mybucket",
+		"https://mybucket.s3.amazonaws.com/key@v1",
+		"https://minio.local/a%40b",
 	} {
 		cfg := validBaseConfig()
 		cfg.BucketURL = good
-		assert.NoError(t, cfg.Validate())
+		assert.NoError(t, cfg.Validate(), good)
 	}
 }

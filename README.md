@@ -1558,12 +1558,14 @@ When connecting to multi-tenant cloud providers (AWS S3 and GCS), the internal h
 
 ### URL Sanitization & Security Redaction (Internal Helpers)
 
-To protect sensitive credentials and query parameters in internal diagnostic logs and traces, `internal/storage/client/url_sanitize.go` provides best-effort URL sanitization routines:
+To protect sensitive credentials and query parameters in internal diagnostic logs and traces, `internal/storage/urlutil` (wrapped via `internal/storage/client/url_sanitize.go`) provides shared URL scheme validation and best-effort URL sanitization routines:
 - **Best-Effort Credential Redaction**: Redacts embedded userinfo credentials (`user:secret@` -> stripped) on valid absolute URLs and standard schemeless hosts.
 - **Query & Fragment Stripping**: Strips URL query strings (`?token=secret...`) and URL fragments (`#ref`) while preserving scheme, hostname, port, and path hierarchy (`https://user:pass@minio.internal:9000/bucket?token=123#frag` -> `https://minio.internal:9000/bucket`).
-- **Schemeless URL Support**: Safely scrubs standard schemeless URLs without adding undesired default schemes (`admin:pass@minio.corp:9000/data?key=val` -> `minio.corp:9000/data`).
-- **Defensive Fallback**: Returns `<unparseable>` placeholder without panicking for invalid or whitespace-containing URLs.
-- **Known Edge Cases & Limitations**: In the current implementation, schemeless strings containing `://` in the query (e.g. `user:pass@host:9000/x?r=a://b`) are misparsed by `url.Parse` as having scheme `user` with opaque body, preserving user credentials (remediation scheduled in step 3). Path-based secrets outside userinfo/query components are also not parsed as credentials.
+- **Schemeless URL Support**: Safely scrubs standard and complex schemeless URLs (including queries or fragments containing scheme delimiters, e.g. `user:pass@host:9000/x?r=a://b` -> `host:9000/x`) without adding undesired default schemes.
+- **Fail-Closed Security on Ambiguous / Malformed Inputs**: Ambiguous or malformed inputs—including single-slash schemes (`https:/user:pass@host`), protocol-relative URLs (`//user:pass@host`), empty-authority strings (`https:////user:pass@host`), path pseudo-schemes (`a/b://user:pass@host`), or invalid whitespace—fail safely and return `<unparseable>`.
+- **Sanitized Error Messaging**: Configuration validation and detection errors never echo userinfo, query strings, fragments, or non-numeric port text (e.g., `invalid URL format`, `invalid scheme format`, `invalid port in URL: must be numeric`). They may still name the offending scheme of an unsupported-scheme error (`unsupported URL scheme "ftp"`) or a numeric out-of-range port.
+- **Compatibility Note (Malformed URL Rejection)**: `ParseTarget`, `Detect`, and `Config.Validate` reject malformed input shapes (such as single-slash schemes like `https:/host`, bare `http`/`https` hosts, colon-terminated hosts, and nested `scheme://userinfo@host` inside a path). Legitimate endpoints are unaffected, including IPv6 literals (`[::1]:9000`, `http://[::ffff:127.0.0.1]:9000`) and `@` or `%40` inside URL paths (`https://proxy.example.com/s3/a@b/`). For log output, the sanitizer may still print `<unparseable>` for URLs with a literal `@` in the path.
+- **Known Limitations & Caveats**: Path-based secrets or authentication tokens embedded directly within URL path segments or non-standard token formats outside standard URL userinfo and query parameters are not recognized by URL parsers and are not redacted.
 
 ### Modular Connection Pipeline & Compatibility Diagnostics
 
