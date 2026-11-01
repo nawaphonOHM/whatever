@@ -88,3 +88,102 @@ func TestBuildS3Options_BucketURLMinioPath(t *testing.T) {
 	assert.Equal(t, "http://localhost:9000", *opts.BaseEndpoint)
 	assert.True(t, opts.UsePathStyle)
 }
+
+func TestBuildS3Options_AWSAmazonEndpointTrailingDot(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:   testBucket,
+		Region:   testAWSRegionSE,
+		Endpoint: "https://s3.amazonaws.com.",
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
+	require.NoError(t, err)
+	assert.Nil(t, opts.BaseEndpoint)
+	assert.False(t, opts.UsePathStyle)
+}
+
+func TestBuildS3Options_UserinfoStrippedEndpoint(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:   testBucket,
+		Endpoint: "https://user:password@minio.internal:9000",
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+	require.NoError(t, err)
+	require.NotNil(t, opts.BaseEndpoint)
+	assert.Equal(t, "https://minio.internal:9000", *opts.BaseEndpoint)
+	assert.NotContains(t, *opts.BaseEndpoint, "user")
+	assert.NotContains(t, *opts.BaseEndpoint, "password")
+	assert.True(t, opts.UsePathStyle)
+}
+
+func TestBuildS3Options_UserinfoStrippedBucketURL(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:    testBucket,
+		BucketURL: "https://user:password@storage.googleapis.com/" + testBucket,
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderGCS, nil)
+	require.NoError(t, err)
+	require.NotNil(t, opts.BaseEndpoint)
+	assert.Equal(t, gcsServiceEndpoint, *opts.BaseEndpoint)
+	assert.NotContains(t, *opts.BaseEndpoint, "user")
+	assert.NotContains(t, *opts.BaseEndpoint, "password")
+	assert.True(t, opts.UsePathStyle)
+}
+
+func TestBuildS3Options_InsecureAndPortFormatting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("insecure applies http scheme", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:   testBucket,
+			Endpoint: "minio.internal.net",
+			Insecure: true,
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+		require.NoError(t, err)
+		require.NotNil(t, opts.BaseEndpoint)
+		assert.Equal(t, "http://minio.internal.net", *opts.BaseEndpoint)
+	})
+
+	t.Run("disable ssl applies http scheme", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:     testBucket,
+			Endpoint:   "minio.internal.net",
+			DisableSSL: true,
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+		require.NoError(t, err)
+		require.NotNil(t, opts.BaseEndpoint)
+		assert.Equal(t, "http://minio.internal.net", *opts.BaseEndpoint)
+	})
+
+	t.Run("port appended when missing", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:   testBucket,
+			Endpoint: "https://custom.s3.internal",
+			Port:     8443,
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+		require.NoError(t, err)
+		require.NotNil(t, opts.BaseEndpoint)
+		assert.Equal(t, "https://custom.s3.internal:8443", *opts.BaseEndpoint)
+	})
+
+	t.Run("explicit use path style on aws", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:       testBucket,
+			Endpoint:     "https://s3.amazonaws.com",
+			UsePathStyle: true,
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
+		require.NoError(t, err)
+		assert.Nil(t, opts.BaseEndpoint)
+		assert.True(t, opts.UsePathStyle)
+	})
+}

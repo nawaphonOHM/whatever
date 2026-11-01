@@ -43,6 +43,7 @@ func parseEndpointURL(target, bucket string, cfg *config.Config) (*url.URL, erro
 	if err != nil {
 		return nil, err
 	}
+	u.User = nil
 	applyInsecureScheme(u, cfg)
 	if err := normalizeEndpointTargetHost(u, bucket); err != nil {
 		return nil, err
@@ -55,6 +56,7 @@ func parseBucketURL(target, bucket string, cfg *config.Config) (*url.URL, error)
 	if err != nil {
 		return nil, err
 	}
+	u.User = nil
 	applyInsecureScheme(u, cfg)
 	if err := normalizeBucketURL(u, bucket); err != nil {
 		return nil, err

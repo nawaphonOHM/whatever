@@ -50,7 +50,7 @@ func matchesAWSStandardSuffix(lower string) bool {
 }
 
 func isStandardAWSS3Host(host string) bool {
-	lower := strings.ToLower(host)
+	lower := strings.ToLower(strings.TrimSuffix(host, "."))
 	if !matchesAWSStandardSuffix(lower) || hasNonStandardAWSHostKeywords(lower) {
 		return false
 	}

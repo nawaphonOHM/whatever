@@ -48,6 +48,18 @@ func normalizeTargetScheme(target string) string {
 // parseRawURL transforms and parses raw target into *url.URL.
 func parseRawURL(target string) (*url.URL, error) {
 	raw := normalizeTargetScheme(target)
+	schemeIdx := strings.Index(raw, "://")
+	afterScheme := raw[schemeIdx+3:]
+	if atIdx := strings.Index(afterScheme, "@"); atIdx != -1 {
+		termIdx := strings.IndexAny(afterScheme, "/?#")
+		if termIdx != -1 && termIdx < atIdx {
+			return nil, errors.New("invalid URL format")
+		}
+		if strings.Contains(afterScheme[atIdx+1:], "@") {
+			return nil, errors.New("invalid URL format")
+		}
+	}
+
 	u, err := url.Parse(raw)
 	if err != nil {
 		if strings.Contains(target, "@") {
@@ -58,6 +70,9 @@ func parseRawURL(target string) (*url.URL, error) {
 			return nil, fmt.Errorf("invalid URL format: %w", urlErr.Err)
 		}
 		return nil, fmt.Errorf("invalid URL format: %w", err)
+	}
+	if strings.Contains(u.Path, "@") || strings.Contains(u.RawQuery, "@") || strings.Contains(u.Fragment, "@") {
+		return nil, errors.New("invalid URL format")
 	}
 	return u, nil
 }
