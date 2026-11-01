@@ -11,11 +11,20 @@ const (
 	suffixVPCE        = ".vpce.amazonaws.com"
 	suffixAWSCN       = ".amazonaws.com.cn"
 	suffixAWSStandard = ".amazonaws.com"
+	suffixVPCEAPI     = ".vpce.api.aws"
+	suffixAPI         = ".api.aws"
 )
 
 func trimKnownHostSuffix(host string) (string, bool) {
-	lower := strings.ToLower(host)
-	suffixes := []string{suffixVPCECN, suffixVPCE, suffixAWSCN, suffixAWSStandard}
+	lower := strings.TrimSuffix(strings.ToLower(host), ".")
+	suffixes := []string{
+		suffixVPCECN,
+		suffixVPCE,
+		suffixAWSCN,
+		suffixAWSStandard,
+		suffixVPCEAPI,
+		suffixAPI,
+	}
 	for _, suffix := range suffixes {
 		if strings.HasSuffix(lower, suffix) {
 			return lower[:len(lower)-len(suffix)], true

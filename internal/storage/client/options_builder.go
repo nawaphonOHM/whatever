@@ -14,7 +14,7 @@ import (
 )
 
 func resolveCredentials(cfg *config.Config) aws.CredentialsProvider {
-	if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
+	if cfg != nil && cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
 		return credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, cfg.SessionToken)
 	}
 	return nil
@@ -30,6 +30,9 @@ func resolveOptionsHTTPClient(opts *Options) *http.Client {
 func resolveHTTPClient(cfg *config.Config, opts *Options) aws.HTTPClient {
 	if client := resolveOptionsHTTPClient(opts); client != nil {
 		return client
+	}
+	if cfg == nil {
+		return nil
 	}
 	return newTransportClient(cfg.ConnectTimeout)
 }

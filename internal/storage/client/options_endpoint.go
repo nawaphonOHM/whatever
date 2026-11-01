@@ -28,7 +28,7 @@ func applyInsecureScheme(u *url.URL, cfg *config.Config) {
 }
 
 func isInsecure(cfg *config.Config) bool {
-	return cfg.Insecure || cfg.DisableSSL
+	return cfg != nil && (cfg.Insecure || cfg.DisableSSL)
 }
 
 func normalizeEndpointTargetHost(u *url.URL, bucket string) error {
@@ -90,6 +90,9 @@ func finalizeBucketURL(cfg *config.Config, provider contracts.Provider) (*string
 }
 
 func resolveEndpointWithError(cfg *config.Config, provider contracts.Provider) (*string, error) {
+	if cfg == nil {
+		return defaultProviderEndpoint(provider), nil
+	}
 	if cfg.Endpoint != "" {
 		return finalizeEndpointURL(cfg, provider)
 	}

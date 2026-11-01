@@ -15,6 +15,9 @@ func isNativeAWSHost(host string) bool {
 }
 
 func extractTargetFromConfig(cfg *config.Config) string {
+	if cfg == nil {
+		return ""
+	}
 	if cfg.Endpoint != "" {
 		return cfg.Endpoint
 	}
@@ -38,7 +41,10 @@ func isCompatibleProvider(provider contracts.Provider) bool {
 }
 
 func isPathStyleConfigured(cfg *config.Config, provider contracts.Provider) bool {
-	return cfg.UsePathStyle || isCompatibleProvider(provider)
+	if cfg != nil && cfg.UsePathStyle {
+		return true
+	}
+	return isCompatibleProvider(provider)
 }
 
 func shouldUsePathStyle(cfg *config.Config, provider contracts.Provider) bool {

@@ -49,6 +49,24 @@ func TestPutObject_GCS_WireNoUnsolicitedChecksums(t *testing.T) {
 	assertNoChecksumHeaders(t, executePut(t, cfgURL))
 }
 
+func TestPutObject_S3Compatible_WireNoUnsolicitedChecksums(t *testing.T) {
+	t.Parallel()
+
+	cfgEp := testConfigWithKeys()
+	cfgEp.Endpoint = "https://minio.internal.net"
+	assertNoChecksumHeaders(t, executePut(t, cfgEp))
+
+	cfgURL := testConfigWithKeys()
+	cfgURL.BucketURL = "https://minio.internal.net/mybucket"
+	assertNoChecksumHeaders(t, executePut(t, cfgURL))
+
+	cfgInsecure := testConfigWithKeys()
+	cfgInsecure.Endpoint = "localhost"
+	cfgInsecure.Port = 9000
+	cfgInsecure.Insecure = true
+	assertNoChecksumHeaders(t, executePut(t, cfgInsecure))
+}
+
 func TestPutObject_AWS_WireAddsChecksumTrailerContrast(t *testing.T) {
 	setAWSEnvCredentials(t)
 
@@ -59,4 +77,22 @@ func TestPutObject_AWS_WireAddsChecksumTrailerContrast(t *testing.T) {
 	assert.Contains(t, req.Header.Get("Content-Encoding"), "aws-chunked")
 	assert.Equal(t, "x-amz-checksum-crc32", req.Header.Get("x-amz-trailer"))
 	assert.Equal(t, "STREAMING-UNSIGNED-PAYLOAD-TRAILER", req.Header.Get("X-Amz-Content-Sha256"))
+}
+
+func TestPutObject_S3Compatible_WireIgnoresOpposingChecksumEnv(t *testing.T) {
+	setOpposingChecksumEnv(t)
+
+	cfg := config.DefaultConfig()
+	cfg.Bucket = testBucket
+	cfg.Endpoint = "https://minio.internal.net"
+	assertNoChecksumHeaders(t, executePut(t, cfg))
+}
+
+func TestPutObject_GCS_WireIgnoresOpposingChecksumEnv(t *testing.T) {
+	setOpposingChecksumEnv(t)
+
+	cfg := config.DefaultConfig()
+	cfg.Bucket = testBucket
+	cfg.Endpoint = gcsServiceEndpoint
+	assertNoChecksumHeaders(t, executePut(t, cfg))
 }
