@@ -66,6 +66,11 @@ func TestConfig_Validate_EndpointValid(t *testing.T) {
 		"https://s3.amazonaws.com",
 		"localhost:9000",
 		"s3.us-east-1.amazonaws.com",
+		"https://proxy.company.com/team%40s3",
+		"https://proxy.company.com/team/s3",
+		"https://user:p%40ss@minio.local:9000",
+		"https://user:p@ss@minio.local:9000",
+		"https://user:p@ss@minio.local:9000/s3",
 	} {
 		cfg := validBaseConfig()
 		cfg.Endpoint = good
@@ -181,6 +186,31 @@ func TestConfig_Validate_CredentialRedaction(t *testing.T) {
 			name:      "secret containing question mark with bad escape",
 			target:    "https://AKIAKEY:quest?secret@minio.local/%zz",
 			forbidden: []string{"AKIAKEY", "quest?secret", "quest", "secret"},
+		},
+		{
+			name:      "unencoded userinfo separator with path",
+			target:    "https://user:8080/supersecret/key@s3.amazonaws.com",
+			forbidden: []string{"supersecret", "key@s3.amazonaws.com"},
+		},
+		{
+			name:      "unencoded userinfo separator with query",
+			target:    "https://user:8080?x=secret@s3.amazonaws.com",
+			forbidden: []string{"secret", "s3.amazonaws.com"},
+		},
+		{
+			name:      "unencoded userinfo separator with fragment",
+			target:    "https://user:8080#frag_secret@s3.amazonaws.com",
+			forbidden: []string{"frag_secret", "s3.amazonaws.com"},
+		},
+		{
+			name:      "schemeless unencoded userinfo separator with path",
+			target:    "user:8080/secret@s3.amazonaws.com",
+			forbidden: []string{"secret", "s3.amazonaws.com"},
+		},
+		{
+			name:      "AWS-style secret with slashes before endpoint host",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@s3.amazonaws.com",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
 		},
 	}
 

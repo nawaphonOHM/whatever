@@ -246,6 +246,38 @@ func TestDetect_ComprehensiveCases(t *testing.T) {
 			wantBucket:   "",
 		},
 		{
+			name:         "Custom proxy with percent-encoded at in path",
+			endpoint:     "https://proxy.company.com/team%40s3",
+			wantProvider: contracts.ProviderS3Compatible,
+			wantRule:     detector.RuleS3CompatibleFallback,
+			wantHost:     "proxy.company.com",
+			wantBucket:   "",
+		},
+		{
+			name:         "Userinfo with percent-encoded at in password",
+			endpoint:     "https://user:p%40ss@minio.local:9000",
+			wantProvider: contracts.ProviderS3Compatible,
+			wantRule:     detector.RuleS3CompatibleFallback,
+			wantHost:     "minio.local",
+			wantBucket:   "",
+		},
+		{
+			name:         "Userinfo with raw at in password before host",
+			endpoint:     "https://user:p@ss@minio.local:9000",
+			wantProvider: contracts.ProviderS3Compatible,
+			wantRule:     detector.RuleS3CompatibleFallback,
+			wantHost:     "minio.local",
+			wantBucket:   "",
+		},
+		{
+			name:         "Userinfo with raw at in password and path prefix",
+			endpoint:     "https://user:p@ss@minio.local:9000/s3",
+			wantProvider: contracts.ProviderS3Compatible,
+			wantRule:     detector.RuleS3CompatibleFallback,
+			wantHost:     "minio.local",
+			wantBucket:   "",
+		},
+		{
 			name:         "Non-S3 AWS endpoint",
 			endpoint:     "https://dynamodb.us-east-1.amazonaws.com",
 			wantProvider: contracts.ProviderS3Compatible,
@@ -316,6 +348,26 @@ func TestDetect_ComprehensiveCases(t *testing.T) {
 		{
 			name:     "Credential with question mark and trailing at",
 			endpoint: "https://AKIAKEY:pa?ss@",
+			wantErr:  true,
+		},
+		{
+			name:     "Unencoded userinfo separator with path",
+			endpoint: "https://user:8080/supersecret/key@s3.amazonaws.com",
+			wantErr:  true,
+		},
+		{
+			name:     "Unencoded userinfo separator with query",
+			endpoint: "https://user:8080?x@s3.amazonaws.com",
+			wantErr:  true,
+		},
+		{
+			name:     "Unencoded userinfo separator with fragment",
+			endpoint: "https://user:8080#frag@s3.amazonaws.com",
+			wantErr:  true,
+		},
+		{
+			name:     "Schemeless unencoded userinfo separator with path",
+			endpoint: "user:8080/secret@s3.amazonaws.com",
 			wantErr:  true,
 		},
 	}

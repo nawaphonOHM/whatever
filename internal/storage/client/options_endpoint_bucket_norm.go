@@ -37,9 +37,6 @@ func normalizeMultiTenantEndpoint(u *url.URL, bucket string) error {
 
 func checkMultiTenantPathMismatch(u *url.URL, bucket string) error {
 	if strings.Trim(u.Path, pathSep) != "" {
-		if strings.Contains(u.Path, "@") || u.User != nil {
-			return fmt.Errorf("bucket %q in configuration does not match bucket in URL path", bucket)
-		}
 		return fmt.Errorf("bucket %q in configuration does not match bucket in URL path %q", bucket, u.Path)
 	}
 	return nil

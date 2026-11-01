@@ -168,6 +168,31 @@ func TestDetect_CredentialRedaction(t *testing.T) {
 			target:    "AKIAKEY:secret@minio:99999/p?x=://",
 			forbidden: []string{"AKIAKEY", "secret"},
 		},
+		{
+			name:      "unencoded userinfo separator with path",
+			target:    "https://user:8080/supersecret/key@s3.amazonaws.com",
+			forbidden: []string{"supersecret", "key@s3.amazonaws.com"},
+		},
+		{
+			name:      "unencoded userinfo separator with query",
+			target:    "https://user:8080?x=secret@s3.amazonaws.com",
+			forbidden: []string{"secret", "s3.amazonaws.com"},
+		},
+		{
+			name:      "unencoded userinfo separator with fragment",
+			target:    "https://user:8080#frag_secret@s3.amazonaws.com",
+			forbidden: []string{"frag_secret", "s3.amazonaws.com"},
+		},
+		{
+			name:      "schemeless unencoded userinfo separator with path",
+			target:    "user:8080/secret@s3.amazonaws.com",
+			forbidden: []string{"secret", "s3.amazonaws.com"},
+		},
+		{
+			name:      "AWS-style secret with slashes before endpoint host",
+			target:    "https://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY@s3.amazonaws.com",
+			forbidden: []string{"AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI", "K7MDENG", "bPxRfiCYEXAMPLEKEY"},
+		},
 	}
 
 	for _, tc := range credentialCases {

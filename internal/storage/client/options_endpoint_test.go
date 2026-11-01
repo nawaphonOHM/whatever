@@ -186,4 +186,42 @@ func TestBuildS3Options_InsecureAndPortFormatting(t *testing.T) {
 		assert.Nil(t, opts.BaseEndpoint)
 		assert.True(t, opts.UsePathStyle)
 	})
+
+	t.Run("aws insecure keeps explicit http base endpoint", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:   testBucket,
+			Endpoint: "https://s3.amazonaws.com",
+			Insecure: true,
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
+		require.NoError(t, err)
+		require.NotNil(t, opts.BaseEndpoint)
+		assert.Equal(t, "http://s3.amazonaws.com", *opts.BaseEndpoint)
+	})
+
+	t.Run("aws custom port keeps explicit base endpoint", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:   testBucket,
+			Endpoint: "https://s3.amazonaws.com",
+			Port:     8443,
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
+		require.NoError(t, err)
+		require.NotNil(t, opts.BaseEndpoint)
+		assert.Equal(t, "https://s3.amazonaws.com:8443", *opts.BaseEndpoint)
+	})
+
+	t.Run("aws path prefix keeps explicit base endpoint", func(t *testing.T) {
+		t.Parallel()
+		cfg := &config.Config{
+			Bucket:   testBucket,
+			Endpoint: "https://s3.amazonaws.com/custom/prefix",
+		}
+		opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
+		require.NoError(t, err)
+		require.NotNil(t, opts.BaseEndpoint)
+		assert.Equal(t, "https://s3.amazonaws.com/custom/prefix", *opts.BaseEndpoint)
+	})
 }

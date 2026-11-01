@@ -64,6 +64,15 @@ func isStandardAWSS3Endpoint(endpoint string) bool {
 	if err != nil {
 		return false
 	}
+	if strings.ToLower(u.Scheme) != "https" {
+		return false
+	}
+	if u.Port() != "" {
+		return false
+	}
+	if strings.Trim(u.Path, "/") != "" {
+		return false
+	}
 	return isStandardAWSS3Host(u.Hostname())
 }
 
