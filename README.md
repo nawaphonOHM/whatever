@@ -75,6 +75,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Connecting & Lifecycle](#connecting--lifecycle-1)
   - [Automatic Cloud Provider Detection](#automatic-cloud-provider-detection)
   - [URL Sanitization & Security Redaction](#url-sanitization--security-redaction)
+  - [Modular Connection Pipeline & Compatibility Diagnostics](#modular-connection-pipeline--compatibility-diagnostics)
   - [Object Operations & Stream Management](#object-operations--stream-management)
   - [Pre-signed URLs](#pre-signed-urls)
   - [Connectivity Probing & Readiness](#connectivity-probing--readiness)
@@ -261,7 +262,7 @@ Unified cloud object storage client supporting AWS S3, Google Cloud Storage XML 
 - **Diagnostic URL & Credential Sanitization**: Best-effort redaction of embedded basic auth credentials, session tokens, query strings, and fragments from logged endpoint strings.
 - **Pre-signed URLs**: Generates pre-signed GET and PUT URLs with configurable expiration durations (up to 7 days).
 - **Stream Handling & Multipart Uploads**: Buffers non-seekable streams and automatically utilizes multipart uploads for large payloads.
-- **Startup Connectivity Probing**: Non-destructive `HeadBucket` reachability probe with graceful fallback to `ListObjectsV2`.
+- **Startup Connectivity Probing**: Non-destructive `HeadBucket` reachability probe with graceful fallback to `ListObjectsV2` on `AccessDenied`/`Forbidden`/HTTP 403.
 - **Defensive Error Handling**: Safe receiver checks returning standardized sentinel errors (`ErrObjectNotFound`, `ErrBucketNotFound`, `ErrAccessDenied`, `ErrNilClient`, `ErrNilConfig`, `ErrInvalidExpiry`).
 
 ### `pkg/testcontainers/firestore`
@@ -1564,6 +1565,20 @@ To protect sensitive credentials and query parameters in internal diagnostic log
 - **Defensive Fallback**: Returns `<unparseable>` placeholder without panicking for invalid or whitespace-containing URLs.
 - **Known Edge Cases & Limitations**: In the current implementation, schemeless strings containing `://` in the query (e.g. `user:pass@host:9000/x?r=a://b`) are misparsed by `url.Parse` as having scheme `user` with opaque body, preserving user credentials (remediation scheduled in step 3). Path-based secrets outside userinfo/query components are also not parsed as credentials.
 
+### Modular Connection Pipeline & Compatibility Diagnostics
+
+Client initialization in `internal/storage/client` decomposes connection handling across specialized pipeline stages (validation, provider classification, client construction, compatibility evaluation, and startup probing).
+
+#### Diagnostic & Lifecycle Log Events
+
+Initialization emits structured log records at `Info` and `Debug` levels:
+- `evaluating storage provider detection` (`DEBUG`): Logs sanitized endpoints, inspected host, matched detection rule, and extracted bucket subdomains.
+- `initializing storage client` (`INFO`): Reports start of client initialization with effective operational settings (`provider`, `bucket`, `region`, `endpoint`, `use_path_style`, `checksum_mode`).
+- `storage client compatibility configuration` (`DEBUG`): Exposes multi-cloud compatibility behaviors (e.g. `suppress_unsolicited_trailers_for_gcs`, `enforced_path_style_for_provider`, `explicit_checksum_configuration`).
+- `storage client initialization complete` (`INFO`): Reports successful client initialization after startup probing succeeds.
+
+For detailed pipeline architecture, full diagnostic field schemas, and compatibility behavior constants, see [pkg/storage/README.md#connection-lifecycle-diagnostics--startup-probing](pkg/storage/README.md#connection-lifecycle-diagnostics--startup-probing).
+
 ### Object Operations & Stream Management
 
 The `Storage` contract provides unified lifecycle operations:
@@ -1636,18 +1651,20 @@ putPresigned, err := client.PresignPutObject(ctx, storage.PresignPutObjectInput{
 
 ### Connectivity Probing & Readiness
 
-`storage.Connect(ctx)` automatically performs a non-destructive reachability probe on the default bucket (`HeadBucket`, with automatic fallback to single-key `ListObjectsV2` when access is denied by restrictive bucket policies). Probing can be skipped via `storage.WithSkipProbe(true)`.
+`storage.Connect(ctx)` and `storage.ConnectWithConfig(ctx, cfg)` automatically perform a non-destructive reachability probe on the default bucket (`HeadBucket`, with automatic fallback to single-key `ListObjectsV2` when `HeadBucket` returns `ErrAccessDenied`, mapped from Smithy/API error codes `AccessDenied`, `Forbidden`, `403` or HTTP 403 status code). Probing is bounded by `OHM9996_STORAGE_PING_TIMEOUT` (`PingTimeout`, default `5s`) and can be bypassed via `storage.WithSkipProbe(true)`.
 
 Applications can also invoke `client.Ping(ctx)` on demand for Kubernetes readiness probes (`/ready`).
 
 ### Termination Hooks & Sentinel Errors
 
 Process exit behavior during initialization:
-- **Missing mandatory configuration** (`OHM9996_STORAGE_BUCKET` via `Connect` / `LoadConfig`): Logs a diagnostic message and triggers **graceful termination (`exitFunc(0)`)**.
-- **Startup connectivity probe failure** (when probing is enabled): Logs diagnostic details with a call stack snapshot and triggers **abnormal termination (`exitFunc(1)`)**.
-- **Configuration validation or client build errors** passed to `ConnectWithConfig`: Returns an error directly without triggering process exit hooks.
+- **Missing mandatory configuration** (`OHM9996_STORAGE_BUCKET` via `Connect` / `config.LoadConfig`): Dispatches graceful termination via `central.ExitWithGraceful`, logging diagnostic and invoking `exitFunc(0)`.
+- **Startup connectivity probe failure** (when probing is enabled): Dispatches abnormal termination via `central.ExitWithAbnormal`, logging error details (with call stack snapshot) and invoking `exitFunc(1)` synchronously. The underlying error is returned to the caller only if the exit hook is intercepted or returns. *(Note: URL sanitization applies to endpoint/bucket URL attributes; raw error text attached to the abnormal exit record is not sanitized).*
+- **Configuration validation or client build errors** passed to `ConnectWithConfig`: Returns an error directly to the caller without invoking exit hooks.
 
-The exit hook can be intercepted during testing:
+For complete abnormal exit mechanics and hook interception details, see [pkg/storage/README.md#error-handling--process-exit-semantics](pkg/storage/README.md#error-handling--process-exit-semantics).
+
+The process exit hook can be intercepted during testing or within process supervisors:
 
 ```go
 prevExit := storage.SetExitFunc(func(code int) {
@@ -1661,7 +1678,7 @@ The package exports standard sentinel errors:
 - `storage.ErrBucketNotFound`: Returned when the target bucket does not exist.
 - `storage.ErrNilClient`: Returned when invoking operations on an uninitialized client instance.
 - `storage.ErrNilConfig`: Returned when configuration is nil.
-- `storage.ErrAccessDenied`: Returned when the storage service rejects the request (HTTP 403).
+- `storage.ErrAccessDenied`: Returned when the storage service rejects the request (mapped from API error codes `AccessDenied`, `Forbidden`, `403` or HTTP 403).
 - `storage.ErrInvalidExpiry`: Returned when pre-signed URL expiration is negative or exceeds 7 days.
 
 ---

@@ -14,7 +14,7 @@ It follows the same modular library pattern as `pkg/mongodb` and `pkg/rest`: con
 - **Diagnostic URL & Credential Sanitization**: Best-effort redaction of sensitive basic auth credentials, session tokens, query strings, and URL fragments from diagnostic log records.
 - **Pre-signed URLs**: Generates pre-signed GET and PUT URLs with configurable expiration durations (up to 7 days, falling back to default if 0).
 - **Stream Handling & Multipart Uploads**: Efficiently handles seekable streams, buffers non-seekable streams, and automatically coordinates multipart uploads for large payloads.
-- **Startup Connectivity Probing**: Non-destructive bucket reachability probe (`HeadBucket` with fallback to single-key `ListObjectsV2`) with diagnostic logging and process exit hooks.
+- **Startup Connectivity Probing**: Non-destructive bucket reachability probe (`HeadBucket` with fallback to single-key `ListObjectsV2` on `AccessDenied`/`Forbidden`/HTTP 403) with diagnostic logging and process exit hooks.
 - **Defensive Error Handling**: Safe receiver checks on all operations returning standardized sentinel errors (`ErrObjectNotFound`, `ErrBucketNotFound`, `ErrAccessDenied`, `ErrNilClient`, `ErrNilConfig`, `ErrInvalidExpiry`).
 
 ---
@@ -123,20 +123,123 @@ The internal storage provider detector and URL sanitization components are valid
 
 ---
 
-## Connection Lifecycle & Startup Probing
+## Connection Lifecycle, Diagnostics & Startup Probing
+
+### Modular Connection Pipeline (Internal Architecture)
+
+Storage client initialization decomposes connection handling into specialized, single-purpose components in `internal/storage/client/`:
+
+- **`connect.go`**: Top-level coordinator for `storage.Connect` (which loads environment configuration via `config.LoadConfig`) and `storage.ConnectWithConfig`. Coordinates provider detection, configuration validation, SDK client construction, diagnostic/lifecycle logging, and startup probing.
+- **`connect_validate.go`**: Validates configuration parameters (`cfg.Validate()`), resolves effective region and endpoint settings, and formats structured lifecycle logs (`initializing storage client` and `storage client initialization complete` at `Info` level).
+- **`connect_log_diagnostic.go`**: Emits pre-connection detection diagnostics (`evaluating storage provider detection` at `Debug` level) containing sanitized raw and normalized endpoints, inspected hostname, matched rule, detected provider, and extracted bucket subdomains.
+- **`connect_log_compat.go` & `connect_log_compat_format.go`**: Evaluates and logs S3 compatibility settings (`storage client compatibility configuration` at `Debug` level) detailing checksum calculation policies, path-style addressing behaviors, authentication modes, and driver overrides.
+- **`connect_probe.go`**: Manages startup bucket reachability probing (`HeadBucket` falling back to `ListObjectsV2`) and process exit hooks (`SetExitFunc`). On probe failure, dispatches abnormal process termination via `central.ExitWithAbnormal`.
+- **`connect_client.go`**: Constructs the underlying AWS SDK v2 `s3.Client` and `s3.PresignClient`, binding base endpoints, credentials (static vs. default chain), HTTP transports, and custom functional options.
+
+```
+storage.Connect / ConnectWithConfig
+  │
+  ├── 1. detector.Detect() ────────────────► connect_log_diagnostic.go (Debug: "evaluating storage provider detection")
+  ├── 2. validateConfig() ─────────────────► connect_validate.go
+  ├── 3. buildClientInstance() ────────────► connect_client.go
+  ├── 4. logClientInitAndCompat() ─────────► connect_validate.go (Info: "initializing storage client")
+  │                                           connect_log_compat.go (Debug: "storage client compatibility configuration")
+  ├── 5. maybeProbeStartup() ──────────────► connect_probe.go (HeadBucket -> ListObjectsV2)
+  │                                           (On failure: central.ExitWithAbnormal -> LevelError + exitFunc(1))
+  └── 6. logStartupComplete() ─────────────► connect_validate.go (Info: "storage client initialization complete")
+```
+
+### Execution Lifecycle
 
 Calling `storage.Connect(ctx, opts...)` executes the following lifecycle:
 
-1. **Configuration Resolution**: Loads environment variables with `OHM9996_STORAGE_*` prefix (with fallback to `.env`/`configs/.env` via `rest/config.Load`) and applies defaults.
-2. **Provider Detection**: Classifies provider type (`gcs`, `aws`, `s3-compatible`) from endpoint/bucket URL patterns (with `Endpoint` taking precedence over `BucketURL`).
-3. **Client Initialization**: Builds the underlying AWS SDK v2 `s3.Client` and `s3.PresignClient`.
-4. **Connectivity Probe**: Unless disabled via `storage.WithSkipProbe(true)`, executes a non-mutating probe against the configured default bucket:
-   - Issues a `HeadBucket` request bounded by `PingTimeout`.
-   - If `HeadBucket` returns `ErrAccessDenied` (HTTP 403), transparently falls back to `ListObjectsV2` with `MaxKeys: 1` to accommodate restrictive IAM policies.
-5. **Error & Exit Handling**:
-   - **Missing mandatory configuration** (`OHM9996_STORAGE_BUCKET` when loading via `storage.Connect` / `config.LoadConfig`) logs a diagnostic message and triggers **graceful termination (`exitFunc(0)`)**.
-   - **Startup connectivity probe failure** (when probing is enabled) logs diagnostic details with a call stack snapshot and triggers **abnormal termination (`exitFunc(1)`)**.
-   - **Configuration validation errors** (e.g., invalid URLs, invalid timeouts, port out of bounds) and client construction errors passed to `storage.ConnectWithConfig` return an error directly and **do not trigger any exit hook**.
+1. **Configuration Resolution**: Loads environment variables with `OHM9996_STORAGE_*` prefix (with fallback to `.env`/`configs/.env` via `rest/config.Load`) and validates parameter bounds.
+2. **Provider Detection & Diagnostic Evaluation**: Classifies provider type (`aws`, `gcs`, `s3-compatible`) from endpoint/bucket URL patterns (with `Endpoint` taking precedence over `BucketURL`) and emits pre-connection debug diagnostics (`evaluating storage provider detection`).
+3. **Configuration Validation**: Resolves effective region and endpoint URL, returning validation errors directly if parameters are invalid.
+4. **Client Initialization**: Builds the underlying AWS SDK v2 `s3.Client` and `s3.PresignClient`, binding transport options, authentication mode, path style, and flexible checksums.
+5. **Lifecycle & Compatibility Diagnostics**: Emits `initializing storage client` (`Info`) and `storage client compatibility configuration` (`Debug`).
+6. **Connectivity Probe**: Unless disabled via `storage.WithSkipProbe(true)`, executes a non-destructive reachability probe against the configured default bucket:
+   - Issues a `HeadBucket` request bounded by `PingTimeout` (default `5s`).
+   - If `HeadBucket` returns `ErrAccessDenied` (mapped from Smithy/SDK API error codes `AccessDenied`, `Forbidden`, or `403`, as well as HTTP 403 status codes), transparently falls back to `ListObjectsV2` with `MaxKeys: 1` to accommodate restrictive IAM policies that grant object listing without bucket metadata read permissions.
+7. **Initialization Complete**: Emits `storage client initialization complete` (`Info`) and returns the ready `*Client`.
+
+### Structured Diagnostic & Compatibility Logging Schemas
+
+When structured logging is enabled, storage client initialization emits structured log records at `Info` and `Debug` levels.
+
+#### 1. Provider Detection Evaluation (`Debug` Level)
+
+Emitted by `connect_log_diagnostic.go` with message `"evaluating storage provider detection"` when the logger has `Debug` level enabled:
+
+| Field | Type | Description | Example |
+| --- | --- | --- | --- |
+| `raw_endpoint` | `string` | Configured endpoint sanitized via `sanitizeLoggedURL` | `"https://storage.googleapis.com"` |
+| `raw_bucket_url` | `string` | Configured bucket URL sanitized via `sanitizeLoggedURL` | `""` |
+| `inspected_host` | `string` | Normalized hostname inspected for classification | `"storage.googleapis.com"` |
+| `detected_provider` | `string` | Classified provider identifier (`"aws"`, `"gcs"`, `"s3-compatible"`) | `"gcs"` |
+| `detection_rule` | `string` | Classification rule matched (`"default_aws"`, `"aws_hostname"`, `"gcs_hostname"`, `"s3_compatible_fallback"`) | `"gcs_hostname"` |
+| `extracted_bucket` | `string` | Virtual-hosted bucket subdomain (if present in multi-tenant hostnames) | `""` |
+| `normalized_endpoint` | `string` | Fully resolved and sanitized base endpoint URL | `"https://storage.googleapis.com"` |
+
+#### 2. Lifecycle Progress (`Info` Level)
+
+Emitted by `connect_validate.go` with messages `"initializing storage client"` and `"storage client initialization complete"`:
+
+| Field | Type | Description | Example |
+| --- | --- | --- | --- |
+| `provider` | `string` | Target cloud provider (`"aws"`, `"gcs"`, `"s3-compatible"`) | `"gcs"` |
+| `bucket` | `string` | Target default bucket name | `"my-app-data"` |
+| `region` | `string` | AWS or S3 region identifier (defaults to `us-east-1` if unset) | `"auto"` (when configured) |
+| `endpoint` | `string` | Sanitized base endpoint URL (empty string `""` for default AWS) | `"https://storage.googleapis.com"` |
+| `use_path_style` | `bool` | Whether path-style addressing is active | `true` |
+| `checksum_mode` | `string` | Formatted checksum mode (`"when_required"` or `"when_supported"`) | `"when_required"` |
+
+#### 3. Compatibility Configuration Diagnostics (`Debug` Level)
+
+Emitted by `connect_log_compat.go` with message `"storage client compatibility configuration"` when `Debug` level is active:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `provider` | `string` | Target cloud provider (`"aws"`, `"gcs"`, `"s3-compatible"`). |
+| `request_checksum_calculation` | `string` | AWS SDK request checksum calculation mode (`"WHEN_REQUIRED"` or `"WHEN_SUPPORTED"`). |
+| `response_checksum_validation` | `string` | AWS SDK response checksum validation mode (`"WHEN_REQUIRED"` or `"WHEN_SUPPORTED"`). |
+| `checksum_behavior_change` | `string` | Behavioral reason comparing effective mode with provider defaults (see constants below). |
+| `use_path_style` | `bool` | Whether path-style addressing is enabled after all options/overrides are evaluated. |
+| `path_style_behavior_change` | `string` | Behavioral reason reflecting effective addressing style and provider (see constants below). |
+| `disable_log_output_checksum_validation_skipped` | `bool` | Internal flag set to `true` to suppress noisy SDK internal checksum skip warnings. |
+| `auth_mode` | `string` | Authentication mode: `"static_credentials"` (when access/secret keys are provided) or `"default_credential_chain"`. |
+| `has_driver_overrides` | `bool` | Boolean flag indicating whether caller supplied custom SDK options via `WithDriverOptions`. |
+
+##### Compatibility Behavior Constants
+
+- **`checksum_behavior_change`**:
+  - `BehaviorChecksumSuppressed` (`"suppress_unsolicited_trailers_for_gcs"`): Default for GCS (`WHEN_REQUIRED`), suppressing unsolicited `aws-chunked` trailing checksum headers that cause GCS S3 XML API signature mismatch errors (`SignatureDoesNotMatch`).
+  - `BehaviorChecksumEnforced` (`"enforce_when_required_for_compat"`): Default for S3-compatible providers (`WHEN_REQUIRED`), preventing trailer checksum mismatches on non-AWS backends.
+  - `BehaviorChecksumStandard` (`"standard_aws_defaults"`): Default for native AWS (`WHEN_SUPPORTED`).
+  - `BehaviorChecksumExplicit` (`"explicit_checksum_configuration"`): Emitted when the effective request checksum calculation mode differs from the provider default (e.g. `WHEN_REQUIRED` on AWS, or any mode other than `WHEN_REQUIRED` on non-AWS backends). Note that `WithDriverOptions` mutators are applied last across all providers and can set arbitrary checksum modes, while the `AWS_REQUEST_CHECKSUM_CALCULATION` environment variable only takes effect on AWS when using the default credential chain (the static credentials path bypasses AWS environment loading, and non-AWS providers unconditionally enforce `WHEN_REQUIRED` during provider compatibility setup). An override that matches the provider default retains the default label.
+- **`path_style_behavior_change`**:
+  - `BehaviorPathStyleStandard` (`"standard_virtual_hosted"`): Effective `UsePathStyle` is `false` (standard AWS virtual-hosted addressing, or non-AWS endpoints where driver options explicitly set `UsePathStyle = false`).
+  - `BehaviorPathStyleConfigured` (`"configured_path_style"`): Effective `UsePathStyle` is `true` on AWS (via `OHM9996_STORAGE_USE_PATH_STYLE=true` or via driver options `WithDriverOptions`).
+  - `BehaviorPathStyleEnforced` (`"enforced_path_style_for_provider"`): Effective `UsePathStyle` is `true` on GCS or S3-compatible backends (standard default for non-AWS backends, unless overridden via driver options).
+
+### Error Handling & Process Exit Semantics
+
+- **Missing Mandatory Configuration**: If required connection settings (e.g. `OHM9996_STORAGE_BUCKET`) are missing when loading via `storage.Connect` / `config.LoadConfig`, the client logs a diagnostic message and dispatches graceful termination (`central.ExitWithGraceful`), invoking `exitFunc(0)` (exit code 0).
+- **Configuration Validation & Build Errors**: Syntax errors, out-of-range ports, invalid timeouts, or unparseable URLs passed to `storage.ConnectWithConfig` return an error directly to the caller and **never trigger any exit hooks**.
+- **Startup Connectivity Probe Failure**: When startup probing is enabled and the probe fails (e.g., `ErrBucketNotFound`, `context.DeadlineExceeded`, or network unreachable), `handleConnectionError` dispatches an abnormal exit event via `central.ExitWithAbnormal(ctx, "failed to connect to storage; exiting abnormally", err, nil)`:
+  - The central logging worker logs the error with severity `slog.LevelError` (exit flag `ExitAbnormal`). *Note: URL sanitization applies specifically to endpoint and bucket URL log attributes; raw error text attached to the abnormal exit record is NOT sanitized and may contain hostnames or URLs embedded by the SDK/network layer.*
+  - When the context carries a call stack (as decorated during `storage.Connect` / `ConnectWithConfig`), the worker logs an additional `"Call stack snapshot"` record at `Error` level containing the stack trace.
+  - The central logging worker flushes all asynchronous log queues.
+  - The worker invokes the configured exit hook `exitFunc(1)` (default `os.Exit(1)`), which terminates the process synchronously.
+  - The underlying error is returned to the caller only if the exit hook is overridden via `SetExitFunc` (or if a custom exit hook returns without terminating the process).
+- **Exit Hook Interception**: Process exit behavior can be intercepted during testing or within supervisor processes using `storage.SetExitFunc`:
+
+```go
+prevExit := storage.SetExitFunc(func(code int) {
+	// Intercept exit code (e.g., 0 for graceful, 1 for abnormal probe failure)
+})
+defer storage.SetExitFunc(prevExit)
+```
 
 ---
 
@@ -169,7 +272,7 @@ Calling `storage.Connect(ctx, opts...)` executes the following lifecycle:
 | `ErrBucketNotFound` | The target bucket does not exist |
 | `ErrNilClient` | Operation attempted on an uninitialized / `nil` client |
 | `ErrNilConfig` | Configuration passed is `nil` |
-| `ErrAccessDenied` | Storage service rejected access (HTTP 403) |
+| `ErrAccessDenied` | Storage service rejected access (mapped from API error codes `AccessDenied`, `Forbidden`, `403` or HTTP 403) |
 | `ErrInvalidExpiry` | Pre-signed URL expiration is negative or exceeds 7 days |
 
 ---
