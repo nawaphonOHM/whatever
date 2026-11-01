@@ -10,7 +10,8 @@ It follows the same modular library pattern as `pkg/mongodb` and `pkg/rest`: con
 
 - **Unified Storage Contract**: Clean interface (`Storage`) for object lifecycle operations (`PutObject`, `GetObject`, `DeleteObject`, `HeadObject`, `ListObjects`, `Exists`, `PresignGetObject`, `PresignPutObject`, and `Ping`).
 - **Zero-Boilerplate Configuration**: Automated configuration parsing and strict validation from `OHM9996_STORAGE_*` environment variables (with fallback to `.env` / `configs/.env`).
-- **Automatic Cloud Provider Detection**: Detects Google Cloud Storage XML API, AWS S3, or S3-compatible providers from endpoint/bucket URL patterns with endpoint precedence.
+- **Structured Cloud Provider Detection**: Detects Google Cloud Storage XML API, AWS S3, or S3-compatible providers from endpoint/bucket URL patterns with structured detection metadata (`Provider`, `Host`, `Rule`, `Bucket`).
+- **Diagnostic URL & Credential Sanitization**: Best-effort redaction of sensitive basic auth credentials, session tokens, query strings, and URL fragments from diagnostic log records.
 - **Pre-signed URLs**: Generates pre-signed GET and PUT URLs with configurable expiration durations (up to 7 days, falling back to default if 0).
 - **Stream Handling & Multipart Uploads**: Efficiently handles seekable streams, buffers non-seekable streams, and automatically coordinates multipart uploads for large payloads.
 - **Startup Connectivity Probing**: Non-destructive bucket reachability probe (`HeadBucket` with fallback to single-key `ListObjectsV2`) with diagnostic logging and process exit hooks.
@@ -44,22 +45,81 @@ The client loads and validates configuration from environment variables when ini
 
 ---
 
-## Provider Detection & Endpoint Routing
+## Provider Detection & Endpoint Routing (Internal Architecture)
 
-When resolving target endpoints, `OHM9996_STORAGE_ENDPOINT` takes precedence over `OHM9996_STORAGE_BUCKET_URL`. URLs without an explicit scheme default to `https://`. Hostnames are normalized (lowercased, trailing dots trimmed), and provider classification is evaluated in the following order:
+When resolving target endpoints during client connection, `OHM9996_STORAGE_ENDPOINT` takes precedence over `OHM9996_STORAGE_BUCKET_URL`. URLs without an explicit scheme default to `https://`. Hostnames are normalized (lowercased, trailing dots trimmed), and provider classification is evaluated internally via `detector.Detect(endpoint, bucketURL)` returning structured `detector.Detection` metadata:
 
-1. **Google Cloud Storage (`ProviderGCS` / `"gcs"`)**:
-   - Matches when the hostname equals or ends with `.storage.googleapis.com`, `.storage.googleapis`, `.stroage.googleapis.com`, or `.stroage.googleapis` (e.g., `https://storage.googleapis.com`, `https://mybucket.storage.googleapis.com`).
-   - Connects to Google Cloud Storage via the S3-compatible XML API using HMAC credentials and path-style addressing.
+```go
+type Detection struct {
+	Provider contracts.Provider // contracts.ProviderAWS, ProviderGCS, or ProviderS3Compatible
+	Host     string             // Normalized inspected hostname
+	Rule     string             // Deterministic classification rule matched
+	Bucket   string             // Extracted virtual-hosted bucket subdomain (if present)
+}
+```
 
-2. **AWS S3 (`ProviderAWS` / `"aws"`)**:
-   - Matches when any dot-separated hostname label equals `s3` or starts with `s3-` (e.g., `s3.amazonaws.com`, `bucket.s3.us-east-1.amazonaws.com`, `s3.local:9000`), or when the host equals or ends with `.amazonaws.com` / `amazonaws.com`.
-   - Also used as the default provider when neither endpoint nor bucket URL is specified.
-   - Uses native AWS SDK v2 defaults. By default, native `amazonaws.com` / `amazonaws.com.cn` endpoints use the SDK's virtual-hosted routing; non-Amazon target hosts (including AWS-classified `s3.local:9000`) use path-style addressing. `OHM9996_STORAGE_USE_PATH_STYLE=true` forces path-style addressing for any provider.
+### Detection Rules & Provider Classification
 
-3. **S3-Compatible Storage (`ProviderS3Compatible` / `"s3-compatible"`)**:
-   - Matches any other custom endpoint or bucket URL (e.g., `http://localhost:9000` for MinIO, `http://localhost:4566` for LocalStack, `https://minio.internal.net`, `https://mys3bucket.example.com`).
-   - Automatically enables path-style bucket addressing and custom base endpoint routing.
+Endpoints are evaluated deterministically in the following priority order:
+
+| Rule Constant | Rule Identifier | Matched Provider | Target Pattern & Behavior |
+| --- | --- | --- | --- |
+| `RuleDefaultAWS` | `"default_aws"` | `ProviderAWS` (`"aws"`) | Triggered when both `Endpoint` and `BucketURL` are empty strings. Uses AWS SDK v2 default regional endpoints. |
+| `RuleGCSHostname` | `"gcs_hostname"` | `ProviderGCS` (`"gcs"`) | Matches Google Cloud Storage XML API hostnames ending with or matching standard suffixes (`storage.googleapis.com`, `storage.googleapis`, `stroage.googleapis.com`, `stroage.googleapis`, `commondatastorage.googleapis.com`, `storage.cloud.google.com`), regional pattern `[<bucket>.]storage.<region>.rep.googleapis.com`, or Private Service Connect pattern `[<bucket>.]storage[-<name>].p.googleapis.com` (including `stroage` typo variants). Configures S3 XML interoperability mode with HMAC credentials and path-style addressing. Unrelated Google Cloud hostnames (e.g., `logging.rep.googleapis.com`, `compute.p.googleapis.com`, `bigquery.googleapis.com`) fall back to `s3_compatible_fallback`. |
+| `RuleAWSHostname` | `"aws_hostname"` | `ProviderAWS` (`"aws"`) | Matches native AWS S3 endpoints where **both** criteria are met: (1) hostname ends with an AWS domain suffix (`.amazonaws.com`, `.amazonaws.com.cn`, or `.api.aws`), and (2) contains an S3 service label (`s3`, `s3-*`, or `s3express-*`) preceding the AWS suffix, with only permitted tail labels (`dualstack`, `fips`, `vpce`, or a standard AWS region pattern like `us-east-1`) allowed between them. Uses default AWS SDK virtual-hosted addressing (`OHM9996_STORAGE_USE_PATH_STYLE=true` forces path-style). Non-S3 AWS service hostnames (e.g., EC2, ELB, API Gateway) fall back to `s3_compatible_fallback`. |
+| `RuleS3CompatibleFallback` | `"s3_compatible_fallback"` | `ProviderS3Compatible` (`"s3-compatible"`) | Fallback rule matched for all other custom endpoints and bucket URLs (e.g., MinIO, LocalStack, Wasabi, Cloudflare R2, Ceph, custom internal endpoints, or non-S3 AWS/GCS service endpoints). Automatically enforces path-style addressing and custom endpoint routing. |
+
+### Virtual-Hosted Bucket Subdomain Extraction
+
+When connecting to multi-tenant cloud providers (AWS S3 and GCS), the internal helper `detector.BucketSubdomain(host)` extracts the virtual-hosted bucket prefix from the hostname if present:
+- **AWS S3**: Extracts bucket prefix preceding the S3 service label (e.g., `https://mybucket.s3.us-east-1.amazonaws.com` -> bucket `"mybucket"`, `https://mybucket.s3express-use1-az4.us-east-1.amazonaws.com` -> bucket `"mybucket"`, `https://mybucket.bucket.vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com` -> bucket `"mybucket"`). Base service endpoints (e.g., `s3.amazonaws.com`, `vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com`) return an empty bucket string.
+- **Google Cloud Storage**: Extracts bucket prefix preceding standard suffixes, regional suffixes, or PSC suffixes (e.g., `https://mybucket.storage.googleapis.com` -> bucket `"mybucket"`, `https://mybucket.storage.us-central1.rep.googleapis.com` -> bucket `"mybucket"`, `https://mybucket.storage-psc.p.googleapis.com` -> bucket `"mybucket"`). Base endpoints (e.g., `storage.googleapis.com`, `storage.us-central1.rep.googleapis.com`) return an empty bucket string.
+
+### Internal Detector Functions
+
+The internal package `internal/storage/detector` provides:
+- `detector.Detect(endpoint, bucketURL) (Detection, error)`: Computes full structured detection metadata.
+- `detector.DetectProvider(endpoint, bucketURL) (contracts.Provider, error)`: Backward-compatibility wrapper returning the provider enum.
+
+---
+
+## URL Sanitization & Credential Redaction (Internal Helpers)
+
+To safeguard against accidental credential leakage in diagnostic logs and observability pipelines, `internal/storage/client/url_sanitize.go` provides best-effort URL sanitization routines used during client initialization and diagnostic logging:
+
+- **`sanitizeLoggedURL(raw string) string`**:
+  - **Best-Effort Userinfo Redaction**: Redacts embedded basic authentication credentials (`user:secretpass@` -> stripped) on valid absolute URLs and standard schemeless hosts.
+  - **Strips Query Parameters**: Removes all URL query parameters (`?token=secret...` -> stripped) to prevent leaking temporary SAS tokens, signature parameters, or auth keys.
+  - **Strips URL Fragments**: Removes fragment identifiers (`#section` -> stripped).
+  - **Preserves URL Structure**: Maintains protocol scheme, hostname, port, and path hierarchy (`https://user:pass@minio.internal:9000/bucket?token=123#frag` -> `https://minio.internal:9000/bucket`).
+  - **Schemeless URL Support**: Safely scrubs standard schemeless endpoint strings without prepending unwanted schemes (`admin:secret@minio.corp:9000/data?key=val` -> `minio.corp:9000/data`).
+  - **Defensive Error Handling**: Rejects malformed strings or inputs containing invalid whitespace characters (`" \t\r\n"`) by returning `<unparseable>` placeholder without throwing panics. Empty inputs return `""`.
+- **`formatLoggedEndpoint(ep *string) string`**:
+  - Safely handles pointer endpoints, returning `""` when `ep` is `nil` and `sanitizeLoggedURL(*ep)` otherwise.
+
+### Known Limitations & Security Considerations
+
+- **Schemeless URLs Containing `://` in Query**: In the current implementation, if a schemeless input string contains `://` in its query string (e.g., `user:pass@host:9000/x?r=a://b`), Go's standard `url.Parse` misidentifies the username as a scheme and treats the rest of the URL as opaque data without stripping the `user:pass` credentials. This known edge case is scheduled for code remediation and test verification in step 3.
+- **Path-Based Secrets**: Secrets or authentication tokens embedded directly within URL path segments or non-standard token formats outside standard URL userinfo and query parameters are not recognized by URL parsers and are not redacted.
+
+---
+
+## Testing & Verification
+
+The internal storage provider detector and URL sanitization components are validated with unit and matrix test suites:
+
+- **`detector_detect_test.go`**:
+  - `TestDetect_RulesAndProviders`: Verifies deterministic rule classification, provider mapping, hostname inspection, and bucket extraction across default AWS, GCS base/virtual-hosted, AWS base, and custom S3-compatible endpoints.
+- **`url_sanitize_test.go`**:
+  - `TestSanitizeLoggedURL_RedactsCredentialsAndQueries`: Validates credential removal, query string stripping, fragment removal, clean URL preservation, schemeless URL preservation, whitespace error handling (`<unparseable>`), and empty string handling.
+  - `TestFormatLoggedEndpoint`: Validates nil-safety and pointer endpoint formatting.
+- **Matrix Suites**:
+  - `detector_aws_test.go`: Validates AWS S3 endpoint classification (standard endpoints, regional formats, dualstack, FIPS, VPC endpoints, S3 Express, and China regions) and virtual-hosted bucket subdomain extraction.
+  - `detector_gcs_test.go`: Validates Google Cloud Storage XML API endpoint classification (standard domains, regional `rep.googleapis.com`, and PSC `p.googleapis.com`) and bucket subdomain extraction.
+  - `detector_custom_test.go`: Validates fallback to `s3_compatible_fallback` for custom endpoints and ensures non-S3 Google Cloud and AWS service endpoints (e.g., BigQuery, Compute, EC2, ELB, API Gateway) correctly classify as S3-compatible rather than AWS/GCS.
+  - `detector_precedence_test.go`: Validates that `Endpoint` takes precedence over `BucketURL`.
+  - `detector_normalize_test.go`: Validates hostname case insensitivity and trailing root dot normalization.
+  - `detector_invalid_test.go`: Validates rejection of unsupported schemes (`ftp://`, `postgres://`), out-of-range ports, and whitespace.
 
 ---
 
