@@ -12,9 +12,10 @@ func TestConnect_Routing_AWSRegional(t *testing.T) {
 	cfg.Region = testAWSRegionSE
 	cfg.Endpoint = "https://s3.amazonaws.com"
 	var got capturedRequest
-	headWithConfig(t, cfg, &got)
+	c := headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, testAWSRegionalHost, testVirtualPath)
 	assert.Contains(t, got.Auth, testAccessKey)
+	assertWhenSupportedChecksum(t, c.RawClient().Options())
 }
 
 func TestConnect_Routing_AWSBucketURL(t *testing.T) {
@@ -22,9 +23,10 @@ func TestConnect_Routing_AWSBucketURL(t *testing.T) {
 	cfg := testConfigWithKeys()
 	cfg.BucketURL = "https://mybucket.s3.us-east-1.amazonaws.com"
 	var got capturedRequest
-	headWithConfig(t, cfg, &got)
+	c := headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, "mybucket.s3.us-east-1.amazonaws.com", testVirtualPath)
 	assert.NotContains(t, got.Host, "mybucket.mybucket.")
+	assertWhenSupportedChecksum(t, c.RawClient().Options())
 }
 
 func TestConnect_Routing_GCSPathStyle(t *testing.T) {
@@ -32,9 +34,10 @@ func TestConnect_Routing_GCSPathStyle(t *testing.T) {
 	cfg := testConfigWithKeys()
 	cfg.Endpoint = gcsServiceEndpoint
 	var got capturedRequest
-	headWithConfig(t, cfg, &got)
+	c := headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, "storage.googleapis.com", testPathStylePath)
 	assert.Equal(t, "https", got.Scheme)
+	assertWhenRequiredChecksum(t, c.RawClient().Options())
 }
 
 func TestConnect_Routing_GCSBucketURL(t *testing.T) {
@@ -42,9 +45,10 @@ func TestConnect_Routing_GCSBucketURL(t *testing.T) {
 	cfg := testConfigWithKeys()
 	cfg.BucketURL = gcsServiceEndpoint + "/" + testBucket
 	var got capturedRequest
-	headWithConfig(t, cfg, &got)
+	c := headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, "storage.googleapis.com", testPathStylePath)
 	assert.NotEqual(t, "/mybucket/mybucket/k", got.Path)
+	assertWhenRequiredChecksum(t, c.RawClient().Options())
 }
 
 func TestConnect_Routing_MinioPathStyle(t *testing.T) {
@@ -52,8 +56,9 @@ func TestConnect_Routing_MinioPathStyle(t *testing.T) {
 	cfg := testConfigWithKeys()
 	cfg.Endpoint = "https://minio.internal.net"
 	var got capturedRequest
-	headWithConfig(t, cfg, &got)
+	c := headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, "minio.internal.net", testPathStylePath)
+	assertWhenRequiredChecksum(t, c.RawClient().Options())
 }
 
 func TestConnect_Routing_LocalhostPathStyle(t *testing.T) {

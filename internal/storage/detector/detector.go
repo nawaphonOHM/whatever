@@ -7,12 +7,7 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/contracts"
 )
 
-var gcsPatterns = []string{
-	"storage.googleapis.com",
-	"storage.googleapis",
-	"stroage.googleapis.com",
-	"stroage.googleapis",
-}
+const labelSep = "."
 
 // selectTargetURL returns the primary target URL from endpoint or bucketURL.
 func selectTargetURL(endpoint, bucketURL string) string {
@@ -22,55 +17,31 @@ func selectTargetURL(endpoint, bucketURL string) string {
 	return bucketURL
 }
 
-// matchesGCSPattern checks if hostname equals pattern or ends with .pattern.
-func matchesGCSPattern(host, pattern string) bool {
-	return host == pattern || strings.HasSuffix(host, "."+pattern)
+// normalizeHost lowercases host and trims a trailing root-label dot.
+func normalizeHost(host string) string {
+	return strings.ToLower(strings.TrimSuffix(host, labelSep))
 }
 
-// isGCSHost determines if the hostname matches Google Cloud Storage patterns.
-func isGCSHost(host string) bool {
-	for _, pattern := range gcsPatterns {
-		if matchesGCSPattern(host, pattern) {
-			return true
-		}
+// matchesDomainOrSubdomain checks if host equals domain or ends with .domain.
+func matchesDomainOrSubdomain(host, domain string) bool {
+	return host == domain || strings.HasSuffix(host, labelSep+domain)
+}
+
+// prefixLabels returns the dot-separated labels preceding the given domain suffix.
+func prefixLabels(host, domain string) []string {
+	prefix := strings.TrimSuffix(strings.TrimSuffix(host, domain), labelSep)
+	if prefix == "" {
+		return nil
 	}
-	return false
-}
-
-// isAWSLabel checks if a dot-separated hostname label indicates AWS S3.
-func isAWSLabel(label string) bool {
-	return label == "s3" || strings.HasPrefix(label, "s3-")
-}
-
-// hasAWSLabel checks if any hostname label matches AWS S3 patterns.
-func hasAWSLabel(host string) bool {
-	for label := range strings.SplitSeq(host, ".") {
-		if isAWSLabel(label) {
-			return true
-		}
-	}
-	return false
-}
-
-// isAWSHostname checks if hostname ends with AWS domain suffix.
-func isAWSHostname(host string) bool {
-	return host == "amazonaws.com" || strings.HasSuffix(host, ".amazonaws.com")
-}
-
-// isAWSHost determines if hostname matches AWS S3 endpoints.
-func isAWSHost(host string) bool {
-	if hasAWSLabel(host) {
-		return true
-	}
-	return isAWSHostname(host)
+	return strings.Split(prefix, labelSep)
 }
 
 // classifyProvider inspects parsed hostname and determines the storage provider.
 func classifyProvider(host string) contracts.Provider {
-	if isGCSHost(host) {
+	if IsGCSHost(host) {
 		return contracts.ProviderGCS
 	}
-	if isAWSHost(host) {
+	if IsAWSHost(host) {
 		return contracts.ProviderAWS
 	}
 	return contracts.ProviderS3Compatible
@@ -87,6 +58,19 @@ func DetectProvider(endpoint, bucketURL string) (contracts.Provider, error) {
 	if err != nil {
 		return "", err
 	}
-	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
-	return classifyProvider(host), nil
+	return classifyProvider(normalizeHost(u.Hostname())), nil
+}
+
+// BucketSubdomain extracts the virtual-hosted bucket name from a multi-tenant provider hostname
+// (e.g. AWS S3 or Google Cloud Storage) if present. It returns ("", false) if the hostname is a base service
+// endpoint or not a recognized multi-tenant storage host.
+func BucketSubdomain(host string) (string, bool) {
+	h := normalizeHost(host)
+	if IsGCSHost(h) {
+		return gcsBucketSubdomain(h)
+	}
+	if IsAWSHost(h) {
+		return awsBucketSubdomain(h)
+	}
+	return "", false
 }
