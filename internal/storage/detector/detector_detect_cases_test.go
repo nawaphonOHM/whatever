@@ -269,6 +269,11 @@ func TestDetect_ComprehensiveCases(t *testing.T) {
 			wantErr:  true,
 		},
 		{
+			name:     "Invalid URL with bad escape",
+			endpoint: "https://minio.local/%zz",
+			wantErr:  true,
+		},
+		{
 			name:     "Invalid port out of range",
 			endpoint: "http://localhost:70000",
 			wantErr:  true,
@@ -281,6 +286,21 @@ func TestDetect_ComprehensiveCases(t *testing.T) {
 		{
 			name:     "Missing host in URL",
 			endpoint: "http://",
+			wantErr:  true,
+		},
+		{
+			name:     "Credential-bearing URL with whitespace",
+			endpoint: "https://user:pass@minio.local:9000 /path",
+			wantErr:  true,
+		},
+		{
+			name:     "Credential-bearing URL with bad escape",
+			endpoint: "https://user:pass@minio.local/%zz",
+			wantErr:  true,
+		},
+		{
+			name:     "Credential-bearing URL with missing host",
+			endpoint: "https://user:pass@",
 			wantErr:  true,
 		},
 	}

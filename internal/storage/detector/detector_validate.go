@@ -13,13 +13,34 @@ const (
 	maxPort = 65535
 )
 
+// redactTarget strips userinfo (credentials) from raw target string for safe error formatting.
+func redactTarget(target string) string {
+	start := 0
+	if idx := strings.Index(target, "://"); idx != -1 {
+		start = idx + 3
+	}
+	end := len(target)
+	for _, delim := range []string{"/", "?", "#"} {
+		if idx := strings.Index(target[start:], delim); idx != -1 {
+			if start+idx < end {
+				end = start + idx
+			}
+		}
+	}
+	authority := target[start:end]
+	if atIdx := strings.LastIndex(authority, "@"); atIdx != -1 {
+		return target[:start] + authority[atIdx+1:] + target[end:]
+	}
+	return target
+}
+
 // checkTargetRaw validates raw target string before URL parsing.
 func checkTargetRaw(target string) error {
 	if target == "" {
 		return errors.New("invalid URL: empty target")
 	}
 	if strings.ContainsAny(target, " \t\r\n") {
-		return fmt.Errorf("invalid URL: contains whitespace: %q", target)
+		return fmt.Errorf("invalid URL: contains whitespace: %q", redactTarget(target))
 	}
 	return nil
 }
@@ -37,6 +58,10 @@ func parseRawURL(target string) (*url.URL, error) {
 	raw := normalizeTargetScheme(target)
 	u, err := url.Parse(raw)
 	if err != nil {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			return nil, fmt.Errorf("invalid URL format: %w", urlErr.Err)
+		}
 		return nil, fmt.Errorf("invalid URL format: %w", err)
 	}
 	return u, nil
@@ -77,7 +102,7 @@ func validateTargetComponents(u *url.URL, target string) error {
 		return err
 	}
 	if u.Hostname() == "" {
-		return fmt.Errorf("invalid URL: missing host: %q", target)
+		return fmt.Errorf("invalid URL: missing host: %q", redactTarget(target))
 	}
 	return validateTargetPort(u.Port())
 }

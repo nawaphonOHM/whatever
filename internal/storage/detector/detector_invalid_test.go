@@ -70,3 +70,51 @@ func TestParseTarget_Valid(t *testing.T) {
 	assert.Equal(t, "9000", u.Port())
 	assert.Equal(t, "https", u.Scheme)
 }
+
+// TestDetect_CredentialRedaction verifies that credentials in malformed URLs are redacted across detection functions.
+func TestDetect_CredentialRedaction(t *testing.T) {
+	credentialCases := []string{
+		"https://AKIAKEY:supersecret@minio.local:9000 /x",
+		"https://AKIAKEY:supersecret@minio.local/%zz",
+		"https://AKIAKEY:supersecret@",
+		"https://AKIAKEY:supersecret@/s3path",
+		"http://AKIAKEY:supersecret@bad host.com",
+		"ftp://AKIAKEY:supersecret@minio.local",
+		"http://AKIAKEY:supersecret@minio:99999",
+		"http://AKIAKEY:supersecret@minio:-1",
+		"AKIAKEY:supersecret@minio.local:9000 /x",
+	}
+
+	for _, bad := range credentialCases {
+		t.Run("detect_endpoint_"+bad, func(t *testing.T) {
+			_, err := Detect(bad, "")
+			require.Error(t, err)
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+
+			_, err = DetectProvider(bad, "")
+			require.Error(t, err)
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+		})
+
+		t.Run("detect_bucketURL_"+bad, func(t *testing.T) {
+			_, err := Detect("", bad)
+			require.Error(t, err)
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+
+			_, err = DetectProvider("", bad)
+			require.Error(t, err)
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+		})
+
+		t.Run("parseTarget_"+bad, func(t *testing.T) {
+			_, err := ParseTarget(bad)
+			require.Error(t, err)
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+		})
+	}
+}

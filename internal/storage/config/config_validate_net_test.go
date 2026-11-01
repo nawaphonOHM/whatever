@@ -53,7 +53,9 @@ func TestConfig_Validate_EndpointInvalid(t *testing.T) {
 	} {
 		cfg := validBaseConfig()
 		cfg.Endpoint = bad
-		require.Error(t, cfg.Validate())
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid endpoint")
 	}
 }
 
@@ -82,7 +84,62 @@ func TestConfig_Validate_BucketURLInvalid(t *testing.T) {
 	} {
 		cfg := validBaseConfig()
 		cfg.BucketURL = bad
-		require.Error(t, cfg.Validate())
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid bucket url")
+	}
+}
+
+// TestConfig_Validate_ValidEndpoint_InvalidBucketURL verifies that an invalid BucketURL is flagged even when Endpoint is valid.
+func TestConfig_Validate_ValidEndpoint_InvalidBucketURL(t *testing.T) {
+	for _, badBucket := range []string{
+		"https://bucket url.com",
+		"https://",
+		"http:///path",
+		"ftp://storage.googleapis.com",
+		"https://storage.googleapis.com/%zz",
+		" https://storage.googleapis.com",
+	} {
+		cfg := validBaseConfig()
+		cfg.Endpoint = "https://s3.amazonaws.com"
+		cfg.BucketURL = badBucket
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid bucket url")
+		assert.NotContains(t, err.Error(), "invalid endpoint")
+	}
+}
+
+// TestConfig_Validate_CredentialRedaction verifies that credentials in malformed URLs are redacted from validation error messages.
+func TestConfig_Validate_CredentialRedaction(t *testing.T) {
+	credentialCases := []string{
+		"https://AKIAKEY:supersecret@minio.local:9000 /x",
+		"https://AKIAKEY:supersecret@minio.local/%zz",
+		"https://AKIAKEY:supersecret@",
+		"https://AKIAKEY:supersecret@/s3path",
+	}
+
+	for _, bad := range credentialCases {
+		t.Run("endpoint_"+bad, func(t *testing.T) {
+			cfg := validBaseConfig()
+			cfg.Endpoint = bad
+			err := cfg.Validate()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid endpoint")
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+		})
+
+		t.Run("bucketURL_"+bad, func(t *testing.T) {
+			cfg := validBaseConfig()
+			cfg.Endpoint = "https://s3.amazonaws.com"
+			cfg.BucketURL = bad
+			err := cfg.Validate()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid bucket url")
+			assert.NotContains(t, err.Error(), "supersecret")
+			assert.NotContains(t, err.Error(), "AKIAKEY")
+		})
 	}
 }
 
