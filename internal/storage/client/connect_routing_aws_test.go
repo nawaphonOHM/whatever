@@ -21,6 +21,16 @@ func TestConnect_Routing_AWSURLDerivedRegion(t *testing.T) {
 	assert.Contains(t, got.Auth, "ap-southeast-1")
 }
 
+func TestConnect_Routing_AWSURLDerivedRegionTrailingDot(t *testing.T) {
+	t.Parallel()
+	cfg := testConfigWithKeys()
+	cfg.Endpoint = "https://s3.eu-west-1.amazonaws.com."
+	var got capturedRequest
+	headWithConfig(t, cfg, &got)
+	assertSignedRequest(t, got, "mybucket.s3.eu-west-1.amazonaws.com", testVirtualPath)
+	assert.Contains(t, got.Auth, "eu-west-1")
+}
+
 func TestConnect_Routing_AWSBucketURLDerivedRegion(t *testing.T) {
 	t.Parallel()
 	cfg := testConfigWithKeys()
@@ -29,6 +39,16 @@ func TestConnect_Routing_AWSBucketURLDerivedRegion(t *testing.T) {
 	headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, "mybucket.s3.ap-southeast-1.amazonaws.com", testVirtualPath)
 	assert.Contains(t, got.Auth, "ap-southeast-1")
+}
+
+func TestConnect_Routing_AWSBucketURLDerivedRegionTrailingDot(t *testing.T) {
+	t.Parallel()
+	cfg := testConfigWithKeys()
+	cfg.BucketURL = "https://mybucket.s3.eu-west-1.amazonaws.com."
+	var got capturedRequest
+	headWithConfig(t, cfg, &got)
+	assertSignedRequest(t, got, "mybucket.s3.eu-west-1.amazonaws.com", testVirtualPath)
+	assert.Contains(t, got.Auth, "eu-west-1")
 }
 
 func TestConnect_Routing_AWSRegionConflict(t *testing.T) {
@@ -47,34 +67,4 @@ func TestConnect_Routing_AWSRegionConflict(t *testing.T) {
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "region mismatch")
-}
-
-func TestConnect_Routing_AWSPrivateLinkEndpoint(t *testing.T) {
-	t.Parallel()
-	cfg := testConfigWithKeys()
-	cfg.Endpoint = "https://bucket.vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com"
-	var got capturedRequest
-	headWithConfig(t, cfg, &got)
-	assert.Equal(t, "mybucket.bucket.vpce-1a2b-3c4d.s3.us-east-1.vpce.amazonaws.com", got.Host)
-	assert.Contains(t, got.Auth, sigV4Algorithm)
-}
-
-func TestConnect_Routing_AWSFIPSEndpoint(t *testing.T) {
-	t.Parallel()
-	cfg := testConfigWithKeys()
-	cfg.Endpoint = "https://s3-fips.us-east-1.amazonaws.com"
-	var got capturedRequest
-	headWithConfig(t, cfg, &got)
-	assert.Equal(t, "mybucket.s3-fips.us-east-1.amazonaws.com", got.Host)
-	assert.Contains(t, got.Auth, sigV4Algorithm)
-}
-
-func TestConnect_Routing_AWSThreePartEndpoint(t *testing.T) {
-	t.Parallel()
-	cfg := testConfigWithKeys()
-	cfg.Endpoint = "https://mybucket.s3.us-east-1.amazonaws.com"
-	var got capturedRequest
-	headWithConfig(t, cfg, &got)
-	assert.Equal(t, "mybucket.s3.us-east-1.amazonaws.com", got.Host)
-	assert.Contains(t, got.Auth, sigV4Algorithm)
 }

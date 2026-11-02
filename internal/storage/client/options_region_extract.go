@@ -14,7 +14,7 @@ const (
 )
 
 func trimKnownHostSuffix(host string) (string, bool) {
-	lower := strings.ToLower(host)
+	lower := normalizeAWSHost(host)
 	suffixes := []string{suffixVPCECN, suffixVPCE, suffixAWSCN, suffixAWSStandard}
 	for _, suffix := range suffixes {
 		if strings.HasSuffix(lower, suffix) {

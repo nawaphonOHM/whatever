@@ -16,6 +16,10 @@ const (
 	maxPrefixParts = 3
 )
 
+func normalizeAWSHost(host string) string {
+	return strings.ToLower(strings.TrimSuffix(host, "."))
+}
+
 func hasNonStandardAWSHostKeywords(lower string) bool {
 	return strings.Contains(lower, ".vpce.") ||
 		strings.Contains(lower, "fips") ||
@@ -50,7 +54,7 @@ func matchesAWSStandardSuffix(lower string) bool {
 }
 
 func isStandardAWSS3Host(host string) bool {
-	lower := strings.ToLower(host)
+	lower := normalizeAWSHost(host)
 	if !matchesAWSStandardSuffix(lower) || hasNonStandardAWSHostKeywords(lower) {
 		return false
 	}
@@ -59,9 +63,16 @@ func isStandardAWSS3Host(host string) bool {
 	return isStandardAWSS3PrefixParts(parts)
 }
 
+func hasDefaultHTTPSOrigin(u *url.URL) bool {
+	if strings.ToLower(u.Scheme) != "https" || u.Port() != "" {
+		return false
+	}
+	return strings.Trim(u.Path, "/") == ""
+}
+
 func isStandardAWSS3Endpoint(endpoint string) bool {
 	u, err := url.Parse(endpoint)
-	if err != nil {
+	if err != nil || !hasDefaultHTTPSOrigin(u) {
 		return false
 	}
 	return isStandardAWSS3Host(u.Hostname())

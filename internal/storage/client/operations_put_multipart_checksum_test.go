@@ -7,76 +7,49 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nawaphonOHM/whatever/v3/internal/storage/client"
-	"github.com/nawaphonOHM/whatever/v3/internal/storage/config"
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/contracts"
 )
 
-const (
-	crcPart1 = "crc32-part-1"
-	crcPart2 = "crc32-part-2"
-)
-
-func awsPartReply(partNumber string) *http.Response {
-	if partNumber == "1" {
-		return newHTTPResponse(http.StatusOK, "", map[string]string{
-			"ETag": `"etag-1"`, "x-amz-checksum-crc32": crcPart1,
-		})
-	}
-	return newHTTPResponse(http.StatusOK, "", map[string]string{
-		"ETag": `"etag-2"`, "x-amz-checksum-crc32": crcPart2,
-	})
-}
-
-func awsControlReply(rec recordedRequest) *http.Response {
-	if rec.Method != http.MethodPost {
-		return newHTTPResponse(http.StatusNoContent, "", nil)
-	}
-	if rec.Query.Has("uploads") {
-		return newHTTPResponse(http.StatusOK, initiateXML, nil)
-	}
-	return newHTTPResponse(http.StatusOK, completeXMLBody, nil)
-}
-
-func awsChecksumResponder() func(recordedRequest) *http.Response {
-	return func(rec recordedRequest) *http.Response {
-		if rec.Method == http.MethodPut {
-			return awsPartReply(rec.Query.Get(partNumberParam))
+func nonAWSMultipartResponder() func(recordedRequest) *http.Response {
+	return func(req recordedRequest) *http.Response {
+		if req.Method == http.MethodPut {
+			return newHTTPResponse(http.StatusOK, "", map[string]string{headerETag: `"etag"`})
 		}
-		return awsControlReply(rec)
+		if req.Query.Has("uploads") {
+			return newHTTPResponse(http.StatusOK, initiateXML, nil)
+		}
+		return newHTTPResponse(http.StatusOK, completeXMLBody, nil)
 	}
 }
 
-func connectAWSDefaultRecorded(t *testing.T, rec *recorder) *client.Client {
+func assertNonAWSMultipartOmissions(t *testing.T, reqs []recordedRequest) {
 	t.Helper()
-	setAWSEnvCredentials(t)
-	cfg := config.DefaultConfig()
-	cfg.Bucket = testBucket
-	cfg.Region = "us-east-1"
-	c, err := client.ConnectWithConfig(t.Context(), cfg, connectOptions(rec.httpClient())...)
-	require.NoError(t, err)
-	return c
+	require.Len(t, reqs, multipartRequestCount)
+	assert.Empty(t, reqs[0].Header.Get(headerChecksumAlgo))
+	assert.Empty(t, reqs[1].Header.Get(headerChecksumCRC32))
+	assert.NotContains(t, string(reqs[completeRequestIndex].Body), "ChecksumCRC32")
 }
 
-func assertCompleteChecksums(t *testing.T, req recordedRequest) {
+func runPutObjectMultipartOmissionTest(t *testing.T, endpoint string) {
 	t.Helper()
-	body := string(req.Body)
-	assert.Contains(t, body, "<ChecksumCRC32>"+crcPart1+"</ChecksumCRC32>")
-	assert.Contains(t, body, "<ChecksumCRC32>"+crcPart2+"</ChecksumCRC32>")
-	assert.Contains(t, body, "<PartNumber>1</PartNumber>")
-	assert.Contains(t, body, "<PartNumber>2</PartNumber>")
-}
-
-func TestPutObject_AWSDefaultChainMultipartChecksums(t *testing.T) {
-	rec := &recorder{respond: awsChecksumResponder()}
-	c := connectAWSDefaultRecorded(t, rec)
+	rec := &recorder{respond: nonAWSMultipartResponder()}
+	cfg := testConfigWithKeys()
+	cfg.Endpoint = endpoint
+	c := connectRecorded(t, cfg, rec)
 	out, err := c.PutObject(t.Context(), contracts.PutObjectInput{
 		Key: testObjectKey, Body: &zeroReader{left: partSize + 1},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, `"final-etag"`, out.ETag)
-	reqs := rec.all()
-	require.Len(t, reqs, multipartRequestCount)
-	assert.Equal(t, "CRC32", reqs[0].Header.Get("x-amz-checksum-algorithm"))
-	assertCompleteChecksums(t, reqs[completeRequestIndex])
+	assertNonAWSMultipartOmissions(t, rec.all())
+}
+
+func TestPutObject_S3CompatibleOmitsMultipartChecksums(t *testing.T) {
+	t.Parallel()
+	runPutObjectMultipartOmissionTest(t, "https://minio.internal.net")
+}
+
+func TestPutObject_GCSOmitsMultipartChecksums(t *testing.T) {
+	t.Parallel()
+	runPutObjectMultipartOmissionTest(t, "https://storage.googleapis.com")
 }

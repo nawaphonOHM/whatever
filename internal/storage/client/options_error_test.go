@@ -13,15 +13,46 @@ import (
 
 func TestBuildS3Options_RegionConflictError(t *testing.T) {
 	t.Parallel()
-	cfg := &config.Config{
-		Bucket:   testBucket,
-		Region:   "us-west-2",
-		Endpoint: "https://s3.ap-southeast-1.amazonaws.com",
+
+	cases := []struct {
+		cfg  *config.Config
+		name string
+	}{
+		{
+			name: "endpoint standard host",
+			cfg: &config.Config{
+				Bucket:   testBucket,
+				Region:   "us-west-2",
+				Endpoint: "https://s3.ap-southeast-1.amazonaws.com",
+			},
+		},
+		{
+			name: "endpoint trailing dot regional host",
+			cfg: &config.Config{
+				Bucket:   testBucket,
+				Region:   "us-west-2",
+				Endpoint: "https://s3.eu-west-1.amazonaws.com.",
+			},
+		},
+		{
+			name: "bucketURL trailing dot regional host",
+			cfg: &config.Config{
+				Bucket:    testBucket,
+				Region:    "us-west-2",
+				BucketURL: "https://mybucket.s3.eu-west-1.amazonaws.com.",
+			},
+		},
 	}
-	opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "region mismatch")
-	assert.Equal(t, s3.Options{}, opts)
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			opts, err := client.BuildS3Options(tt.cfg, contracts.ProviderAWS, nil)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "region mismatch")
+			assert.Equal(t, s3.Options{}, opts)
+		})
+	}
 }
 
 func TestBuildS3Options_BucketURLSubdomainMismatchError(t *testing.T) {

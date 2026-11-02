@@ -11,7 +11,10 @@ import (
 	"github.com/nawaphonOHM/whatever/v3/internal/storage/contracts"
 )
 
-const gcsServiceEndpoint = "https://storage.googleapis.com"
+const (
+	gcsServiceEndpoint = "https://storage.googleapis.com"
+	testCustomPort     = 8443
+)
 
 func TestBuildS3Options_AWSAmazonEndpointSkipped(t *testing.T) {
 	t.Parallel()
@@ -87,4 +90,18 @@ func TestBuildS3Options_BucketURLMinioPath(t *testing.T) {
 	require.NotNil(t, opts.BaseEndpoint)
 	assert.Equal(t, "http://localhost:9000", *opts.BaseEndpoint)
 	assert.True(t, opts.UsePathStyle)
+}
+
+func TestBuildS3Options_InsecureAndPortFormatting(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:   testBucket,
+		Endpoint: "https://custom.s3.internal",
+		Port:     testCustomPort,
+		Insecure: true,
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+	require.NoError(t, err)
+	require.NotNil(t, opts.BaseEndpoint)
+	assert.Equal(t, "http://custom.s3.internal:8443", *opts.BaseEndpoint)
 }
