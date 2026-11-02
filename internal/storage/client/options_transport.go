@@ -85,5 +85,6 @@ func applyProviderCompat(o *s3.Options, provider contracts.Provider) {
 func applyProviderSettings(o *s3.Options, cfg *config.Config, provider contracts.Provider) {
 	applyConfiguredPathStyle(o, cfg, provider)
 	applyProviderCompat(o, provider)
+	applyGCSSigningOptions(o, provider)
 	o.DisableLogOutputChecksumValidationSkipped = true
 }
