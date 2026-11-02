@@ -63,18 +63,16 @@ func isStandardAWSS3Host(host string) bool {
 	return isStandardAWSS3PrefixParts(parts)
 }
 
+func hasDefaultHTTPSOrigin(u *url.URL) bool {
+	if strings.ToLower(u.Scheme) != "https" || u.Port() != "" {
+		return false
+	}
+	return strings.Trim(u.Path, "/") == ""
+}
+
 func isStandardAWSS3Endpoint(endpoint string) bool {
 	u, err := url.Parse(endpoint)
-	if err != nil {
-		return false
-	}
-	if strings.ToLower(u.Scheme) != "https" {
-		return false
-	}
-	if u.Port() != "" {
-		return false
-	}
-	if strings.Trim(u.Path, "/") != "" {
+	if err != nil || !hasDefaultHTTPSOrigin(u) {
 		return false
 	}
 	return isStandardAWSS3Host(u.Hostname())
