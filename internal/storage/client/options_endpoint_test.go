@@ -88,3 +88,56 @@ func TestBuildS3Options_BucketURLMinioPath(t *testing.T) {
 	assert.Equal(t, "http://localhost:9000", *opts.BaseEndpoint)
 	assert.True(t, opts.UsePathStyle)
 }
+
+func TestBuildS3Options_AWSAmazonEndpointTrailingDot(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:   testBucket,
+		Region:   testAWSRegionSE,
+		Endpoint: "https://s3.amazonaws.com.",
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderAWS, nil)
+	require.NoError(t, err)
+	assert.Nil(t, opts.BaseEndpoint)
+	assert.False(t, opts.UsePathStyle)
+}
+
+func TestBuildS3Options_UserinfoStrippedEndpoint(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:   testBucket,
+		Endpoint: "https://user:pass@minio.internal:9000",
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+	require.NoError(t, err)
+	require.NotNil(t, opts.BaseEndpoint)
+	assert.Equal(t, "https://minio.internal:9000", *opts.BaseEndpoint)
+	assert.NotContains(t, *opts.BaseEndpoint, "user")
+	assert.NotContains(t, *opts.BaseEndpoint, "pass")
+}
+
+func TestBuildS3Options_UserinfoStrippedBucketURL(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:    testBucket,
+		BucketURL: "https://admin:secret@storage.googleapis.com/" + testBucket,
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderGCS, nil)
+	require.NoError(t, err)
+	require.NotNil(t, opts.BaseEndpoint)
+	assert.Equal(t, gcsServiceEndpoint, *opts.BaseEndpoint)
+}
+
+func TestBuildS3Options_InsecureAndPortFormatting(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Bucket:   testBucket,
+		Endpoint: "https://custom.s3.internal",
+		Port:     8443,
+		Insecure: true,
+	}
+	opts, err := client.BuildS3Options(cfg, contracts.ProviderS3Compatible, nil)
+	require.NoError(t, err)
+	require.NotNil(t, opts.BaseEndpoint)
+	assert.Equal(t, "http://custom.s3.internal:8443", *opts.BaseEndpoint)
+}

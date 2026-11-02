@@ -49,6 +49,18 @@ func TestPutObject_GCS_WireNoUnsolicitedChecksums(t *testing.T) {
 	assertNoChecksumHeaders(t, executePut(t, cfgURL))
 }
 
+func TestPutObject_S3Compatible_WireNoUnsolicitedChecksums(t *testing.T) {
+	t.Parallel()
+
+	cfgEp := testConfigWithKeys()
+	cfgEp.Endpoint = "https://minio.internal.net"
+	assertNoChecksumHeaders(t, executePut(t, cfgEp))
+
+	cfgURL := testConfigWithKeys()
+	cfgURL.BucketURL = "https://localhost:9000/mybucket"
+	assertNoChecksumHeaders(t, executePut(t, cfgURL))
+}
+
 func TestPutObject_AWS_WireAddsChecksumTrailerContrast(t *testing.T) {
 	setAWSEnvCredentials(t)
 

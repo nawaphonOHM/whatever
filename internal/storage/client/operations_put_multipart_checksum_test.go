@@ -80,3 +80,55 @@ func TestPutObject_AWSDefaultChainMultipartChecksums(t *testing.T) {
 	assert.Equal(t, "CRC32", reqs[0].Header.Get("x-amz-checksum-algorithm"))
 	assertCompleteChecksums(t, reqs[completeRequestIndex])
 }
+
+func TestPutObject_S3CompatibleOmitsMultipartChecksums(t *testing.T) {
+	t.Parallel()
+	rec := &recorder{respond: func(req recordedRequest) *http.Response {
+		if req.Method == http.MethodPut {
+			return newHTTPResponse(http.StatusOK, "", map[string]string{"ETag": `"etag"`})
+		}
+		if req.Query.Has("uploads") {
+			return newHTTPResponse(http.StatusOK, initiateXML, nil)
+		}
+		return newHTTPResponse(http.StatusOK, completeXMLBody, nil)
+	}}
+	cfg := testConfigWithKeys()
+	cfg.Endpoint = "https://minio.internal.net"
+	c := connectRecorded(t, cfg, rec)
+	out, err := c.PutObject(t.Context(), contracts.PutObjectInput{
+		Key: testObjectKey, Body: &zeroReader{left: partSize + 1},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, `"final-etag"`, out.ETag)
+	reqs := rec.all()
+	require.Len(t, reqs, multipartRequestCount)
+	assert.Empty(t, reqs[0].Header.Get("x-amz-checksum-algorithm"))
+	assert.Empty(t, reqs[1].Header.Get("x-amz-checksum-crc32"))
+	assert.NotContains(t, string(reqs[completeRequestIndex].Body), "ChecksumCRC32")
+}
+
+func TestPutObject_GCSOmitsMultipartChecksums(t *testing.T) {
+	t.Parallel()
+	rec := &recorder{respond: func(req recordedRequest) *http.Response {
+		if req.Method == http.MethodPut {
+			return newHTTPResponse(http.StatusOK, "", map[string]string{"ETag": `"etag"`})
+		}
+		if req.Query.Has("uploads") {
+			return newHTTPResponse(http.StatusOK, initiateXML, nil)
+		}
+		return newHTTPResponse(http.StatusOK, completeXMLBody, nil)
+	}}
+	cfg := testConfigWithKeys()
+	cfg.Endpoint = "https://storage.googleapis.com"
+	c := connectRecorded(t, cfg, rec)
+	out, err := c.PutObject(t.Context(), contracts.PutObjectInput{
+		Key: testObjectKey, Body: &zeroReader{left: partSize + 1},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, `"final-etag"`, out.ETag)
+	reqs := rec.all()
+	require.Len(t, reqs, multipartRequestCount)
+	assert.Empty(t, reqs[0].Header.Get("x-amz-checksum-algorithm"))
+	assert.Empty(t, reqs[1].Header.Get("x-amz-checksum-crc32"))
+	assert.NotContains(t, string(reqs[completeRequestIndex].Body), "ChecksumCRC32")
+}

@@ -50,7 +50,7 @@ func matchesAWSStandardSuffix(lower string) bool {
 }
 
 func isStandardAWSS3Host(host string) bool {
-	lower := strings.ToLower(host)
+	lower := strings.ToLower(strings.TrimSuffix(host, "."))
 	if !matchesAWSStandardSuffix(lower) || hasNonStandardAWSHostKeywords(lower) {
 		return false
 	}
@@ -62,6 +62,15 @@ func isStandardAWSS3Host(host string) bool {
 func isStandardAWSS3Endpoint(endpoint string) bool {
 	u, err := url.Parse(endpoint)
 	if err != nil {
+		return false
+	}
+	if strings.ToLower(u.Scheme) != "https" {
+		return false
+	}
+	if u.Port() != "" {
+		return false
+	}
+	if strings.Trim(u.Path, "/") != "" {
 		return false
 	}
 	return isStandardAWSS3Host(u.Hostname())
