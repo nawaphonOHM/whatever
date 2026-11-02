@@ -21,6 +21,16 @@ func TestConnect_Routing_AWSURLDerivedRegion(t *testing.T) {
 	assert.Contains(t, got.Auth, "ap-southeast-1")
 }
 
+func TestConnect_Routing_AWSURLDerivedRegionTrailingDot(t *testing.T) {
+	t.Parallel()
+	cfg := testConfigWithKeys()
+	cfg.Endpoint = "https://s3.eu-west-1.amazonaws.com."
+	var got capturedRequest
+	headWithConfig(t, cfg, &got)
+	assertSignedRequest(t, got, "mybucket.s3.eu-west-1.amazonaws.com", testVirtualPath)
+	assert.Contains(t, got.Auth, "eu-west-1")
+}
+
 func TestConnect_Routing_AWSBucketURLDerivedRegion(t *testing.T) {
 	t.Parallel()
 	cfg := testConfigWithKeys()
@@ -29,6 +39,16 @@ func TestConnect_Routing_AWSBucketURLDerivedRegion(t *testing.T) {
 	headWithConfig(t, cfg, &got)
 	assertSignedRequest(t, got, "mybucket.s3.ap-southeast-1.amazonaws.com", testVirtualPath)
 	assert.Contains(t, got.Auth, "ap-southeast-1")
+}
+
+func TestConnect_Routing_AWSBucketURLDerivedRegionTrailingDot(t *testing.T) {
+	t.Parallel()
+	cfg := testConfigWithKeys()
+	cfg.BucketURL = "https://mybucket.s3.eu-west-1.amazonaws.com."
+	var got capturedRequest
+	headWithConfig(t, cfg, &got)
+	assertSignedRequest(t, got, "mybucket.s3.eu-west-1.amazonaws.com", testVirtualPath)
+	assert.Contains(t, got.Auth, "eu-west-1")
 }
 
 func TestConnect_Routing_AWSRegionConflict(t *testing.T) {

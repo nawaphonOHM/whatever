@@ -16,6 +16,10 @@ const (
 	maxPrefixParts = 3
 )
 
+func normalizeAWSHost(host string) string {
+	return strings.ToLower(strings.TrimSuffix(host, "."))
+}
+
 func hasNonStandardAWSHostKeywords(lower string) bool {
 	return strings.Contains(lower, ".vpce.") ||
 		strings.Contains(lower, "fips") ||
@@ -50,7 +54,7 @@ func matchesAWSStandardSuffix(lower string) bool {
 }
 
 func isStandardAWSS3Host(host string) bool {
-	lower := strings.ToLower(strings.TrimSuffix(host, "."))
+	lower := normalizeAWSHost(host)
 	if !matchesAWSStandardSuffix(lower) || hasNonStandardAWSHostKeywords(lower) {
 		return false
 	}
