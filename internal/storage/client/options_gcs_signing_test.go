@@ -18,6 +18,15 @@ type signingTestCapture struct {
 	acceptEncoding string
 }
 
+func extractSignedHeaders(auth string) string {
+	for part := range strings.SplitSeq(auth, ",") {
+		if after, ok := strings.CutPrefix(strings.TrimSpace(part), "SignedHeaders="); ok {
+			return after
+		}
+	}
+	return ""
+}
+
 func headWithCapture(t *testing.T, endpoint string) signingTestCapture {
 	t.Helper()
 	var rec signingTestCapture
@@ -42,7 +51,9 @@ func TestConnect_GCS_ExcludesAcceptEncodingFromSignedHeaders(t *testing.T) {
 	got := headWithCapture(t, gcsServiceEndpoint)
 	require.NotEmpty(t, got.auth)
 	assert.Contains(t, got.auth, sigV4Algorithm)
-	assert.NotContains(t, strings.ToLower(got.auth), "accept-encoding")
+	signedHeaders := extractSignedHeaders(got.auth)
+	require.NotEmpty(t, signedHeaders)
+	assert.NotContains(t, strings.Split(signedHeaders, ";"), "accept-encoding")
 	assert.Equal(t, "identity", got.acceptEncoding)
 }
 
@@ -51,4 +62,8 @@ func TestConnect_AWS_IncludesSignedHeadersNormally(t *testing.T) {
 	got := headWithCapture(t, "https://s3.us-east-1.amazonaws.com")
 	require.NotEmpty(t, got.auth)
 	assert.Contains(t, got.auth, sigV4Algorithm)
+	signedHeaders := extractSignedHeaders(got.auth)
+	require.NotEmpty(t, signedHeaders)
+	assert.Contains(t, strings.Split(signedHeaders, ";"), "accept-encoding")
+	assert.Equal(t, "identity", got.acceptEncoding)
 }

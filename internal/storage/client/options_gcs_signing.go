@@ -53,6 +53,9 @@ var restoreGCSAcceptEncoding = middleware.FinalizeMiddlewareFunc(
 )
 
 func applyGCSSigningMiddleware(stack *middleware.Stack) error {
+	if _, ok := stack.Finalize.Get("Signing"); !ok {
+		return nil
+	}
 	if err := stack.Finalize.Insert(dropGCSAcceptEncoding, "Signing", middleware.Before); err != nil {
 		return err
 	}
