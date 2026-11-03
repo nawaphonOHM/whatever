@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -77,7 +78,7 @@ func TestErrorMapping_ObjectVersusBucketVersusAccess(t *testing.T) {
 func assertNotOtherSentinels(t *testing.T, err, want error) {
 	t.Helper()
 	for _, s := range []error{contracts.ErrObjectNotFound, contracts.ErrBucketNotFound, contracts.ErrAccessDenied} {
-		if s != want {
+		if !errors.Is(s, want) {
 			assert.NotErrorIs(t, err, s)
 		}
 	}

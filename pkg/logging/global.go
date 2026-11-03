@@ -15,12 +15,12 @@ type Level = config.Level
 
 // Supported log level string constants.
 const (
-	LevelTrace Level = config.LevelTrace
-	LevelDebug Level = config.LevelDebug
-	LevelInfo  Level = config.LevelInfo
-	LevelWarn  Level = config.LevelWarn
-	LevelError Level = config.LevelError
-	LevelFatal Level = config.LevelFatal
+	LevelTrace = config.LevelTrace
+	LevelDebug = config.LevelDebug
+	LevelInfo  = config.LevelInfo
+	LevelWarn  = config.LevelWarn
+	LevelError = config.LevelError
+	LevelFatal = config.LevelFatal
 )
 
 func init() {

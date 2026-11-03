@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	maxMillisInt64 = int64(math.MaxInt64 / int64(time.Millisecond))
+	maxMillisInt64 = math.MaxInt64 / int64(time.Millisecond)
 	maxMillisFloat = float64(maxMillisInt64)
 )
 

@@ -12,7 +12,6 @@ import (
 
 const (
 	testRawGroupPath = "/custom/items"
-	rawGroupMode     = "raw"
 )
 
 func rawRegs() []*contracts.RRestAPIRegistration {
