@@ -20,10 +20,10 @@ const (
 // Supported custom slog.Level values.
 const (
 	SlogLevelTrace slog.Level = -8
-	SlogLevelDebug slog.Level = slog.LevelDebug // -4
-	SlogLevelInfo  slog.Level = slog.LevelInfo  // 0
-	SlogLevelWarn  slog.Level = slog.LevelWarn  // 4
-	SlogLevelError slog.Level = slog.LevelError // 8
+	SlogLevelDebug            = slog.LevelDebug // -4
+	SlogLevelInfo             = slog.LevelInfo  // 0
+	SlogLevelWarn             = slog.LevelWarn  // 4
+	SlogLevelError            = slog.LevelError // 8
 	SlogLevelFatal slog.Level = 12
 )
 

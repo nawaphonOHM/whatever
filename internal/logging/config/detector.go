@@ -9,9 +9,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Supported environment variable keys for detector.
 const (
-	EnvCloudProvider                  = "OHM9996_CLOUD_PROVIDER"
 	EnvOtelEnabled                    = "OHM9996_OTEL_ENABLED"
 	EnvLoggingDisableTraceCorrelation = "OHM9996_LOGGING_DISABLE_TRACE_CORRELATION"
 )

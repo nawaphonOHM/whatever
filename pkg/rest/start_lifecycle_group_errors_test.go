@@ -34,7 +34,7 @@ func testPublicInvalidRegistrationGroup(t *testing.T) {
 	defer reset()
 
 	t.Setenv(envGinMode, gin.TestMode)
-	bp := makeGroupBlueprint(APIGroup("invalid_group"), "/test")
+	bp := makeGroupBlueprint("invalid_group", "/test")
 
 	require.ErrorIs(t, startRESTWithTimeout(t, bp), ErrInvalidRegistrationGroup)
 	assertPublicRouteRegError(t, buf.Bytes(), "invalid API registration group")

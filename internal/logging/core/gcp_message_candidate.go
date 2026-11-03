@@ -11,7 +11,7 @@ func parseCandidateJSON(headerPart string, jsonPart []byte) (MixedMessage, bool)
 	}
 	return MixedMessage{
 		Header:  headerPart,
-		Content: json.RawMessage(jsonPart),
+		Content: jsonPart,
 	}, true
 }
 

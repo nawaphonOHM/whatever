@@ -21,7 +21,7 @@ func NewD(elements ...E) D {
 		return D{}
 	}
 
-	return D(elements)
+	return elements
 }
 
 // NewE constructs a single BSON element with the provided key and value.
@@ -41,7 +41,7 @@ func NewA(values ...any) A {
 		return A{}
 	}
 
-	return A(values)
+	return values
 }
 
 // Marshal returns the BSON encoding of val.
