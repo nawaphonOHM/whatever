@@ -1,6 +1,7 @@
 package mongodb_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,10 @@ const (
 	testStatusKey = "status"
 	testActiveVal = "active"
 )
+
+type objectIDDocument struct {
+	ID mongodb.ObjectID `bson:"_id" json:"_id"`
+}
 
 // TestBSONSerializationCompatibility verifies round-trip BSON marshaling.
 func TestBSONSerializationCompatibility(t *testing.T) {
@@ -52,6 +57,30 @@ func TestNestedEmptyNewDMarshalsAsDocument(t *testing.T) {
 	expected, err := bson.Marshal(bson.D{{Key: "nested", Value: bson.D{}}})
 	require.NoError(t, err)
 	assert.Equal(t, expected, encoded)
+}
+
+func TestObjectIDSerializationRoundTrips(t *testing.T) {
+	id := mongodb.NewObjectID()
+	assertObjectIDBSONRoundTrip(t, id)
+	assertObjectIDJSONRoundTrip(t, id)
+}
+
+func assertObjectIDBSONRoundTrip(t *testing.T, id mongodb.ObjectID) {
+	encoded, err := bson.Marshal(mongodb.NewD(mongodb.NewE("_id", id)))
+	require.NoError(t, err)
+
+	var result objectIDDocument
+	require.NoError(t, bson.Unmarshal(encoded, &result))
+	assert.Equal(t, id, result.ID)
+}
+
+func assertObjectIDJSONRoundTrip(t *testing.T, id mongodb.ObjectID) {
+	encoded, err := json.Marshal(objectIDDocument{ID: id})
+	require.NoError(t, err)
+
+	var result objectIDDocument
+	require.NoError(t, json.Unmarshal(encoded, &result))
+	assert.Equal(t, id, result.ID)
 }
 
 func TestEmptyNewAMarshalsAsArray(t *testing.T) {

@@ -26,6 +26,14 @@ func verifyPkgElem(e mongodb.E) mongodb.E {
 	return e
 }
 
+func verifyDriverObjectID(id bson.ObjectID) bson.ObjectID {
+	return id
+}
+
+func verifyPkgObjectID(id mongodb.ObjectID) mongodb.ObjectID {
+	return id
+}
+
 // TestBSONTypeAliasesInteroperability verifies compile-time and runtime
 // assignment compatibility between pkg/mongodb aliases and mongo-driver bson types.
 func TestBSONTypeAliasesInteroperability(t *testing.T) {
@@ -42,6 +50,27 @@ func TestBSONTypeAliasesInteroperability(t *testing.T) {
 
 	driverDoc2 := verifyDriverDoc(pkgDoc)
 	assert.Equal(t, pkgDoc, driverDoc2)
+}
+
+func TestObjectIDInteroperability(t *testing.T) {
+	driverID := bson.NewObjectID()
+	pkgID := verifyPkgObjectID(driverID)
+	assert.Equal(t, driverID, pkgID)
+
+	driverID2 := verifyDriverObjectID(pkgID)
+	assert.Equal(t, pkgID, driverID2)
+}
+
+func TestObjectIDHelpers(t *testing.T) {
+	id := mongodb.NewObjectID()
+	assert.False(t, id.IsZero())
+
+	parsedID, err := mongodb.ObjectIDFromHex(id.Hex())
+	require.NoError(t, err)
+	assert.Equal(t, id, parsedID)
+
+	_, err = mongodb.ObjectIDFromHex("not-an-object-id")
+	require.Error(t, err)
 }
 
 // TestNewE verifies construction of BSON elements with various key and value types.

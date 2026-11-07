@@ -1392,6 +1392,36 @@ When connecting to Google Cloud Firestore with MongoDB compatibility (endpoints 
 
 There is no configuration switch to bypass startup verification. Applications can additionally invoke `client.Ping(ctx)` on demand (for example, inside readiness probes or background pollers).
 
+### ObjectIDs
+
+Use `mongodb.ObjectID` in models and generate or parse IDs without importing the MongoDB driver:
+
+```go
+package model
+
+import (
+	"fmt"
+
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
+)
+
+type User struct {
+	ID mongodb.ObjectID `bson:"_id,omitempty"`
+}
+
+func newUser() User {
+	return User{ID: mongodb.NewObjectID()}
+}
+
+func parseUserID(hex string) (mongodb.ObjectID, error) {
+	id, err := mongodb.ObjectIDFromHex(hex)
+	if err != nil {
+		return mongodb.ObjectID{}, fmt.Errorf("parse user ID: %w", err)
+	}
+	return id, nil
+}
+```
+
 ### Database & Collection Handles
 
 The managed client resolves default database names and exposes database and collection handles. Collection operations can use the public `mongodb.Collection` alias without importing the driver package:

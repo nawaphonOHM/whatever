@@ -14,6 +14,9 @@ type M = bson.M
 // A represents a BSON array.
 type A = bson.A
 
+// ObjectID is a MongoDB object identifier.
+type ObjectID = bson.ObjectID
+
 // NewD constructs an ordered BSON document from elements. With no elements, it
 // returns a non-nil empty document.
 func NewD(elements ...E) D {
@@ -42,4 +45,14 @@ func NewA(values ...any) A {
 	}
 
 	return values
+}
+
+// NewObjectID generates a new ObjectID.
+func NewObjectID() ObjectID {
+	return bson.NewObjectID()
+}
+
+// ObjectIDFromHex parses a hexadecimal string into an ObjectID.
+func ObjectIDFromHex(s string) (ObjectID, error) {
+	return bson.ObjectIDFromHex(s)
 }
