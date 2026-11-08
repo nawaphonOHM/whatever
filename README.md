@@ -1,9 +1,9 @@
 # whatever
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27.2-00ADD8?style=flat&logo=go)](https://go.dev/)
-[![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever)
-[![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever)
+[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27.3-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever/v3.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever/v3)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever/v3)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever/v3)
 
 A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, zero-boilerplate managed MongoDB client connectivity, isolated Testcontainers-based MongoDB integration testing, and ergonomic programmatic MongoDB test harnesses with automated fixture cleanup.
 
@@ -73,8 +73,8 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Termination Hooks & Sentinel Errors](#termination-hooks--sentinel-errors)
 - [Cloud Object Storage (`pkg/storage`)](#cloud-object-storage-pkgstorage)
   - [Connecting & Lifecycle](#connecting--lifecycle-1)
-  - [Automatic Cloud Provider Detection](#automatic-cloud-provider-detection)
-  - [URL Sanitization & Security Redaction](#url-sanitization--security-redaction)
+  - [Automatic Cloud Provider Detection](#automatic-cloud-provider-detection-internal-architecture)
+  - [URL Sanitization & Security Redaction](#url-sanitization--security-redaction-internal-helpers)
   - [Modular Connection Pipeline & Compatibility Diagnostics](#modular-connection-pipeline--compatibility-diagnostics)
   - [Object Operations & Stream Management](#object-operations--stream-management)
   - [Pre-signed URLs](#pre-signed-urls)
@@ -113,6 +113,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
 - [Development Workflows](#development-workflows)
   - [Makefile Targets](#makefile-targets)
   - [Testing & Code Coverage](#testing--code-coverage)
+    - [Docker-Dependent Testcontainers Integration Tests](#docker-dependent-testcontainers-integration-tests)
   - [Static Analysis & Linting](#static-analysis--linting)
   - [Code Formatting](#code-formatting)
   - [Dependency Management & Verification](#dependency-management--verification)
@@ -125,14 +126,14 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
 
 ### Prerequisites
 
-- **Go**: Version `1.27.2` or higher (tested with Go `1.27+`)
+- **Go**: Version `1.27.3` or higher, as declared by this module's `go.mod`.
 
 ### Installation
 
 Install the library in your Go module:
 
 ```bash
-go get github.com/nawaphonOHM/whatever
+go get github.com/nawaphonOHM/whatever/v3
 ```
 
 ---
@@ -186,7 +187,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   └── workflows/
 │       └── ci.yml             # Continuous integration pipeline
 ├── Makefile                   # Local development, test, and build targets
-├── go.mod                     # Go module definition (Go 1.27.2+)
+├── go.mod                     # Go module definition (Go 1.27.3+)
 ├── go.sum                     # Go module checksums
 └── README.md                  # Project documentation
 ```
@@ -195,7 +196,7 @@ This repository is structured as a modular library. Consuming microservices impo
 
 ## Package Catalog & Feature Matrix
 
-The toolkit is divided into focused public packages under `pkg/`:
+The toolkit is divided into focused public packages under `pkg/`. Code blocks are illustrative unless identified as complete examples; short fragments may omit imports, application-specific handlers, and surrounding function context.
 
 | Package | Primary Role | Key Types & Functions | Underlying Technology |
 |---|---|---|---|
@@ -233,13 +234,13 @@ Structured logging built on Go standard library `log/slog` with extended severit
 
 ### `pkg/logger`
 
-Zero-allocation Gin HTTP access logging middleware designed for production observability:
+Gin HTTP access logging middleware designed for production observability:
 
-- **Comprehensive Request Metrics**: Automatically logs request duration/latency, client IP, HTTP method, URL path, query string, response status code, and response payload size in bytes.
+- **Comprehensive Request Metrics**: Automatically logs request duration/latency, client IP, HTTP method, URL path, query string, response status code, and response payload size in bytes. Query strings are included, so do not put secrets in URL parameters.
 - **Google Cloud Logging Integration**: Automatically shapes HTTP access metrics into top-level Google Cloud Logging `httpRequest` objects when operating under GCP structured logging mode.
-- **Trace Context Extraction**: Automatically extracts active span and trace IDs from the Gin request context or W3C distributed tracing headers.
+- **Trace Context Extraction**: Extracts trace and span IDs from Gin context values or the active OpenTelemetry span; W3C headers are reflected when tracing middleware has extracted them into that span.
 - **Status-Based Log Leveling**: Assigns `INFO` for 2xx/3xx responses, `WARN` for 4xx client errors, and `ERROR` for 5xx server errors.
-- **Path Filtering**: Exclude high-frequency health probes or metrics scrapers via configurable `SkipPaths`.
+- **Path Filtering**: Exclude exact request paths such as health probes or metrics scrapers via configurable `SkipPaths`.
 
 ### `pkg/mongodb`
 
@@ -267,7 +268,7 @@ Unified cloud object storage client supporting AWS S3, Google Cloud Storage XML 
 
 ### `pkg/testcontainers/firestore`
 
-Dedicated Testcontainers integration for spin-up and teardown of ephemeral Google Cloud Firestore emulator instances in automated test suites:
+Dedicated Testcontainers integration for spinning up and tearing down ephemeral Google Cloud Firestore emulator instances in automated test suites without a pre-installed emulator; a Docker-compatible runtime is required:
 
 - **Ephemeral Emulator Lifecycle**: Spin up isolated, throwaway Firestore emulator containers in Go tests using `firestore.Run(ctx, opts...)` and terminate them cleanly with `container.Terminate(ctx)`.
 - **Dynamic Endpoint Introspection**: Resolve mapped external ports, host addresses, and connection URIs via `container.Port(ctx)`, `container.Host(ctx)`, and `container.URI(ctx)`.
@@ -295,14 +296,14 @@ Ergonomic MongoDB testing client with programmatic options, connection string pa
 
 ## Quick Start
 
-Get a high-performance HTTP REST microservice running with declarative routing, structured logging, and signal-driven graceful shutdown in just a few lines of code:
+Get a high-performance HTTP REST microservice running with declarative routing, structured logging, and signal-driven graceful shutdown in just a few lines of code. The example uses the default CORS behavior and does not require a configuration file. To configure CORS, add a metadata value with `rest.NewMeta().WithCorsPath("./configs/cors.yaml")` and provide that file, as described in [CORS & Blueprint Metadata](#cors--blueprint-metadata).
 
 ```go
 package main
 
 import (
-	"github.com/nawaphonOHM/whatever/pkg/logging"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v3/pkg/rest"
 )
 
 type Item struct {
@@ -342,14 +343,11 @@ func main() {
 		},
 	}
 
-	// 3. Configure CORS policy and assemble application blueprint
-	meta := rest.NewMeta().WithCorsPath("./configs/cors.yaml")
-
+	// 2. Assemble the application blueprint
 	bp := rest.NewBluePrint().
-		WithMeta(meta).
 		WithAPIs(itemRoutes)
 
-	// 4. Start the REST server
+	// 3. Start the REST server
 	// StartREST initializes Gin, binds OHM9996_ configuration, validates routes,
 	// mounts health probes (/health, /ready), and manages graceful shutdown on SIGINT/SIGTERM.
 	logging.Info("Starting REST service...")
@@ -398,7 +396,7 @@ An API group is defined by creating an instance of `*rest.RRestAPIRegistration`,
 package users
 
 import (
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/v3/pkg/rest"
 )
 
 // NewUserAPIs returns declarative API registrations for user endpoints.
@@ -678,7 +676,7 @@ For values injected into the context by upstream middlewares, `rest.Context` pro
 package users
 
 import (
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/v3/pkg/rest"
 )
 
 type CreateUserRequest struct {
@@ -866,7 +864,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/nawaphonOHM/whatever/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
 )
 
 func main() {
@@ -1108,7 +1106,7 @@ import (
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nawaphonOHM/whatever/pkg/logger"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logger"
 )
 
 // Attach default request logging middleware (uses slog.Default())
@@ -1345,7 +1343,7 @@ The `pkg/mongodb` package encapsulates MongoDB connection establishment, connect
 
 ### Connecting & Lifecycle
 
-Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library automatically reads and validates `OHM9996_MONGODB_*` environment variables, executes a two-phase connection flow, verifies connectivity via an initial ping (when enabled), and manages the underlying connection pool:
+Consuming applications connect to MongoDB using `mongodb.Connect(ctx)`. The library reads and validates `OHM9996_MONGODB_*` environment variables, requires `OHM9996_MONGODB_HOST`, performs a mandatory ping and collection/document probe during startup, and manages the underlying connection pool. Both checks run before the client is returned; neither can be disabled:
 
 ```go
 package database
@@ -1355,7 +1353,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 )
 
 func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
@@ -1378,17 +1376,17 @@ func InitMongoDB(ctx context.Context) (*mongodb.Client, func()) {
 
 ### Two-Phase Automatic TLS Fallback
 
-To provide seamless connectivity across unencrypted local Docker instances, secured staging clusters, and cloud deployments (such as MongoDB Atlas), `mongodb.Connect(ctx)` implements an automated two-phase connection strategy:
+`mongodb.Connect(ctx)` implements an automated TLS connection strategy:
 
-1. **Unencrypted Connection Attempt**: First attempts connection without TLS (`tls=false`). A mandatory connectivity ping and collection/document probe verify the connection before initialization completes.
-2. **Automatic TLS Fallback**: If the server rejects the unencrypted connection with an error indicating TLS/SSL is required (such as `"server requires tls"`, `"server requires ssl"`, `"ssl handshake"`, `"tls handshake"`, or `"connection closed"`), the client transparently re-attempts connection with TLS enabled (`tls=true`).
-3. **Failure Handling**: If connection fails after fallback or during the mandatory probes, the client routes structured diagnostics through Central Log and returns the underlying error.
+1. **Initial Attempt**: For standard MongoDB endpoints, the client first attempts a connection without TLS and validates it with the mandatory ping and collection/document probe.
+2. **TLS Fallback**: If the first attempt reports a recognized TLS-related transport error, the client retries with TLS enabled. Google Cloud Firestore MongoDB-compatible endpoints connect directly with TLS.
+3. **Failure Handling**: A failed final attempt routes structured diagnostics through the central logger and triggers abnormal exit handling; the underlying error is returned if the exit hook returns.
 
 ### Startup Connectivity Verification
 
-`mongodb.Connect(ctx)` always performs an active ping check during initialization to ensure that the remote MongoDB deployment is reachable before application routes begin serving traffic. It then lists collections, selects a random collection when available, and probes a document with `FindOne`; an empty database is checked through the `__probe__` namespace. If either verification fails, the connection pool is immediately closed and a wrapped error is returned.
+`mongodb.Connect(ctx)` always performs an active ping and collection/document probe before returning a client. For standard MongoDB endpoints, it lists collections in the configured database, selects one at random when available, and issues `FindOne`; when there are no collections, it probes the `probe` collection. If either check fails, the connection is closed and the error is returned (and connection failures invoke the abnormal exit hook).
 
-When connecting to Google Cloud Firestore with MongoDB compatibility (endpoints containing `firestore.goog`), the client automatically detects the endpoint and substitutes standard admin ping commands (`{ping: 1}`) with a dummy document read (`FindOne` on collection `"__ping__"`), treating `mongo.ErrNoDocuments` as success.
+For Google Cloud Firestore MongoDB-compatible endpoints (containing `firestore.goog`), the client uses a `FindOne` read on the `ping` collection instead of the MongoDB ping command; `mongo.ErrNoDocuments` counts as a successful connectivity check.
 
 There is no configuration switch to bypass startup verification. Applications can additionally invoke `client.Ping(ctx)` on demand (for example, inside readiness probes or background pollers).
 
@@ -1507,7 +1505,7 @@ defer session.EndSession(ctx)
 
 ### Termination Hooks & Sentinel Errors
 
-When required MongoDB configuration (such as `OHM9996_MONGODB_HOST`) is missing or connection fails during initialization, `mongodb.Connect` outputs diagnostic information and triggers a configurable exit hook (`os.Exit(0)` by default). In unit and integration test suites, this hook can be intercepted:
+When required MongoDB configuration (such as `OHM9996_MONGODB_HOST`) is missing, `mongodb.Connect` logs a diagnostic and triggers graceful exit handling (`os.Exit(0)` by default). Connection or startup-verification failures trigger abnormal exit handling (`os.Exit(1)` by default). The configurable exit hook can be intercepted in tests; if it returns, the connection error is returned to the caller:
 
 ```go
 // Override the process termination hook during tests (returns previous hook)
@@ -1532,7 +1530,7 @@ Consuming applications interact exclusively with clean public APIs (`pkg/storage
 
 ### Connecting & Lifecycle
 
-Initialize storage connectivity via `storage.Connect(ctx, opts...)` or `storage.ConnectWithConfig(ctx, cfg, opts...)`. The client loads settings from `OHM9996_STORAGE_*` environment variables (with fallback to `.env`/`configs/.env`), detects the cloud provider, constructs the underlying AWS SDK v2 client, and executes an initial bucket connectivity probe:
+Initialize storage connectivity via `storage.Connect(ctx, opts...)` or `storage.ConnectWithConfig(ctx, cfg, opts...)`. `Connect` loads settings from `OHM9996_STORAGE_*` environment variables (with fallback to `.env`/`configs/.env`); `ConnectWithConfig` uses the supplied configuration. Both detect the cloud provider and construct the underlying AWS SDK v2 client. A startup bucket connectivity probe runs by default and can be skipped with `storage.WithSkipProbe(true)`:
 
 ```go
 package main
@@ -1595,7 +1593,7 @@ To protect sensitive credentials and query parameters in internal diagnostic log
 - **Fail-Closed Security on Ambiguous / Malformed Inputs**: Ambiguous or malformed inputs—including single-slash schemes (`https:/user:pass@host`), protocol-relative URLs (`//user:pass@host`), empty-authority strings (`https:////user:pass@host`), path pseudo-schemes (`a/b://user:pass@host`), or invalid whitespace—fail safely and return `<unparseable>`.
 - **Sanitized Error Messaging**: Configuration validation and detection errors never echo userinfo, query strings, fragments, or non-numeric port text (e.g., `invalid URL format`, `invalid scheme format`, `invalid port in URL: must be numeric`). They may still name the offending scheme of an unsupported-scheme error (`unsupported URL scheme "ftp"`) or a numeric out-of-range port.
 - **Compatibility Note (Malformed URL Rejection)**: `ParseTarget`, `Detect`, and `Config.Validate` reject malformed input shapes (such as single-slash schemes like `https:/host`, bare `http`/`https` hosts, colon-terminated hosts, and nested `scheme://userinfo@host` inside a path). Legitimate endpoints are unaffected, including IPv6 literals (`[::1]:9000`, `http://[::ffff:127.0.0.1]:9000`) and `@` or `%40` inside URL paths (`https://proxy.example.com/s3/a@b/`). For log output, the sanitizer may still print `<unparseable>` for URLs with a literal `@` in the path.
-- **Known Limitations & Caveats**: Path-based secrets or authentication tokens embedded directly within URL path segments or non-standard token formats outside standard URL userinfo and query parameters are not recognized by URL parsers and are not redacted.
+- **Known Limitations & Caveats**: Path-based secrets or authentication tokens embedded directly within URL path segments or non-standard token formats outside standard URL userinfo and query parameters are not recognized by URL parsers and are not redacted. Underlying network/probe error text and multi-tenant path-mismatch errors are not sanitized and may include provider details or the configured bucket/path; do not put secrets in URL paths. See the [storage compatibility and security release notes](docs/storage-compatibility-release-notes.md) for the full caveats.
 
 ### Modular Connection Pipeline & Compatibility Diagnostics
 
@@ -1609,7 +1607,7 @@ Initialization emits structured log records at `Info` and `Debug` levels:
 - `storage client compatibility configuration` (`DEBUG`): Exposes multi-cloud compatibility behaviors (e.g. `suppress_unsolicited_trailers_for_gcs`, `enforced_path_style_for_provider`, `explicit_checksum_configuration`).
 - `storage client initialization complete` (`INFO`): Reports successful client initialization after startup probing succeeds.
 
-For detailed pipeline architecture, full diagnostic field schemas, and compatibility behavior constants, see [pkg/storage/README.md#connection-lifecycle-diagnostics--startup-probing](pkg/storage/README.md#connection-lifecycle-diagnostics--startup-probing).
+For detailed pipeline architecture, full diagnostic field schemas, and compatibility behavior constants, see [the storage package reference](pkg/storage/README.md#connection-lifecycle-diagnostics--startup-probing) and [storage compatibility release notes](docs/storage-compatibility-release-notes.md).
 
 ### Object Operations & Stream Management
 
@@ -1730,7 +1728,7 @@ import (
 	"context"
 	"testing"
 
-	tcfirestore "github.com/nawaphonOHM/whatever/pkg/testcontainers/firestore"
+	tcfirestore "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/firestore"
 )
 
 func TestFirestoreContainerStartup(t *testing.T) {
@@ -1811,7 +1809,7 @@ import (
 	"context"
 	"testing"
 
-	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	tcmongo "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
 )
 
 func TestContainerStartup(t *testing.T) {
@@ -1886,8 +1884,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/mongodb"
-	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
+	tcmongo "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -2065,7 +2063,7 @@ import (
 	"testing"
 	"time"
 
-	testmongo "github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+	testmongo "github.com/nawaphonOHM/whatever/v3/pkg/testing/mongodb"
 )
 
 func TestClientConnectionModes(t *testing.T) {
@@ -2106,8 +2104,8 @@ import (
 	"context"
 	"testing"
 
-	tcmongo "github.com/nawaphonOHM/whatever/pkg/testcontainers/mongodb"
-	testmongo "github.com/nawaphonOHM/whatever/pkg/testing/mongodb"
+	tcmongo "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
+	testmongo "github.com/nawaphonOHM/whatever/v3/pkg/testing/mongodb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -2244,7 +2242,7 @@ All environment variables read by the library use the **`OHM9996_`** prefix.
 
 Configuration values are resolved using the following order of precedence:
 1. **System Environment Variables**: Explicit environment variables set on the host or container environment take top priority.
-2. **Local `.env` File**: If a `.env` file exists in the working directory, it is automatically parsed using `godotenv`. An absent `.env` file is silently ignored.
+2. **Environment File**: Unless explicit filenames are supplied to a config loader, it reads the first existing file from `.env` and `configs/.env`; missing files are ignored. Existing system environment values are not overwritten.
 3. **Library Defaults**: If a variable is unset across environment sources, built-in defaults defined on the configuration structs are applied.
 
 ### Server General Settings
@@ -2313,7 +2311,7 @@ CORS policies are configured by providing a path to a `.json`, `.yaml`, or `.yml
 | `OHM9996_OTEL_SERVICE_NAME` | `string` | `whatever-service` | Service name reported to OpenTelemetry collectors |
 | `OHM9996_OTEL_EXPORTER_OTLP_ENDPOINT` | `string` | `localhost:4317` | Collector host:port address or URL endpoint |
 | `OHM9996_OTEL_EXPORTER_OTLP_PROTOCOL` | `string` | `grpc` | Transport protocol (`grpc`, `http`, `http/protobuf`, `http/json`) |
-| `OHM9996_OTEL_INSECURE` | `bool` | `true` | Disables TLS verification for OTLP collector connections |
+| `OHM9996_OTEL_INSECURE` | `bool` | `true` | Configures insecure transport for OTLP exporter connections; set to `false` when the collector requires a secure transport |
 | `OHM9996_OTEL_SAMPLE_RATE` | `float64` | `1.0` | Trace sampling ratio between `0.0` (0%) and `1.0` (100%) |
 | `OHM9996_OTEL_SKIP_PATHS` | `string` | `""` | Comma-separated list of URL paths excluded from tracing spans |
 
@@ -2337,7 +2335,7 @@ CORS policies are configured by providing a path to a `.json`, `.yaml`, or `.yml
 | `OHM9996_MONGODB_MAX_POOL_SIZE` | `uint64` | `100` | Maximum number of concurrent connections in the pool |
 | `OHM9996_MONGODB_MIN_POOL_SIZE` | `uint64` | `5` | Minimum number of idle connections maintained in the pool |
 
-If mandatory configuration (`HOST`) is missing, or if connection fails after TLS fallback, the client logs descriptive error details and triggers a peaceful termination hook (`exitFunc(0)`).
+If required configuration (`OHM9996_MONGODB_HOST`) is missing, `mongodb.Connect()` logs a diagnostic and triggers graceful exit handling (`os.Exit(0)` by default). Connection, ping, or probe failures trigger abnormal exit handling (`os.Exit(1)` by default). If the exit hook is replaced with one that returns, the error is returned to the caller.
 
 ### Object Storage Configuration
 
@@ -2379,7 +2377,7 @@ Structured logging via `pkg/logging` is configured entirely through `OHM9996_LOG
 
 ## Consumer Bootstrap
 
-The example below demonstrates how an importing application bootstraps MongoDB connectivity, configures structured logging and CORS policies, defines declarative REST API registrations, and starts the server with signal-driven graceful shutdown:
+This complete example requires a reachable MongoDB deployment and `OHM9996_MONGODB_HOST` (plus credentials if authentication is enabled); `mongodb.Connect` performs a mandatory startup ping and probe. It uses the default CORS behavior, so no CORS configuration file is required. Add a supplied file with `rest.NewMeta().WithCorsPath(...)` only when the application needs a custom CORS policy.
 
 ```go
 package main
@@ -2388,9 +2386,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/pkg/logging"
-	"github.com/nawaphonOHM/whatever/pkg/mongodb"
-	"github.com/nawaphonOHM/whatever/pkg/rest"
+	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
+	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
+	"github.com/nawaphonOHM/whatever/v3/pkg/rest"
 )
 
 type Item struct {
@@ -2447,13 +2445,8 @@ func main() {
 		},
 	}
 
-	// 3. Configure CORS policy and assemble blueprint metadata
-	meta := rest.NewMeta().
-		WithCorsPath("./configs/cors.yaml")
-
-	blueprint := rest.NewBluePrint().
-		WithMeta(meta).
-		WithAPIs(itemAPI)
+	// 3. Assemble the blueprint with default CORS behavior
+	blueprint := rest.NewBluePrint().WithAPIs(itemAPI)
 
 	// 4. Start HTTP server (blocks until SIGINT / SIGTERM signal, then gracefully drains)
 	if err := rest.StartREST(blueprint); err != nil {
@@ -2476,8 +2469,9 @@ The repository includes a dedicated `Makefile` defining verification, test, and 
 |---|---|---|
 | `make` / `make help` | `make help` | Displays list of available Makefile targets with descriptions |
 | `make build` | `go build -v ./...` | Verifies compilation of all library packages |
-| `make test` | `go test -race -v ./...` | Runs all unit and integration test suites with the race detector enabled |
-| `make test-coverage` | `go test -race -coverprofile=coverage.out ./...` | Executes tests and generates an HTML code coverage report (`coverage.html`) |
+| `make test` | `go test -race -v ./...` | Runs the standard, untagged test suite with the race detector; excludes tests requiring the `testcontainers` build tag |
+| `make test-integration` | `go test -tags=testcontainers -race -v ./...` | Runs the suite with Docker-dependent Testcontainers tests enabled; requires a working Docker-compatible runtime |
+| `make test-coverage` | `go test -race -coverprofile=coverage.out ./...` | Runs the standard, untagged test suite and generates an HTML code coverage report (`coverage.html`) |
 | `make vet` | `go vet ./...` | Runs standard Go static analysis (`go vet`) across all packages |
 | `make lint` | `golangci-lint run` | Executes `golangci-lint` (falls back to `go vet ./...` if `golangci-lint` is not installed) |
 | `make tidy` | `go mod tidy && go mod verify` | Tidies and verifies Go module dependencies in `go.mod` and `go.sum` |
@@ -2488,9 +2482,26 @@ The repository includes a dedicated `Makefile` defining verification, test, and 
 
 #### Full Test Suite (Makefile)
 
-Execute the complete unit and integration test suite with Go's race detector enabled:
+Run the standard untagged test suite with Go's race detector enabled. Tests guarded by the `testcontainers` build tag are excluded:
 ```bash
 make test
+```
+
+#### Docker-Dependent Testcontainers Integration Tests
+
+The MongoDB and Firestore container integration tests are guarded by the `testcontainers` build tag and require Docker (or a compatible Docker runtime). They are not included in `make test`, `make test-coverage`, or `make all`.
+
+Run all tagged tests through the Makefile target, or run either integration package directly:
+
+```bash
+# Run the full suite with Testcontainers integration tests enabled
+make test-integration
+
+# Run only the MongoDB Testcontainers integration tests
+go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...
+
+# Run only the Firestore Testcontainers integration tests
+go test -tags=testcontainers -race -v ./pkg/testcontainers/firestore/...
 ```
 
 #### Coverage Profiling & Visualization (Makefile)
@@ -2520,8 +2531,11 @@ go test -v ./pkg/rest/...
 go test -v ./pkg/mongodb/...
 go test -v ./pkg/testing/mongodb/...
 
-# Run MongoDB Testcontainers integration tests
-go test -v ./pkg/testcontainers/mongodb/...
+# Run MongoDB Testcontainers integration tests (requires Docker)
+go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...
+
+# Run Firestore Testcontainers integration tests (requires Docker)
+go test -tags=testcontainers -race -v ./pkg/testcontainers/firestore/...
 ```
 
 ### Static Analysis & Linting
@@ -2571,7 +2585,7 @@ go mod verify
 
 ### Full Verification Pipeline
 
-Run the complete verification pipeline locally before submitting changes or creating pull requests:
+Run the standard verification pipeline locally before submitting changes or creating pull requests. `make all` does not include the Docker-dependent `make test-integration` target:
 ```bash
 make all
 ```
@@ -2582,6 +2596,7 @@ make all
 
 The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) configured to:
 - Enforce Go module integrity (`go mod verify` and dirty check on `go.mod`/`go.sum`).
-- Execute static analysis with `golangci-lint` (`--timeout=5m`).
-- Run the full test suite across all packages with race detection and coverage collection (`go test -race -v -coverprofile=coverage.out ./...`).
+- Execute static analysis with `golangci-lint` (`--timeout=5m`) using the `testcontainers` build tag.
+- Run the standard untagged test suite across all packages with race detection and coverage collection (`go test -race -v -coverprofile=coverage.out ./...`).
+- Run the tagged MongoDB Testcontainers integration tests separately (`go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...`); the CI test command does not run the tagged Firestore integration tests.
 - Verify compilation of all library packages with `go build -v ./...`.
