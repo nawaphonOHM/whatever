@@ -2,11 +2,7 @@ package rest
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // newTestE2EBlueprint creates a blueprint with sample versioned and unversioned routes.
@@ -48,33 +44,29 @@ func TestStartREST_Success(t *testing.T) {
 	signalAndWait(t, errCh)
 }
 
-type e2eFailureCase struct {
-	name          string
-	fixture       string
-	expectedError string
-}
-
-func getE2EFailureCases() []e2eFailureCase {
-	return []e2eFailureCase{
-		{"missing file", "nonexistent.json", "failed to read CORS configuration file"},
-		{"invalid syntax", "invalid_syntax.json", "failed to parse JSON CORS configuration"},
-		{"schema violation", "invalid_schema_disallowed_method.json", schemaValidationErr},
+func TestStartREST_InvalidCORSConfigurationContinuesStartup(t *testing.T) {
+	tests := []struct {
+		name       string
+		yamlConfig string
+		jsonConfig string
+	}{
+		{name: "missing configuration"},
+		{name: "whitespace configuration", yamlConfig: " \t\n ", jsonConfig: " \t\n "},
+		{name: "invalid JSON syntax", jsonConfig: `{"allow-origins": [`},
+		{name: "invalid YAML syntax", yamlConfig: "allow-origins: [\n  -"},
+		{name: "schema violation", jsonConfig: `{"unknown-property": true}`},
+		{
+			name:       "invalid JSON does not fall back to valid YAML",
+			yamlConfig: "allow-origins:\n  - https://app.example.com\n",
+			jsonConfig: `{"unknown-property": true}`,
+		},
 	}
-}
-
-func TestStartREST_StartupFailures(t *testing.T) {
-	port := getFreePort(t)
-	setStartEnv(t, port)
-	t.Setenv(envCORSKey, "")
-
-	for _, tc := range getE2EFailureCases() {
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			corsPath := filepath.Join("testdata", tc.fixture)
-			bp := newCORSBlueprintWithFixture(corsPath)
-			errCh := startRESTAsync(bp)
-			err := waitErr(t, errCh)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tc.expectedError)
+			url, errCh := startCORSE2E(t, tc.yamlConfig, tc.jsonConfig)
+			assertDefaultDisabledPreflight(t, url)
+			assertDefaultDisabledGET(t, url)
+			signalAndWait(t, errCh)
 		})
 	}
 }

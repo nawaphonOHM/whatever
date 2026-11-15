@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const envCORSKey = "OHM9996_SERVER_CORS_PATH"
-
-func startCORSE2EWithEnv(t *testing.T, metaPath, envPath string) (string, <-chan error) {
+func startCORSE2EWithLegacyPath(t *testing.T, envPath string) (string, <-chan error) {
 	t.Helper()
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	t.Setenv(envCORSKey, envPath)
-	errCh := startRESTAsync(newCORSBlueprintWithFixture(metaPath))
+	t.Setenv(envCORSYAMLKey, "")
+	t.Setenv(envCORSJSONKey, "")
+	t.Setenv(envCORSPathKey, envPath)
+	errCh := startRESTAsync(newCORSBlueprintWithFixture())
 	return pingURL(port), errCh
 }
 
@@ -48,16 +48,22 @@ func assertEnvJSONPreflight(t *testing.T, url string) {
 	})
 }
 
-func TestStartREST_EnvFallback(t *testing.T) {
-	url, errCh := startCORSE2EWithEnv(t, "", testdataFixturePath("valid_cors.yaml"))
+func TestStartREST_EnvironmentYAML(t *testing.T) {
+	url, errCh := startCORSE2E(t, readCORSTestFixture(t, "valid_cors.yaml"), "")
 	assertEnvYAMLPreflight(t, url)
 	signalAndWait(t, errCh)
 }
 
-func TestStartREST_MetaPrecedenceOverEnv(t *testing.T) {
-	jsonPath := testdataFixturePath("valid_cors.json")
-	yamlPath := testdataFixturePath("valid_cors.yaml")
-	url, errCh := startCORSE2EWithEnv(t, jsonPath, yamlPath)
+func TestStartREST_JSONPrecedence(t *testing.T) {
+	url, errCh := startCORSE2E(t, readCORSTestFixture(t, "valid_cors.yaml"), readCORSTestFixture(t, "valid_cors.json"))
 	assertEnvJSONPreflight(t, url)
+	signalAndWait(t, errCh)
+}
+
+func TestStartREST_LegacyPathsAreIgnored(t *testing.T) {
+	envPath := testdataFixturePath("valid_cors.yaml")
+	url, errCh := startCORSE2EWithLegacyPath(t, envPath)
+	assertDefaultDisabledPreflight(t, url)
+	assertDefaultDisabledGET(t, url)
 	signalAndWait(t, errCh)
 }

@@ -3,10 +3,17 @@ package server
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/nawaphonOHM/whatever/v3/internal/rest/contracts"
 	"github.com/nawaphonOHM/whatever/v3/internal/rest/middleware"
 	"github.com/nawaphonOHM/whatever/v3/pkg/logging"
+)
+
+const (
+	corsYAMLEnvName      = "OHM9996_SERVER_CORS_YML_YAML"
+	corsJSONEnvName      = "OHM9996_SERVER_CORS_JSON"
+	msgCORSNotConfigured = "no CORS environment configuration found; CORS is disabled"
+	msgCORSInvalid       = "invalid CORS environment configuration; CORS is disabled"
 )
 
 func readAndParseCORS(path string) ([]byte, *CORSFileConfig, error) {
@@ -34,33 +41,42 @@ func LoadAndValidateCORS(path string) (*middleware.CORSConfig, error) {
 	return loadValidCORS(path)
 }
 
-func blueprintCorsPath(bp *contracts.BluePrint) string {
-	if bp == nil || bp.Meta() == nil {
-		return ""
-	}
-	return bp.Meta().CorsPath()
+type corsEnvironmentPolicy struct {
+	parser func(string, []byte) ([]byte, *CORSFileConfig, error)
+	name   string
+	value  string
 }
 
-func serverConfigCorsPath(cfg *Config) string {
+func loadCORSConfig(cfg *Config) *middleware.CORSConfig {
+	for _, policy := range corsEnvironmentPolicies(cfg) {
+		if corsConfig, configured := loadEnvironmentCORS(policy); configured {
+			return corsConfig
+		}
+	}
+
+	logging.Info(msgCORSNotConfigured)
+	return middleware.DefaultCORSConfig()
+}
+
+func corsEnvironmentPolicies(cfg *Config) []corsEnvironmentPolicy {
 	if cfg == nil {
-		return ""
+		return nil
 	}
-	return cfg.CORSPath
+	return []corsEnvironmentPolicy{
+		{name: corsJSONEnvName, value: cfg.CORSJSON, parser: parseJSONCORS},
+		{name: corsYAMLEnvName, value: cfg.CORSYAML, parser: parseYAMLCORS},
+	}
 }
 
-func resolveCORSPath(cfg *Config, bp *contracts.BluePrint) string {
-	if path := blueprintCorsPath(bp); path != "" {
-		return path
+func loadEnvironmentCORS(policy corsEnvironmentPolicy) (*middleware.CORSConfig, bool) {
+	if strings.TrimSpace(policy.value) == "" {
+		return nil, false
 	}
-	return serverConfigCorsPath(cfg)
-}
 
-func loadCORSConfig(cfg *Config, bp *contracts.BluePrint) (*middleware.CORSConfig, error) {
-	path := resolveCORSPath(cfg, bp)
-	corsCfg, err := LoadAndValidateCORS(path)
+	_, fileCfg, err := policy.parser(policy.name, []byte(policy.value))
 	if err != nil {
-		logging.Error("failed to load CORS configuration", "error", err)
-		return nil, err
+		logging.Warn(msgCORSInvalid, "variable", policy.name)
+		return middleware.DefaultCORSConfig(), true
 	}
-	return corsCfg, nil
+	return buildCORSConfig(fileCfg), true
 }

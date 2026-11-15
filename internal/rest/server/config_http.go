@@ -2,7 +2,10 @@ package server
 
 // HTTPFields defines HTTP routing and path handling options.
 type HTTPFields struct {
+	// Deprecated: CORSPath is retained for compatibility and no longer configures server CORS.
 	CORSPath               string `env:"OHM9996_SERVER_CORS_PATH" envDefault:""`
+	CORSYAML               string `env:"OHM9996_SERVER_CORS_YML_YAML" envDefault:""`
+	CORSJSON               string `env:"OHM9996_SERVER_CORS_JSON" envDefault:""`
 	RedirectTrailingSlash  bool   `env:"OHM9996_SERVER_REDIRECT_TRAILING_SLASH" envDefault:"true"`
 	RedirectFixedPath      bool   `env:"OHM9996_SERVER_REDIRECT_FIXED_PATH" envDefault:"false"`
 	HandleMethodNotAllowed bool   `env:"OHM9996_SERVER_HANDLE_METHOD_NOT_ALLOWED" envDefault:"true"`
@@ -20,5 +23,7 @@ func defaultHTTPFields() HTTPFields {
 		UnescapePathValues:     true,
 		RemoveExtraSlash:       false,
 		CORSPath:               "",
+		CORSYAML:               "",
+		CORSJSON:               "",
 	}
 }

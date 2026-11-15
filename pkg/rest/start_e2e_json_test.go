@@ -47,7 +47,7 @@ func assertJSONE2EGETs(t *testing.T, url string) {
 }
 
 func TestStartREST_ValidJSONFixture(t *testing.T) {
-	url, errCh := startCORSE2E(t, testdataFixturePath("valid_cors.json"))
+	url, errCh := startCORSE2E(t, "", readCORSTestFixture(t, "valid_cors.json"))
 	assertJSONE2EPreflights(t, url)
 	assertJSONE2EGETs(t, url)
 	signalAndWait(t, errCh)

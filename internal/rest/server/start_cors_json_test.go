@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -54,8 +53,8 @@ func assertJSONGETs(t *testing.T, srv *Server) {
 // TestNewFromBluePrint_ValidJSONFixture verifies server initialization from JSON fixture.
 func TestNewFromBluePrint_ValidJSONFixture(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	corsPath := filepath.Join("testdata", "valid_cors.json")
-	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(corsPath))
+	setCORSConfigurationEnv(t, "", readCORSFixture(t, "valid_cors.json"), "")
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute())
 	require.NoError(t, err)
 
 	assertJSONPreflights(t, srv)

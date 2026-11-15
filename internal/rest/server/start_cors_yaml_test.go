@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -13,8 +12,8 @@ import (
 // TestNewFromBluePrint_ValidYAMLFixture verifies server initialization from YAML fixture.
 func TestNewFromBluePrint_ValidYAMLFixture(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	corsPath := filepath.Join("testdata", "valid_cors.yaml")
-	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(corsPath))
+	setCORSConfigurationEnv(t, readCORSFixture(t, "valid_cors.yaml"), "", "")
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute())
 	require.NoError(t, err)
 
 	preflight := executePreflight(srv, testPingPath, preflightOpts{
@@ -40,8 +39,8 @@ func TestNewFromBluePrint_ValidYAMLFixture(t *testing.T) {
 // TestNewFromBluePrint_ValidYAMLWithRequestsFixture verifies server initialization with request fields.
 func TestNewFromBluePrint_ValidYAMLWithRequestsFixture(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	corsPath := filepath.Join("testdata", "valid_cors_with_requests.yaml")
-	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(corsPath))
+	setCORSConfigurationEnv(t, readCORSFixture(t, "valid_cors_with_requests.yaml"), "", "")
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute())
 	require.NoError(t, err)
 
 	preflight := executePreflight(srv, testPingPath, preflightOpts{
@@ -58,39 +57,39 @@ func TestNewFromBluePrint_ValidYAMLWithRequestsFixture(t *testing.T) {
 }
 
 type serverFailureCase struct {
-	name          string
-	fixture       string
-	expectedError string
+	name        string
+	yamlFixture string
+	jsonFixture string
 }
 
 func getStartupFailureCases() []serverFailureCase {
 	return []serverFailureCase{
-		{"missing file", "nonexistent.json", "failed to read CORS configuration file"},
-		{"unsupported extension", "invalid.txt", "unsupported CORS configuration file format"},
-		{"invalid json syntax", "invalid_syntax.json", "failed to parse JSON CORS configuration"},
-		{"invalid yaml syntax", "invalid_syntax.yaml", "failed to parse YAML CORS configuration"},
-		{"multi-doc yaml", "invalid_multidoc.yaml", "multiple documents or trailing content detected"},
-		{"disallowed method", "invalid_schema_disallowed_method.json", schemaValidationErr},
-		{"bad origin format", "invalid_schema_bad_origin.json", schemaValidationErr},
-		{"bad header format", "invalid_schema_bad_header.json", schemaValidationErr},
-		{"unknown property", "invalid_unknown_property.json", schemaValidationErr},
-		{"yaml disallowed method", "invalid_schema_disallowed_method.yaml", schemaValidationErr},
-		{"yaml bad origin format", "invalid_schema_bad_origin.yaml", schemaValidationErr},
+		{name: "invalid JSON syntax", jsonFixture: "invalid_syntax.json"},
+		{name: "invalid YAML syntax", yamlFixture: "invalid_syntax.yaml"},
+		{name: "multi-document YAML", yamlFixture: "invalid_multidoc.yaml"},
+		{name: "disallowed method", jsonFixture: "invalid_schema_disallowed_method.json"},
+		{name: "bad origin format", jsonFixture: "invalid_schema_bad_origin.json"},
+		{name: "bad header format", jsonFixture: "invalid_schema_bad_header.json"},
+		{name: "unknown property", jsonFixture: "invalid_unknown_property.json"},
+		{name: "YAML disallowed method", yamlFixture: "invalid_schema_disallowed_method.yaml"},
+		{name: "YAML bad origin format", yamlFixture: "invalid_schema_bad_origin.yaml"},
+		{
+			name:        "invalid selected JSON does not fall back to valid YAML",
+			yamlFixture: "valid_cors.yaml",
+			jsonFixture: "invalid_unknown_property.json",
+		},
 	}
 }
 
-// TestNewFromBluePrint_StartupFailures verifies startup errors for invalid files.
+// TestNewFromBluePrint_StartupFailures verifies invalid CORS does not block server startup.
 func TestNewFromBluePrint_StartupFailures(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envCORSPathKey, "")
 
 	for _, tc := range getStartupFailureCases() {
 		t.Run(tc.name, func(t *testing.T) {
-			corsPath := filepath.Join("testdata", tc.fixture)
-			srv, err := NewFromBluePrint(createTestBlueprintWithRoute(corsPath))
-			require.Error(t, err)
-			assert.Nil(t, srv)
-			assert.Contains(t, err.Error(), tc.expectedError)
+			yamlConfig, jsonConfig := readStartupCORSConfig(t, tc)
+			setCORSConfigurationEnv(t, yamlConfig, jsonConfig, "")
+			assertInvalidCORSDoesNotStopServer(t)
 		})
 	}
 }
