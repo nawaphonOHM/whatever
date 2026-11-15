@@ -20,6 +20,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [`pkg/mongodb`](#pkgmongodb)
   - [`pkg/storage`](#pkgstorage)
   - [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore)
+  - [`pkg/testcontainers/azurite`](#pkgtestcontainersazurite)
   - [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb)
   - [`pkg/testing/mongodb`](#pkgtestingmongodb)
 - [Quick Start](#quick-start)
@@ -85,6 +86,8 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
   - [Functional Options & Customization](#functional-options--customization)
   - [Connection Getters & Container Methods](#connection-getters--container-methods)
   - [Constants & Sentinel Errors](#constants--sentinel-errors)
+- [Azurite Testcontainers (`pkg/testcontainers/azurite`)](#azurite-testcontainers-pkgtestcontainersazurite)
+  - [S3 Gateway Integration](#s3-gateway-integration)
 - [MongoDB Testcontainers (`pkg/testcontainers/mongodb`)](#mongodb-testcontainers-pkgtestcontainersmongodb)
   - [Container Lifecycle & Startup](#container-lifecycle--startup-1)
   - [Functional Options & Customization](#functional-options--customization-1)
@@ -1776,6 +1779,24 @@ The package exports standard defaults and sentinel errors:
 
 ---
 
+## Azurite Testcontainers (`pkg/testcontainers/azurite`)
+
+The `pkg/testcontainers/azurite` package provides a reusable wrapper for the Azure Storage emulator, exposing mapped Blob, Queue, and Table service endpoints. Azurite implements Azure Storage APIs, not S3, so AWS S3 clients cannot connect directly to Azurite or Azure Blob. The helper does not change `pkg/storage` or the LocalStack-backed S3 integration tests.
+
+### S3 Gateway Integration
+
+The tagged integration tests exercise `pkg/storage` and the AWS S3 client through a separate S3Proxy gateway:
+
+```text
+AWS S3 SDK / pkg/storage -> S3Proxy -> Azurite Blob
+```
+
+The fixture uses `mcr.microsoft.com/azure-storage/azurite:3.37.0` and `andrewgaul/s3proxy:3.2.0` on a private Testcontainers network. S3Proxy's Azure backend uses `http://azurite-blob:10000/devstoreaccount1`, the Azurite emulator account name and key exposed by `DefaultAccountName` and `DefaultAccountKey`, and its `azureblob-sdk` provider. The test S3 endpoint is the gateway's dynamically mapped host port; requests use path-style addressing, region `us-east-1`, and AWS SigV4 credentials `azurite-test-access-key` / `azurite-test-secret-key`.
+
+These credentials and endpoints are local test values only. The tests do not use live Azure or AWS credentials and do not imply that S3 speaks directly to Azure Blob or Azurite. See [the Azurite helper guide](pkg/testcontainers/azurite/README.md) for the fixture details and test command.
+
+---
+
 ## MongoDB Testcontainers (`pkg/testcontainers/mongodb`)
 
 The `pkg/testcontainers/mongodb` package provides lightweight, isolated MongoDB container management for integration testing using [Testcontainers for Go](https://golang.testcontainers.org/). It spins up ephemeral MongoDB instances with zero host dependencies, automatically exposes connection details, and provides ready-to-use managed client instances.
@@ -2473,9 +2494,9 @@ make test
 
 #### Docker-Dependent Testcontainers Integration Tests
 
-The MongoDB and Firestore container integration tests are guarded by the `testcontainers` build tag and require Docker (or a compatible Docker runtime). They are not included in `make test`, `make test-coverage`, or `make all`.
+The MongoDB, Firestore, and Azurite container integration tests are guarded by the `testcontainers` build tag and require Docker (or a compatible Docker runtime). They are not included in `make test`, `make test-coverage`, or `make all`.
 
-Run all tagged tests through the Makefile target, or run either integration package directly:
+Run all tagged tests through the Makefile target, or run an integration package directly:
 
 ```bash
 # Run the full suite with Testcontainers integration tests enabled
@@ -2486,6 +2507,9 @@ go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...
 
 # Run only the Firestore Testcontainers integration tests
 go test -tags=testcontainers -race -v ./pkg/testcontainers/firestore/...
+
+# Run the Azurite S3-to-Blob gateway integration tests
+go test -tags=testcontainers -race -v ./pkg/testcontainers/azurite/...
 ```
 
 #### Coverage Profiling & Visualization (Makefile)
@@ -2520,6 +2544,9 @@ go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...
 
 # Run Firestore Testcontainers integration tests (requires Docker)
 go test -tags=testcontainers -race -v ./pkg/testcontainers/firestore/...
+
+# Run Azurite S3-to-Blob gateway Testcontainers integration tests (requires Docker)
+go test -tags=testcontainers -race -v ./pkg/testcontainers/azurite/...
 ```
 
 ### Static Analysis & Linting
