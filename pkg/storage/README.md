@@ -426,3 +426,27 @@ if err := client.Ping(ctx); err != nil {
 	log.Printf("Storage readiness probe failed: %v", err)
 }
 ```
+
+## Integration Tests
+
+The storage integration tests use Testcontainers to start `localstack/localstack:4.14.0` and exercise S3 operations against an isolated LocalStack bucket. Docker must be running and able to pull the image. The suite uses explicit dummy credentials and does not require AWS credentials or contact live AWS services.
+
+Run the tagged storage integration tests with:
+
+```sh
+go test -tags=testcontainers ./pkg/storage
+```
+
+To enable race detection, run:
+
+```sh
+go test -tags=testcontainers -race ./pkg/storage
+```
+
+The repository-wide integration target runs all Testcontainers-tagged tests with race detection:
+
+```sh
+make test-integration
+```
+
+Ordinary untagged tests do not start LocalStack and remain independent of Docker.
