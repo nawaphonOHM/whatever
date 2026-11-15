@@ -6,14 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMeta_WithCorsPath(t *testing.T) {
-	meta := NewMeta().WithCorsPath("configs/cors.json")
-	assert.Equal(t, "configs/cors.json", meta.CorsPath())
-
-	var nilMeta *Meta
-	assert.Empty(t, nilMeta.CorsPath())
-}
-
 func TestNewBluePrint_BuildersAndAccessors(t *testing.T) {
 	reg1 := &RRestAPIRegistration{
 		Prefix: "/v1",
@@ -25,12 +17,11 @@ func TestNewBluePrint_BuildersAndAccessors(t *testing.T) {
 	}
 
 	bp := NewBluePrint().
-		WithMeta(NewMeta().WithCorsPath("cors.yaml")).
+		WithMeta(NewMeta()).
 		WithAPIs(reg1).
 		AddAPIs(reg2)
 
 	assert.NotNil(t, bp.Meta())
-	assert.Equal(t, "cors.yaml", bp.Meta().CorsPath())
 	assert.Len(t, bp.Apis(), 2)
 }
 

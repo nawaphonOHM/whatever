@@ -27,17 +27,20 @@ func assertDefaultDisabledGET(t *testing.T, url string) {
 }
 
 func TestStartREST_DefaultCORS(t *testing.T) {
-	url, errCh := startCORSE2E(t, "")
+	url, errCh := startCORSE2E(t, "", "")
 	assertDefaultDisabledPreflight(t, url)
 	assertDefaultDisabledGET(t, url)
 	signalAndWait(t, errCh)
 }
 
-func startCORSE2E(t *testing.T, corsPath string) (string, <-chan error) {
+func startCORSE2E(t *testing.T, yamlConfig, jsonConfig string) (string, <-chan error) {
 	t.Helper()
 	port := getFreePort(t)
 	setStartEnv(t, port)
-	errCh := startRESTAsync(newCORSBlueprintWithFixture(corsPath))
+	t.Setenv(envCORSYAMLKey, yamlConfig)
+	t.Setenv(envCORSJSONKey, jsonConfig)
+	t.Setenv(envCORSPathKey, "")
+	errCh := startRESTAsync(newCORSBlueprintWithFixture())
 	return pingURL(port), errCh
 }
 

@@ -10,13 +10,15 @@ func NewMeta() *Meta {
 	return &Meta{}
 }
 
-// WithCorsPath sets the CORS configuration file path on the Meta instance.
+// Deprecated: CORS configuration is supplied through the server environment.
+// WithCorsPath is retained for source compatibility and no longer affects startup.
 func (m *Meta) WithCorsPath(path string) *Meta {
 	m.corsPath = path
 	return m
 }
 
-// CorsPath returns the configured CORS configuration file path.
+// Deprecated: CORS configuration is supplied through the server environment.
+// CorsPath is retained for source compatibility and is not used during startup.
 func (m *Meta) CorsPath() string {
 	if m == nil {
 		return ""

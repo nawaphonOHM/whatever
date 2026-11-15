@@ -13,6 +13,8 @@ import (
 
 const (
 	testFilePerm        = 0o600
+	testCORSPathEnv     = "OHM9996_SERVER_CORS_PATH"
+	testCORSFixtureDir  = "testdata"
 	testPingPath        = "/api/v1/ping"
 	testAppOrigin       = "https://app.example.com"
 	testAdminOrigin     = "https://admin.example.com"
@@ -24,6 +26,20 @@ const (
 	jsonExpectedMethods = "POST, GET"
 	yamlExpectedMethods = "GET, POST"
 )
+
+func setCORSConfigurationEnv(t *testing.T, yamlConfig, jsonConfig, path string) {
+	t.Helper()
+	t.Setenv(testCORSYAMLEnv, yamlConfig)
+	t.Setenv(testCORSJSONEnv, jsonConfig)
+	t.Setenv(testCORSPathEnv, path)
+}
+
+func readCORSFixture(t *testing.T, filename string) string {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(testCORSFixtureDir, filename))
+	require.NoError(t, err)
+	return string(content)
+}
 
 type preflightOpts struct {
 	origin  string
@@ -46,12 +62,7 @@ func writeTempConfigFile(t *testing.T, filename, content string) string {
 	return path
 }
 
-func createTestBlueprintWithRoute(corsPath string) *contracts.BluePrint {
-	meta := contracts.NewMeta()
-	if corsPath != "" {
-		meta = meta.WithCorsPath(corsPath)
-	}
-
+func createTestBlueprintWithRoute() *contracts.BluePrint {
 	api := &contracts.ExportableAPI{
 		Path:   "/ping",
 		Method: contracts.GET,
@@ -64,7 +75,7 @@ func createTestBlueprintWithRoute(corsPath string) *contracts.BluePrint {
 		Prefix:  "/api",
 		Apis:    []*contracts.ExportableAPI{api},
 	}
-	return contracts.NewBluePrint().WithMeta(meta).WithAPIs(reg)
+	return contracts.NewBluePrint().WithAPIs(reg)
 }
 
 func setReqHeader(req *http.Request, key, val string) {

@@ -72,8 +72,7 @@ func buildTracedServer(
 	t.Helper()
 	srv, err := New(cfg)
 	require.NoError(t, err)
-	corsCfg, err := loadCORSConfig(cfg, bp)
-	require.NoError(t, err)
+	corsCfg := loadCORSConfig(cfg)
 	srv.SetupMiddlewares(corsCfg)
 	require.NoError(t, srv.RegisterRoutesWithVersion(bp.Apis(), cfg.AppVersion))
 	return srv

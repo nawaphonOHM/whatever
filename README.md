@@ -218,7 +218,7 @@ The primary REST framework package provides declarative route registration contr
 - **RFC 9457 Problem Details**: Compliant error representations (`rest.BadRequest`, `rest.Unauthorized`, `rest.Forbidden`, `rest.NotFound`, `rest.InternalServerError`, `rest.Error`).
 - **Standardized Response Builders**: Consistent JSON success formatting (`rest.OK`, `rest.Created`, `rest.NoContent`, `rest.JSON`).
 - **Context Abstraction**: Unified `rest.Context` interface for URL params, query parameters, headers, cookies, JSON payload binding (`c.ShouldBindJSON`), and typed context values.
-- **CORS & Metadata Configuration**: File-based CORS configuration (.json/.yaml) validated against JSON Schema via `meta.WithCorsPath("cors.yaml")` or `OHM9996_SERVER_CORS_PATH` (disabled by default).
+- **CORS Configuration**: Inline YAML or JSON policies supplied through `OHM9996_SERVER_CORS_YML_YAML` or `OHM9996_SERVER_CORS_JSON`, validated against the existing schema (disabled by default).
 - **Built-in Probes & Lifecycle**: Mounts reserved `/health` (liveness) and `/ready` (readiness) probe endpoints and provides signal-driven graceful shutdown via `rest.StartREST(bp)`.
 
 ### `pkg/logging`
@@ -296,7 +296,7 @@ Ergonomic MongoDB testing client with programmatic options, connection string pa
 
 ## Quick Start
 
-Get a high-performance HTTP REST microservice running with declarative routing, structured logging, and signal-driven graceful shutdown in just a few lines of code. The example uses the default CORS behavior and does not require a configuration file. To configure CORS, add a metadata value with `rest.NewMeta().WithCorsPath("./configs/cors.yaml")` and provide that file, as described in [CORS & Blueprint Metadata](#cors--blueprint-metadata).
+Get a high-performance HTTP REST microservice running with declarative routing, structured logging, and signal-driven graceful shutdown in just a few lines of code. The example uses the default CORS behavior and does not require a configuration file. To configure CORS, set one of the inline policy environment variables before starting the process, as described in [CORS & Blueprint Metadata](#cors--blueprint-metadata).
 
 ```go
 package main
@@ -366,12 +366,12 @@ The library utilizes a declarative routing paradigm built on top of `rest.BluePr
 
 ### Blueprint & Server Middleware Pipeline
 
-Application bootstrap is centered around `rest.BluePrint`, constructed via `rest.NewBluePrint()`. A blueprint encapsulates server metadata (such as CORS policies) and registered API route groups:
+Application bootstrap is centered around `rest.BluePrint`, constructed via `rest.NewBluePrint()`. A blueprint encapsulates server metadata and registered API route groups:
 
 | Blueprint Method | Description |
 |---|---|
 | `rest.NewBluePrint()` | Initializes an empty `*rest.BluePrint` builder |
-| `bp.WithMeta(meta *rest.Meta)` | Assigns server metadata (e.g. CORS settings) to the blueprint |
+| `bp.WithMeta(meta *rest.Meta)` | Assigns server metadata to the blueprint; deprecated CORS path metadata does not configure startup |
 | `bp.WithAPIs(apis ...*rest.RRestAPIRegistration)` | Replaces the registered API route groups with the provided slice |
 | `bp.AddAPIs(apis ...*rest.RRestAPIRegistration)` | Appends additional API route groups to the blueprint |
 | `bp.Meta()` | Returns the configured `*rest.Meta` or `nil` |
@@ -383,7 +383,7 @@ When `rest.StartREST(bp)` is invoked, it configures the underlying HTTP engine a
 2. **Request ID Tracking**: Generates or propagates `X-Request-ID` headers across all requests via `middleware.RequestID()`.
 3. **Structured HTTP Access Logging**: High-throughput access logger (`pkg/logger`) recording method, path, status, latency, client IP, and trace IDs (configurable via `OHM9996_SERVER_ENABLE_ACCESS_LOG`).
 4. **Panic Recovery**: Robust recovery middleware (`middleware.Recovery()`) capturing unhandled panics and writing RFC 9457 Problem Details error responses.
-5. **CORS Handling**: Attaches CORS middleware (`middleware.CORS()`) using rules configured via `bp.WithMeta(rest.NewMeta().WithCorsPath(...))` or `OHM9996_SERVER_CORS_PATH` (disabled by default).
+5. **CORS Handling**: Attaches CORS middleware (`middleware.CORS()`) using the policy supplied through `OHM9996_SERVER_CORS_JSON` or `OHM9996_SERVER_CORS_YML_YAML` (disabled by default).
 6. **Liveness & Readiness Probes**: Mounts reserved health check endpoints (`GET /health` and `GET /ready`) exempted from both `/api` and version prefixes.
 7. **Runtime Profiling (pprof)**: Exposes profiling endpoints at `OHM9996_SERVER_PROFILE_PATH` when enabled (`OHM9996_SERVER_ENABLE_PROFILING=true`).
 8. **Signal-Driven Graceful Shutdown**: Automatically captures `SIGINT` and `SIGTERM` signals and allows inflight requests to complete within `OHM9996_SERVER_SHUTDOWN_TIMEOUT`.
@@ -494,22 +494,10 @@ $$\text{FullPath} = \text{CalculateFullPath}(\text{Group}, \text{Version}, \text
 
 ### CORS & Blueprint Metadata
 
-Custom Cross-Origin Resource Sharing (CORS) policies can be configured on the blueprint via `rest.NewMeta().WithCorsPath(path)` or environment variable `OHM9996_SERVER_CORS_PATH`:
+Custom Cross-Origin Resource Sharing (CORS) policies are supplied as literal configuration documents in environment variables. Choose either YAML or JSON:
 
-```go
-meta := rest.NewMeta().WithCorsPath("./configs/cors.yaml")
-
-bp := rest.NewBluePrint().
-	WithMeta(meta).
-	WithAPIs(apiRegistrations...)
-```
-
-The CORS configuration file (`.json`, `.yaml`, or `.yml`) is validated against JSON schema (`cors.schema.json`) at server startup. If no CORS configuration is provided, CORS is disabled by default (no `Access-Control-Allow-Origin` headers emitted).
-
-#### Example Configuration Files
-
-**YAML (`configs/cors.yaml`):**
-```yaml
+```sh
+export OHM9996_SERVER_CORS_YML_YAML='
 allow-origins:
   - https://app.example.com
 allow-methods:
@@ -518,24 +506,18 @@ allow-methods:
 allow-headers:
   - Content-Type
   - Authorization
+'
 ```
 
-**JSON (`configs/cors.json`):**
-```json
-{
-  "allow-origins": [
-    "https://app.example.com"
-  ],
-  "allow-methods": [
-    "GET",
-    "POST"
-  ],
-  "allow-headers": [
-    "Content-Type",
-    "Authorization"
-  ]
-}
+```sh
+export OHM9996_SERVER_CORS_JSON='{"allow-origins":["https://app.example.com"],"allow-methods":["GET","POST"],"allow-headers":["Content-Type","Authorization"]}'
 ```
+
+The values are parsed directly as YAML or JSON documents and validated against the existing CORS schema. If both variables are set, JSON takes precedence; invalid JSON does not fall back to YAML. Unset, empty, or whitespace-only values are treated as absent. When neither contains a policy, the server logs at `INFO` and disables CORS. Invalid syntax, schema, or decoding logs a `WARN`, disables CORS, and does not prevent server startup. Configuration contents are not included in these log messages.
+
+#### Migration from file paths
+
+Move the contents of the old `.yaml`, `.yml`, or `.json` file into `OHM9996_SERVER_CORS_YML_YAML` or `OHM9996_SERVER_CORS_JSON` in the service's environment, deployment manifest, or secret/configuration manager. Do not set these variables to a file path: they must contain the document itself. `OHM9996_SERVER_CORS_PATH` and blueprint metadata methods `WithCorsPath` and `CorsPath` are deprecated; the methods remain available for source compatibility, but neither path-based setting configures server startup. With no valid environment policy, CORS remains disabled.
 
 #### Schema Constraints & Rules
 - **`allow-origins`**: Slice of origin URLs matching pattern `^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/.*)?$`. Note that while the schema allows optional path suffixes (`(?:/.*)?`), standard browser `Origin` request headers contain only `scheme://host[:port]` without paths; therefore, configured origins with path components will not match incoming browser origins at runtime. In addition, wildcards (`*`), raw `localhost`, and port numbers (e.g. `:3000`) are not allowed by the schema pattern.
@@ -2297,11 +2279,13 @@ Configuration values are resolved using the following order of precedence:
 
 ### CORS Policy Configuration
 
-CORS policies are configured by providing a path to a `.json`, `.yaml`, or `.yml` configuration file via blueprint metadata (`meta.WithCorsPath(...)`) or environment variable `OHM9996_SERVER_CORS_PATH`. By default, CORS is disabled unless explicitly configured.
+CORS policies are supplied as literal YAML or JSON documents through environment variables. JSON takes precedence if both are set; absent policies disable CORS, while invalid policies log a warning and allow server startup to continue with CORS disabled.
 
 | Variable | Type | Default | Description |
 |---|---|---|---|
-| `OHM9996_SERVER_CORS_PATH` | `string` | `""` (disabled) | Path to `.json`, `.yaml`, or `.yml` CORS configuration file |
+| `OHM9996_SERVER_CORS_YML_YAML` | `string` | `""` (absent) | Literal YAML document containing the CORS policy |
+| `OHM9996_SERVER_CORS_JSON` | `string` | `""` (absent) | Literal JSON document containing the CORS policy; takes precedence over YAML |
+| `OHM9996_SERVER_CORS_PATH` | `string` | ignored | Deprecated legacy path; no longer configures CORS |
 
 ### OpenTelemetry Tracing Configuration
 
@@ -2377,7 +2361,7 @@ Structured logging via `pkg/logging` is configured entirely through `OHM9996_LOG
 
 ## Consumer Bootstrap
 
-This complete example requires a reachable MongoDB deployment and `OHM9996_MONGODB_HOST` (plus credentials if authentication is enabled); `mongodb.Connect` performs a mandatory startup ping and probe. It uses the default CORS behavior, so no CORS configuration file is required. Add a supplied file with `rest.NewMeta().WithCorsPath(...)` only when the application needs a custom CORS policy.
+This complete example requires a reachable MongoDB deployment and `OHM9996_MONGODB_HOST` (plus credentials if authentication is enabled); `mongodb.Connect` performs a mandatory startup ping and probe. It uses the default CORS behavior, so no CORS environment variable is required. Set `OHM9996_SERVER_CORS_YML_YAML` or `OHM9996_SERVER_CORS_JSON` to a literal policy document when the application needs custom CORS behavior.
 
 ```go
 package main

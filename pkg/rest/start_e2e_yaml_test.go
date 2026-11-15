@@ -35,15 +35,15 @@ func assertYAMLE2EDisallowed(t *testing.T, url string) {
 }
 
 func TestStartREST_ValidYAMLFixture(t *testing.T) {
-	url, errCh := startCORSE2E(t, testdataFixturePath("valid_cors.yaml"))
+	url, errCh := startCORSE2E(t, readCORSTestFixture(t, "valid_cors.yaml"), "")
 	assertYAMLE2EAllowed(t, url)
 	assertYAMLE2EDisallowed(t, url)
 	signalAndWait(t, errCh)
 }
 
 func TestStartREST_ValidYAMLWithRequestsFixture(t *testing.T) {
-	path := testdataFixturePath("valid_cors_with_requests.yaml")
-	url, errCh := startCORSE2E(t, path)
+	yamlConfig := readCORSTestFixture(t, "valid_cors_with_requests.yaml")
+	url, errCh := startCORSE2E(t, yamlConfig, "")
 	assertYAMLRequestsPreflight(t, url)
 	signalAndWait(t, errCh)
 }

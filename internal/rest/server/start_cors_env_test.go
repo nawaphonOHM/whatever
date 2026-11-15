@@ -10,14 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const envCORSPathKey = "OHM9996_SERVER_CORS_PATH"
-
 // TestNewFromBluePrint_DefaultCORS verifies disabled CORS when unconfigured.
 func TestNewFromBluePrint_DefaultCORS(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envCORSPathKey, "")
+	setCORSConfigurationEnv(t, "", "", filepath.Join(testCORSFixtureDir, "valid_cors.yaml"))
 
-	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(""))
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute())
 	require.NoError(t, err)
 
 	preflight := executePreflight(srv, testPingPath, preflightOpts{
@@ -32,12 +30,13 @@ func TestNewFromBluePrint_DefaultCORS(t *testing.T) {
 	assertNoCORSHeaders(t, getResp)
 }
 
-// TestNewFromBluePrint_EnvFallback verifies environment variable fallback when Meta.CorsPath is empty.
-func TestNewFromBluePrint_EnvFallback(t *testing.T) {
+// TestNewFromBluePrint_EnvironmentYAML verifies inline YAML configuration.
+func TestNewFromBluePrint_EnvironmentYAML(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envCORSPathKey, filepath.Join("testdata", "valid_cors.yaml"))
+	jsonPath := filepath.Join(testCORSFixtureDir, "valid_cors.json")
+	setCORSConfigurationEnv(t, readCORSFixture(t, "valid_cors.yaml"), "", jsonPath)
 
-	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(""))
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute())
 	require.NoError(t, err)
 
 	preflight := executePreflight(srv, testPingPath, preflightOpts{
@@ -52,23 +51,27 @@ func TestNewFromBluePrint_EnvFallback(t *testing.T) {
 	})
 }
 
-// TestNewFromBluePrint_MetaPrecedenceOverEnv verifies Meta.CorsPath overrides environment variable.
-func TestNewFromBluePrint_MetaPrecedenceOverEnv(t *testing.T) {
+// TestNewFromBluePrint_LegacyPathEnvironmentIsIgnored verifies legacy paths do not configure startup.
+func TestNewFromBluePrint_LegacyPathEnvironmentIsIgnored(t *testing.T) {
 	t.Setenv(envGinMode, gin.TestMode)
-	t.Setenv(envCORSPathKey, filepath.Join("testdata", "valid_cors.yaml"))
+	legacyEnvPath := filepath.Join(testCORSFixtureDir, "valid_cors.yaml")
+	setCORSConfigurationEnv(t, "", "", legacyEnvPath)
 
-	corsPath := filepath.Join("testdata", "valid_cors.json")
-	srv, err := NewFromBluePrint(createTestBlueprintWithRoute(corsPath))
+	srv, err := NewFromBluePrint(createTestBlueprintWithRoute())
 	require.NoError(t, err)
 
 	preflight := executePreflight(srv, testPingPath, preflightOpts{
 		origin: testAppOrigin,
-		method: postMethod,
+		method: getMethod,
 	})
-	assert.Equal(t, http.StatusNoContent, preflight.Code)
-	assertCORSHeaders(t, preflight, expectedHeaders{
-		origin:  testAppOrigin,
-		methods: jsonExpectedMethods,
-		headers: jsonExpectedHeaders,
-	})
+	assert.NotEqual(t, http.StatusNoContent, preflight.Code)
+	assertNoCORSHeaders(t, preflight)
+	assertDefaultCORSDisabledGET(t, srv)
+}
+
+func assertDefaultCORSDisabledGET(t *testing.T, srv *Server) {
+	t.Helper()
+	getResp := executeGET(srv, testPingPath, testAppOrigin)
+	assert.Equal(t, http.StatusOK, getResp.Code)
+	assertNoCORSHeaders(t, getResp)
 }
