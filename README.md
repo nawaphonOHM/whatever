@@ -1,11 +1,11 @@
 # whatever
 
 [![CI](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml/badge.svg)](https://github.com/nawaphonOHM/whatever/actions/workflows/ci.yml)
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27.3-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-%3E%3D1.27.4-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nawaphonOHM/whatever/v3.svg)](https://pkg.go.dev/github.com/nawaphonOHM/whatever/v3)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nawaphonOHM/whatever/v3)](https://goreportcard.com/report/github.com/nawaphonOHM/whatever/v3)
 
-A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, zero-boilerplate managed MongoDB client connectivity, isolated Testcontainers-based MongoDB integration testing, and ergonomic programmatic MongoDB test harnesses with automated fixture cleanup.
+A production-ready, modular Go library designed to bootstrap high-performance microservices and RESTful API applications. It provides declarative Blueprint routing with preflight collision validation, encapsulated Gin HTTP server lifecycle management with signal-driven graceful shutdown, standardized RFC 9457 Problem Details error responses, uniform success envelopes, structured logging with `log/slog`, native OpenTelemetry distributed tracing correlation, managed MongoDB connectivity, cloud object storage for AWS S3, Google Cloud Storage, and S3-compatible endpoints, Testcontainers utilities for MongoDB and Firestore, an Azurite Azure Storage emulator wrapper, and ergonomic MongoDB test harnesses with automated fixture cleanup.
 
 ---
 
@@ -129,7 +129,7 @@ A production-ready, modular Go library designed to bootstrap high-performance mi
 
 ### Prerequisites
 
-- **Go**: Version `1.27.3` or higher, as declared by this module's `go.mod`.
+- **Go**: Version `1.27.4` or higher, as declared by this module's `go.mod`.
 
 ### Installation
 
@@ -148,7 +148,10 @@ This repository is structured as a modular library. Consuming microservices impo
 ```
 .
 ├── internal/
+│   ├── json_schema/            # Embedded JSON schemas and validation helpers
 │   ├── logging/
+│   │   ├── callstack/          # Call-stack and contextual logging helpers
+│   │   ├── central/            # Centralized logging event types
 │   │   ├── config/            # Logging environment configuration loader, level parsing, and validation
 │   │   └── core/              # Core logger engine, slog handler pipeline, OTel trace correlation, and test hooks
 │   ├── mongodb/
@@ -169,8 +172,10 @@ This repository is structured as a modular library. Consuming microservices impo
 │   │   ├── client/            # Managed S3/GCS storage client wrapper, options, and operations
 │   │   ├── config/            # Storage environment configuration loader and validation
 │   │   ├── contracts/         # Abstract storage contracts, models, and sentinel errors
-│   │   └── detector/          # URL pattern-based cloud provider detector (AWS, GCS, S3-compatible)
+│   │   ├── detector/          # URL pattern-based cloud provider detector (AWS, GCS, S3-compatible)
+│   │   └── urlutil/            # Storage URL parsing and credential redaction helpers
 │   ├── testcontainers/
+│   │   ├── azurite/           # Azurite emulator container integration and lifecycle
 │   │   ├── firestore/         # Testcontainers Firestore module integration, lifecycle, and emulator wiring
 │   │   └── mongodb/           # Testcontainers MongoDB module integration, lifecycle, and client wiring
 │   └── testing/
@@ -182,6 +187,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   ├── rest/                  # Declarative Blueprint routing contracts, Context, Response, and StartREST
 │   ├── storage/               # Public Cloud Object Storage entrypoint and managed client
 │   ├── testcontainers/
+│   │   ├── azurite/           # Public Azurite emulator runner, options, and service URL accessors
 │   │   ├── firestore/         # Public Testcontainers Firestore emulator runner, options, and container handle
 │   │   └── mongodb/           # Public Testcontainers MongoDB testing runner, options, and container handle
 │   └── testing/
@@ -190,7 +196,7 @@ This repository is structured as a modular library. Consuming microservices impo
 │   └── workflows/
 │       └── ci.yml             # Continuous integration pipeline
 ├── Makefile                   # Local development, test, and build targets
-├── go.mod                     # Go module definition (Go 1.27.3+)
+├── go.mod                     # Go module definition (Go 1.27.4+)
 ├── go.sum                     # Go module checksums
 └── README.md                  # Project documentation
 ```
@@ -208,6 +214,7 @@ The toolkit is divided into focused public packages under `pkg/`. Code blocks ar
 | [`pkg/logger`](#pkglogger) | Gin HTTP access logging middleware with trace context correlation & GCP httpRequest formatting | `logger.Logger()`, `logger.WithLogger()`, `logger.WithConfig()`, `logger.GetRequestID()` | `gin-gonic/gin`, `log/slog`, OpenTelemetry |
 | [`pkg/mongodb`](#pkgmongodb) | Managed MongoDB client with auto-TLS fallback, pooling & health verification | `mongodb.Connect()`, `client.Database()`, `client.Collection()`, `client.Ping()`, `client.RawClient()` | `go.mongodb.org/mongo-driver/v2` |
 | [`pkg/storage`](#pkgstorage) | Cloud object storage client for AWS S3, Google Cloud Storage, & S3-compatible endpoints | `storage.Connect()`, `client.PutObject()`, `client.GetObject()`, `client.PresignGetObject()`, `client.Ping()` | `aws/aws-sdk-go-v2/service/s3` |
+| [`pkg/testcontainers/azurite`](#pkgtestcontainersazurite) | Azurite Azure Storage emulator container for integration tests | `azurite.Run()`, `container.BlobServiceURL()`, `container.QueueServiceURL()`, `container.TableServiceURL()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testcontainers/firestore`](#pkgtestcontainersfirestore) | Ephemeral Firestore emulator containers for integration tests | `firestore.Run()`, `container.URI()`, `container.Host()`, `container.Port()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testcontainers/mongodb`](#pkgtestcontainersmongodb) | Ephemeral MongoDB containers with automated lifecycle and connection wiring for integration tests | `mongodb.Run()`, `container.Client()`, `container.ConnectionString()`, `container.Terminate()` | `testcontainers-go`, Docker |
 | [`pkg/testing/mongodb`](#pkgtestingmongodb) | Test MongoDB client with URI/options connectivity, automated `testing.TB` teardown, & fixture cleanup | `mongodb.NewTestClientURI()`, `mongodb.NewTestClient()`, `mongodb.ConnectURI()`, `client.TruncateCollections()` | `go.mongodb.org/mongo-driver/v2` |
@@ -268,6 +275,10 @@ Unified cloud object storage client supporting AWS S3, Google Cloud Storage XML 
 - **Stream Handling & Multipart Uploads**: Buffers non-seekable streams and automatically utilizes multipart uploads for large payloads.
 - **Startup Connectivity Probing**: Non-destructive `HeadBucket` reachability probe with graceful fallback to `ListObjectsV2` on `AccessDenied`/`Forbidden`/HTTP 403.
 - **Defensive Error Handling**: Safe receiver checks returning standardized sentinel errors (`ErrObjectNotFound`, `ErrBucketNotFound`, `ErrAccessDenied`, `ErrNilClient`, `ErrNilConfig`, `ErrInvalidExpiry`).
+
+### `pkg/testcontainers/azurite`
+
+Testcontainers wrapper for running the Azurite Azure Storage emulator in integration tests; it exposes dynamically mapped Blob, Queue, and Table service URLs. Azurite does not implement S3—the separate S3Proxy fixture translates S3 requests to Azure Blob for the tagged storage integration tests.
 
 ### `pkg/testcontainers/firestore`
 
@@ -1887,7 +1898,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nawaphonOHM/whatever/v3/pkg/mongodb"
 	tcmongo "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/mongodb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -2494,13 +2504,16 @@ make test
 
 #### Docker-Dependent Testcontainers Integration Tests
 
-The MongoDB, Firestore, and Azurite container integration tests are guarded by the `testcontainers` build tag and require Docker (or a compatible Docker runtime). They are not included in `make test`, `make test-coverage`, or `make all`.
+The MongoDB, Firestore, Azurite, and LocalStack-backed `pkg/storage` integration tests are guarded by the `testcontainers` build tag and require Docker (or a compatible Docker runtime). The storage suite starts `localstack/localstack:4.14.0`, uses local dummy credentials, and does not contact AWS. These tests are not included in `make test`, `make test-coverage`, or `make all`.
 
 Run all tagged tests through the Makefile target, or run an integration package directly:
 
 ```bash
 # Run the full suite with Testcontainers integration tests enabled
 make test-integration
+
+# Run the LocalStack-backed storage integration tests
+go test -tags=testcontainers -race -v ./pkg/storage
 
 # Run only the MongoDB Testcontainers integration tests
 go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...
@@ -2609,5 +2622,5 @@ The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) c
 - Enforce Go module integrity (`go mod verify` and dirty check on `go.mod`/`go.sum`).
 - Execute static analysis with `golangci-lint` (`--timeout=5m`) using the `testcontainers` build tag.
 - Run the standard untagged test suite across all packages with race detection and coverage collection (`go test -race -v -coverprofile=coverage.out ./...`).
-- Run the tagged MongoDB Testcontainers integration tests separately (`go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...`); the CI test command does not run the tagged Firestore integration tests.
+- Run only the tagged MongoDB Testcontainers integration tests separately (`go test -tags=testcontainers -race -v ./pkg/testcontainers/mongodb/...`); CI does not run the tagged Firestore, LocalStack storage, or Azurite integration suites.
 - Verify compilation of all library packages with `go build -v ./...`.

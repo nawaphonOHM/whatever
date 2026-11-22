@@ -77,7 +77,7 @@ import (
 	"context"
 	"log"
 
-	tcfirestore "github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/firestore"
+	tcfirestore "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/firestore"
 )
 
 func main() {
@@ -115,7 +115,7 @@ import (
 	"context"
 	"testing"
 
-	tcfirestore "github.com/nawaphonOHM/whatever/v2/pkg/testcontainers/firestore"
+	tcfirestore "github.com/nawaphonOHM/whatever/v3/pkg/testcontainers/firestore"
 )
 
 func TestFirestoreIntegration(t *testing.T) {
