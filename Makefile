@@ -35,7 +35,7 @@ vet: ## Run go vet analysis
 
 .PHONY: lint
 lint: ## Run golangci-lint (or go vet if golangci-lint not installed)
-	@which golangci-lint > /dev/null 2>&1 && golangci-lint run || (echo "golangci-lint not found in PATH; running go vet ./..." && go vet ./...)
+	(./ai-stupidly-bypass-lint-rule-prevention.sh || exit 1) && @which golangci-lint > /dev/null 2>&1 && golangci-lint run || (echo "golangci-lint not found in PATH; running go vet ./..." && go vet ./...)
 
 .PHONY: tidy
 tidy: ## Tidy and verify Go module dependencies
