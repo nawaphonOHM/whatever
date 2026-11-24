@@ -24,6 +24,11 @@ jobs:
           check-latest: true
           cache: true
 
+      - name: Run ai-stupidly-bypass-lint-rule-prevention.sh
+        run: |
+         chmod u+x ./ai-stupidly-bypass-lint-rule-prevention.sh || exit 1 
+          ./ai-stupidly-bypass-lint-rule-prevention.sh
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
