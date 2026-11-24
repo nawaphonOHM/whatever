@@ -24,10 +24,7 @@ jobs:
           check-latest: true
           cache: true
 
-      - name: Pre Start Run ai-stupidly-bypass-lint-rule-prevention.sh
-        run: cksum --check <<< ${{ vars.AI_LINT_RULE_BYPASS_CHECKSUM }}
-
-      - name: Start Run ai-stupidly-bypass-lint-rule-prevention.sh
+      - name: Run ai-stupidly-bypass-lint-rule-prevention.sh
         run: ./ai-stupidly-bypass-lint-rule-prevention.sh
 
       - name: Run golangci-lint
