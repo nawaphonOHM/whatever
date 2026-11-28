@@ -200,8 +200,8 @@ github.com/testcontainers/testcontainers-go/modules/gcloud v0.45.0 h1:E54SO2VuMb
 github.com/testcontainers/testcontainers-go/modules/gcloud v0.45.0/go.mod h1:xJOgV5vmC5RKbwVyQHtm3PxM3banswN9YhblxBaD//s=
 github.com/testcontainers/testcontainers-go/modules/localstack v0.45.0 h1:Gy2tlk0L+LOqIt/PTR5wtK9EvVXoC2ehje/yTJje2us=
 github.com/testcontainers/testcontainers-go/modules/localstack v0.45.0/go.mod h1:7+cBOpzWo9P/1Zld+dOBvvDzn11T3pasqrp2ZKcy51g=
-github.com/testcontainers/testcontainers-go/modules/mongodb v0.44.0 h1:VSPDFiumAtt0CkZEVbmAkEmYVRvsJpKJy9oF3exRKYg=
-github.com/testcontainers/testcontainers-go/modules/mongodb v0.44.0/go.mod h1:kHfzrY1cYP/zr9H4TdqAxbP836A1C2fyUojlHidhFGI=
+github.com/testcontainers/testcontainers-go/modules/mongodb v0.45.0 h1:lOeoea1MnafesDCZ3AxmH1BbHWKpTlRM2x4HAogPHX8=
+github.com/testcontainers/testcontainers-go/modules/mongodb v0.45.0/go.mod h1:U6l6ppAf5SGoZMzL8dFWFmiJ79qNUr7Fj5BX2TrMeAw=
 github.com/tklauser/go-sysconf v0.4.0 h1:7H0uAN+7RkwWRaxhYXDLqa5V3LPrJeV8wmD9dRUgPQU=
 github.com/tklauser/go-sysconf v0.4.0/go.mod h1:8mTNWyog7H+MpKijp4VmKJAd2bbYQ2zuUwkYRbUArPI=
 github.com/tklauser/numcpus v0.12.0 h1:NR85qdvHA9pFse3x3weVZ0r0ST8R6l5RHbZrlRaqob4=
