@@ -18,7 +18,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/azure v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/gcloud v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.45.0
-	github.com/testcontainers/testcontainers-go/modules/mongodb v0.44.0
+	github.com/testcontainers/testcontainers-go/modules/mongodb v0.45.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.mongodb.org/mongo-driver/v2 v2.10.0
 	go.opentelemetry.io/otel v1.47.0
